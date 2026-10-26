@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+__pycache__/
+.venv/
+node_modules/
+*.mp4
+*.wav
+*.webm
+media/
