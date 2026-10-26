@@ -1,5 +1,11 @@
 # New work vs pre-existing
 
+**Disclosure.** IoMarkets.tv had a prior interview studio built on other providers, before this
+hackathon. This entry is a ground-up rebuild on Meta's stack: every line of code in this repo was
+written Oct 27 – Nov 4, 2026. No code was copied from the prior version. Where ideas or prompt
+wording carry over, the entry below says so. The demo video labels on screen which parts are new
+and which are pre-existing.
+
 The hackathon rules require that judges can tell what was built during the event. This file is
 the record. Every entry links to the commits that built it.
 
