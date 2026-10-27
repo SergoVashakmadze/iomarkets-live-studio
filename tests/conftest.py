@@ -52,3 +52,4 @@ def isolated_ledger(tmp_path, monkeypatch):
     monkeypatch.setenv("STUDIO_LEDGER", str(tmp_path / "ledger.json"))
     monkeypatch.delenv("STUDIO_DAILY_BUDGET_USD", raising=False)
     monkeypatch.setattr(ledger, "current", None)
+    monkeypatch.setenv("STUDIO_VOICE", "browser")  # no Edge TTS calls from tests

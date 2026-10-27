@@ -50,6 +50,11 @@ without downtime.
 - **Open weights:** Muse Spark Open, served by Fireworks, edits Scout's brief (since Oct 27).
   **Built with Muse Spark Open.**
 
+## Not Meta
+
+The anchor's voice is Microsoft Edge text-to-speech (Meta has no speech-synthesis model); it
+only ever receives the anchor's own lines.
+
 ## Licence
 
 MIT. See [`LICENSE`](LICENSE).

@@ -9,6 +9,9 @@ The ASR decides when the guest starts and stops; this decides what the anchor do
 - The guest starts again while a reply is still being written: that reply is dropped, so the
   anchor never answers half a thought. The guest's words stay pending and the next reply
   covers all of them.
+- Each anchor line is sent as text at once, then as audio sentence by sentence (`voice`), so
+  playback starts on the first sentence. The page uses the browser's own voice if audio is
+  late or fails.
 - Every guest turn with a figure in it, and every chart the guest holds up, goes to the fact
   desk in the background; the anchor never waits for it. A contradicted figure becomes a note
   the anchor sees with the guest's next words.
@@ -19,14 +22,17 @@ Everything sent to the page is a JSON message with a `type`.
 from __future__ import annotations
 
 import asyncio
+import base64
 from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any, Protocol
 
 from studio.agents.anchor import Anchor
 from studio.agents.factcheck import ChartReading, Check
 from studio.asr import Event, GuestPartial, GuestPaused, GuestStarted, GuestTurn
+from studio.tts import sentences
 
 Send = Callable[[dict[str, Any]], Awaitable[None]]
+Voice = Callable[[str], Awaitable[bytes]]
 
 
 class Desk(Protocol):
@@ -35,9 +41,13 @@ class Desk(Protocol):
 
 
 class LiveSession:
-    def __init__(self, anchor: Anchor, send: Send, desk: Desk | None = None):
+    def __init__(
+        self, anchor: Anchor, send: Send, desk: Desk | None = None, voice: Voice | None = None
+    ):
         self.anchor = anchor
         self.desk = desk
+        self.voice = voice
+        self._line_id = 0
         self.notes: list[str] = []
         self._background: set[asyncio.Task] = set()
         self._send = send
@@ -154,4 +164,32 @@ class LiveSession:
         if not opening:
             del self.notes[:noted]
         self.interrupted = False
-        await self.send({"type": "anchor_line", "text": line})
+        self._line_id += 1
+        await self.send({"type": "anchor_line", "id": self._line_id, "text": line})
+        if self.voice:
+            self._spawn(self._speak(self._line_id, line))
+
+    async def _speak(self, line_id: int, line: str) -> None:
+        """Audio for one line, in order, one message per sentence."""
+        assert self.voice is not None
+        parts = sentences(line) or [line]
+        jobs = [asyncio.create_task(self.voice(p)) for p in parts]
+        try:
+            for i, job in enumerate(jobs):
+                mp3 = await job
+                await self.send(
+                    {
+                        "type": "anchor_audio",
+                        "id": line_id,
+                        "part": i,
+                        "last": i == len(jobs) - 1,
+                        "mp3": base64.b64encode(mp3).decode(),
+                    }
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            await self.send({"type": "anchor_audio_failed", "id": line_id})
+        finally:
+            for job in jobs:
+                job.cancel()
