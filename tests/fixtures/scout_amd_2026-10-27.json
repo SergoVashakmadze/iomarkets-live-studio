@@ -1,0 +1,1113 @@
+[
+ {
+  "request": {
+   "model": "muse-spark-1.3",
+   "input": "Brief me for an interview with: Lisa Su, CEO of AMD",
+   "reasoning": {
+    "effort": "medium"
+   },
+   "max_output_tokens": 6000,
+   "instructions": "You are Scout, the researcher for IoMarkets.tv, a business-news channel. Write the brief an\nanchor reads before a live interview.\n\nSearch the web for recent, reputable reporting. If the company is listed, call market_quote\nfor its ticker and use that price rather than one from a search result.\n\nWrite plain text with these sections, each a few short lines:\nGUEST: who they are and their role.\nCOMPANY: what it does, size, listed or private.\nRECENT: the two to four most newsworthy developments of the last six months, each dated.\nNUMBERS: figures the guest is likely to cite, each with its source and date.\nQUESTIONS: four open questions, each a different style (explain, challenge, forward-looking,\npersonal). Never the same opening twice.\nCAUTION: anything unconfirmed, disputed or out of date.\n\nThis is journalism, not investment advice: no buy, sell or price-target language. Leave out\npolitics. If you cannot confirm something, say so instead of guessing.\n",
+   "tools": [
+    {
+     "type": "function",
+     "name": "market_quote",
+     "description": "Last traded price, previous close, day change and 52-week range for one listed security. Use it to check a price or market-value figure; never to recommend a trade.",
+     "parameters": {
+      "properties": {
+       "ticker": {
+        "description": "Exchange ticker as Yahoo Finance writes it, e.g. AAPL, VOD.L, ^GSPC",
+        "pattern": "^[A-Za-z0-9.\\-^=]{1,15}$",
+        "title": "Ticker",
+        "type": "string"
+       }
+      },
+      "required": [
+       "ticker"
+      ],
+      "title": "QuoteArgs",
+      "type": "object"
+     }
+    },
+    {
+     "type": "web_search"
+    }
+   ],
+   "include": [
+    "web_search_call.results"
+   ]
+  },
+  "status": 200,
+  "secs": 3.63,
+  "response": {
+   "top_logprobs": 0,
+   "temperature": 1.0,
+   "top_p": 1.0,
+   "service_tier": "auto",
+   "model": "muse-spark-1.3",
+   "reasoning": {
+    "effort": "medium"
+   },
+   "background": false,
+   "tools": [
+    {
+     "type": "function",
+     "name": "market_quote",
+     "description": "Last traded price, previous close, day change and 52-week range for one listed security. Use it to check a price or market-value figure; never to recommend a trade.",
+     "parameters": {
+      "title": "QuoteArgs",
+      "properties": {
+       "ticker": {
+        "description": "Exchange ticker as Yahoo Finance writes it, e.g. AAPL, VOD.L, ^GSPC",
+        "pattern": "^[A-Za-z0-9.\\-^=]{1,15}$",
+        "title": "Ticker",
+        "type": "string"
+       }
+      },
+      "required": [
+       "ticker"
+      ],
+      "type": "object"
+     }
+    },
+    {
+     "type": "web_search"
+    }
+   ],
+   "tool_choice": "auto",
+   "truncation": "disabled",
+   "id": "resp_6ae07102b3c76dbbec2e4018",
+   "object": "response",
+   "status": "completed",
+   "created_at": 1793093890.0,
+   "completed_at": 1793093892.0,
+   "error": null,
+   "incomplete_details": null,
+   "output": [
+    {
+     "type": "reasoning",
+     "id": "rs_6ae07102b3c76dbbec2e4018:rs_1acf1be1-ef3c-4ab7-b1fb-8a3dabec77d6",
+     "summary": [],
+     "status": "completed"
+    },
+    {
+     "type": "message",
+     "id": "rs_ac53b71e-dfd2-4263-9d84-2037679a705b",
+     "role": "assistant",
+     "content": [
+      {
+       "type": "output_text",
+       "text": "Prepping your AMD brief \u2014 gathering fresh reporting and the latest quote.",
+       "annotations": [],
+       "logprobs": []
+      }
+     ],
+     "phase": "commentary",
+     "status": "completed"
+    },
+    {
+     "type": "function_call",
+     "id": "fc_3f9f084f-932f-4daf-92b5-839a478eb878",
+     "call_id": "call_3f9f084f-932f-4daf-92b5-839a478eb878",
+     "name": "market_quote",
+     "arguments": "{\"ticker\":\"AMD\"}",
+     "status": "completed"
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_af5bf6b5-afc4-45c5-be17-364082ed2d6d",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "Lisa Su CEO AMD biography role"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "Lisa Su Net Worth 2026: AMD CEO Salary & Success Story",
+       "url": "https://www.businessoutreach.in/lisa-su-net-worth/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Lisa Su - Wikipedia",
+       "url": "http://en.wikipedia.org/wiki/Lisa_Su",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Lisa Su | AMD CEO and Semiconductor Pioneer | Bio - Interesting Engineering",
+       "url": "https://interestingengineering.com/engineers-directory/lisa-su-engineer-biography",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Lisa Su | Tatler Asia",
+       "url": "https://www.tatlerasia.com/people/lisa-su-zh-hant-en",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD\u2019s Lisa Su honored with the 2024 imec Innovation Award",
+       "url": "https://www.imec-int.com/en/press/amds-lisa-su-honored-2024-imec-innovation-award",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Lisa Su - Chair & CEO at AMD | LinkedIn",
+       "url": "https://www.linkedin.com/in/lisasu-amd",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Lisa Su Biography",
+       "url": "https://www.analyticsinsight.net/biography/lisa-su",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Lisa Su Biography: Powering AMD\u2019s Tech Revolution",
+       "url": "https://topmag.co/lisa-su-biography-powering-amds-tech-revolution/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD | Lisa Su \u2013 Women's Power Gap",
+       "url": "https://www.womenspowergap.org/ceo-profile/amd-lisa-su/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "How much AMD stock does CEO Lisa Su actually own?",
+       "url": "https://www.thestreet.com/personalities/how-much-amd-stock-does-ceo-lisa-su-own",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Lisa Su Bio \u2013 AMD CEO & Chairman",
+       "url": "https://www.theofficialboard.com/biography/lisa-su-2",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_346d20ed-4cd1-4788-836b-32814a7f2a30",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD earnings Q2 2026 results"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "Markets - Financial Advisors",
+       "url": "https://markets.financialcontent.com/1discountbrokerage/article/acnnewswire-2026-8-19-amd-reports-second-quarter-2026-financial-results",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Q2 2026 earnings results beat on revenue expectations, but miss on EPS whisper number",
+       "url": "http://www.shacknews.com/article/150246/amd-q2-2026-earnings-results",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD AI Momentum Sets High-Stakes Earnings Stage",
+       "url": "https://www.tradingpedia.com/2026/10/05/amd-ai-momentum-sets-high-stakes-earnings-stage/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AI Chip Market Statistics 2026: NVIDIA, AMD, Broadcom and More",
+       "url": "https://blockonomi.com/ai-chip-market-statistics-2026-nvidia-amd-broadcom-and-more/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's Account Payables Grew By $2.36 Billion Last Quarter, Partially Masking A Free Cash Flow Squeeze Behind Record Earnings",
+       "url": "https://wccftech.com/amd-withheld-2-36-billion-in-supplier-payments-last-quarter-masking-a-free-cash-flow-squeeze-behind-record-earnings/amp/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock Surges on Data Center Growth\u2014What\u2019s Driving It?",
+       "url": "https://bitcoinethereumnews.com/tech/amd-stock-surges-on-data-center-growth-whats-driving-it/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Q2 2026: Record $11.5B Revenue, Data Center Up 107%, Stock Pulls Back to $485",
+       "url": "https://www.tradingkey.com/analysis/stocks/us-stocks/262088719-amd-q2-2026-earnings-data-center-symmetrical-triangle-tradingkey",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Reports Second Quarter 2026 Financial Results",
+       "url": "https://www.nasdaq.com/press-release/amd-reports-second-quarter-2026-financial-results-2026-08-04",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD stock gains as Q2 2026 AI growth and new Piper Sandler target support rally",
+       "url": "https://www.ad-hoc-news.de/boerse/news/corporate-news/amd-stock-gains-as-q2-2026-ai-growth-and-new-piper-sandler-target-support-rally/70111107",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Q2 2026 earnings: Data Center revenue more than doubles",
+       "url": "https://www.tradingkey.com/news/earnings/262076530-tradingkey",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Advanced Micro Devices (NASDAQ: AMD) Stock Rating: Hold Into Q3 FY12/26 Earnings",
+       "url": "https://www.cestriancapitalresearch.com/advanced-micro-devices-nasdaq-amd-stock-rating-hold-into-q3-fy12-26-earnings/",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_5ada4a77-0964-4720-b669-312edaae0002",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD news September October 2026"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "AMD agrees to buy World Labs: AMD stock gains 1.77 percent",
+       "url": "https://www.ad-hoc-news.de/boerse/news/corporate-news/amd-agrees-to-buy-world-labs-amd-stock-gains-1-77-percent/70209349",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD stock gains 2.95 percent as World Labs deal reshapes AI push",
+       "url": "https://www.ad-hoc-news.de/boerse/news/corporate-news/amd-stock-gains-2-95-percent-as-world-labs-deal-reshapes-ai-push/70225205",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD agrees to buy World Labs: AMD stock sits 0.13 percent below its high",
+       "url": "https://www.ad-hoc-news.de/boerse/news/corporate-news/amd-agrees-to-buy-world-labs-amd-stock-sits-0-13-percent-below-its-high/70231968",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD announces $8.2bn acquisition of Fei-Fei Li's start-up World Labs",
+       "url": "https://aichina.news/news/amd-announces-8-2bn-acquisition-of-fei-fei-li-s-start-up-world-labs-mmy9ep/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD introduces Helion. AMD stock gains 1.37 percent",
+       "url": "https://www.ad-hoc-news.de/boerse/corporate-news/amd-introduces-helion-amd-stock-gains-1-37-percent/70338339",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's Instinct security bulletin names two CVEs for one flaw, and explains only one",
+       "url": "https://mixed-news.com/en/amd-sb-6033-rccl-cve-2026-43598-54974-instinct-rocm-7-14/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD agrees to acquire World Labs as Rosenblatt keeps $700 target for AMD stock",
+       "url": "https://www.ad-hoc-news.de/boerse/news/corporate-news/amd-agrees-to-acquire-world-labs-as-rosenblatt-keeps-700-target-for-amd-stock/70239829",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD says a Radeon crash fix is planned, and its own tables date it to July 20",
+       "url": "https://mixed-news.com/en/amd-sb-6034-cve-2026-43603-radeon-linux-null-pointer-dereference/?utm_source=vrdb",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Space-Grade Chip Market Targets $5.78B by 2034",
+       "url": "https://tech-insider.org/amd-space-grade-silicon-market-2026/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Q3 2026 earnings preview",
+       "url": "https://www.el-fondo.com/en/news/amd-reports-third-quarter-results-on-tuesday",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD agrees to acquire World Labs as AMD stock costs EUR 562.80",
+       "url": "https://www.ad-hoc-news.de/boerse/news/corporate-news/amd-agrees-to-acquire-world-labs-as-amd-stock-costs-eur-562-80/70226604",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD, Intel Chip Price Hike 2026: 10% TSMC Cost Pass-Through",
+       "url": "https://tech-insider.org/amd-intel-chip-price-hike-10-percent-tsmc-2026/",
+       "snippet": ""
+      }
+     ]
+    }
+   ],
+   "instructions": "You are Scout, the researcher for IoMarkets.tv, a business-news channel. Write the brief an\nanchor reads before a live interview.\n\nSearch the web for recent, reputable reporting. If the company is listed, call market_quote\nfor its ticker and use that price rather than one from a search result.\n\nWrite plain text with these sections, each a few short lines:\nGUEST: who they are and their role.\nCOMPANY: what it does, size, listed or private.\nRECENT: the two to four most newsworthy developments of the last six months, each dated.\nNUMBERS: figures the guest is likely to cite, each with its source and date.\nQUESTIONS: four open questions, each a different style (explain, challenge, forward-looking,\npersonal). Never the same opening twice.\nCAUTION: anything unconfirmed, disputed or out of date.\n\nThis is journalism, not investment advice: no buy, sell or price-target language. Leave out\npolitics. If you cannot confirm something, say so instead of guessing.\n",
+   "usage": {
+    "input_tokens": 1408,
+    "input_tokens_details": {
+     "cached_tokens": 1393
+    },
+    "output_tokens": 379,
+    "output_tokens_details": {
+     "reasoning_tokens": 133
+    },
+    "total_tokens": 1787
+   },
+   "parallel_tool_calls": true,
+   "store": true,
+   "max_output_tokens": 6000
+  }
+ },
+ {
+  "request": {
+   "model": "muse-spark-1.3",
+   "input": [
+    {
+     "type": "function_call_output",
+     "call_id": "call_3f9f084f-932f-4daf-92b5-839a478eb878",
+     "output": "{\"ticker\": \"AMD\", \"name\": \"Advanced Micro Devices, Inc.\", \"exchange\": \"NasdaqGS\", \"currency\": \"USD\", \"price\": 531.28, \"previous_close\": 516.79, \"change_pct\": 2.8, \"fifty_two_week_high\": 658.52, \"fifty_two_week_low\": 188.22, \"as_of\": \"2026-10-26T20:00:01+00:00\", \"source\": \"Yahoo Finance\"}"
+    }
+   ],
+   "reasoning": {
+    "effort": "medium"
+   },
+   "max_output_tokens": 6000,
+   "instructions": "You are Scout, the researcher for IoMarkets.tv, a business-news channel. Write the brief an\nanchor reads before a live interview.\n\nSearch the web for recent, reputable reporting. If the company is listed, call market_quote\nfor its ticker and use that price rather than one from a search result.\n\nWrite plain text with these sections, each a few short lines:\nGUEST: who they are and their role.\nCOMPANY: what it does, size, listed or private.\nRECENT: the two to four most newsworthy developments of the last six months, each dated.\nNUMBERS: figures the guest is likely to cite, each with its source and date.\nQUESTIONS: four open questions, each a different style (explain, challenge, forward-looking,\npersonal). Never the same opening twice.\nCAUTION: anything unconfirmed, disputed or out of date.\n\nThis is journalism, not investment advice: no buy, sell or price-target language. Leave out\npolitics. If you cannot confirm something, say so instead of guessing.\n",
+   "tools": [
+    {
+     "type": "function",
+     "name": "market_quote",
+     "description": "Last traded price, previous close, day change and 52-week range for one listed security. Use it to check a price or market-value figure; never to recommend a trade.",
+     "parameters": {
+      "properties": {
+       "ticker": {
+        "description": "Exchange ticker as Yahoo Finance writes it, e.g. AAPL, VOD.L, ^GSPC",
+        "pattern": "^[A-Za-z0-9.\\-^=]{1,15}$",
+        "title": "Ticker",
+        "type": "string"
+       }
+      },
+      "required": [
+       "ticker"
+      ],
+      "title": "QuoteArgs",
+      "type": "object"
+     }
+    },
+    {
+     "type": "web_search"
+    }
+   ],
+   "previous_response_id": "resp_6ae07102b3c76dbbec2e4018",
+   "include": [
+    "web_search_call.results"
+   ]
+  },
+  "status": 200,
+  "secs": 28.94,
+  "response": {
+   "top_logprobs": 0,
+   "temperature": 1.0,
+   "top_p": 1.0,
+   "service_tier": "auto",
+   "previous_response_id": "resp_6ae07102b3c76dbbec2e4018",
+   "model": "muse-spark-1.3",
+   "reasoning": {
+    "effort": "medium"
+   },
+   "background": false,
+   "tools": [
+    {
+     "type": "function",
+     "name": "market_quote",
+     "description": "Last traded price, previous close, day change and 52-week range for one listed security. Use it to check a price or market-value figure; never to recommend a trade.",
+     "parameters": {
+      "properties": {
+       "ticker": {
+        "description": "Exchange ticker as Yahoo Finance writes it, e.g. AAPL, VOD.L, ^GSPC",
+        "pattern": "^[A-Za-z0-9.\\-^=]{1,15}$",
+        "title": "Ticker",
+        "type": "string"
+       }
+      },
+      "required": [
+       "ticker"
+      ],
+      "title": "QuoteArgs",
+      "type": "object"
+     }
+    },
+    {
+     "type": "web_search"
+    }
+   ],
+   "tool_choice": "auto",
+   "truncation": "disabled",
+   "id": "resp_6ae0710868723cc5c48a4f23",
+   "object": "response",
+   "status": "completed",
+   "created_at": 1793093896.0,
+   "completed_at": 1793093914.0,
+   "error": null,
+   "incomplete_details": null,
+   "output": [
+    {
+     "type": "reasoning",
+     "id": "rs_6ae0710868723cc5c48a4f23:rs_7af6d358-59e1-454c-ba92-a8b7c19ec829",
+     "summary": [],
+     "status": "completed"
+    },
+    {
+     "type": "message",
+     "id": "rs_fcd45db5-a4b2-4bee-bdcd-0c6e67696e50",
+     "role": "assistant",
+     "content": [
+      {
+       "type": "output_text",
+       "text": "I've got the share price and early headlines \u2014 now digging into the biggest recent moves for the interview.",
+       "annotations": [],
+       "logprobs": []
+      }
+     ],
+     "phase": "commentary",
+     "status": "completed"
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_4e05e9f6-ffe4-4913-9f1f-e1cabab7df4f",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD to acquire World Labs $8.2 billion Reuters"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "AMD bets $8.2B that worlds matter more than words in AI",
+       "url": "https://www.theregister.com/ai-and-ml/2026/09/28/amd-bets-82b-that-worlds-matter-more-than-words-in-ai/5299609",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Nvidia Eyes Physical AI as Next Big Growth Story as AMD Strikes 8.2 Billion Dollar World Labs Deal",
+       "url": "https://qncnews.com/nvidia-eyes-physical-ai-as-next-big-growth-story-as-amd-strikes-8-2-billion-dollar-world-labs-deal/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD chief Lisa Su becomes first female CEO to lead company past $1 trillion market value",
+       "url": "https://www.europesays.com/people/254335/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD agrees to buy World Labs: AMD stock sits 0.13 percent below its high",
+       "url": "https://www.ad-hoc-news.de/boerse/news/corporate-news/amd-agrees-to-buy-world-labs-amd-stock-sits-0-13-percent-below-its-high/70231968",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD\u2019s $8.2 Billion World Labs Deal: A Direct Challenge to Nvidia in AI Accelerators and Model Development",
+       "url": "https://www.oswaldosrm.com/single-post/amd-s-8-2-billion-world-labs-deal-a-direct-challenge-to-nvidia-in-ai-accelerators-and-model-develo",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Market Analysis 2026: World Labs Deal | MatrixPro24",
+       "url": "https://matrixpro24.com/amd-market-analysis/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's Dual Momentum: A $1.2 Billion Helios Win and OpenAI's EPYC Endorsement",
+       "url": "https://www.ad-hoc-news.de/boerse/news/unternehmensnachrichten/amd-s-dual-momentum-a-1-2-billion-helios-win-and-openai-s-epyc-endorsement/70224601",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Market Analysis 2026: World Labs Deal | MatrixPro24",
+       "url": "https://medium.com/@matrixpro24/amd-market-analysis-2026-world-labs-deal-matrixpro24-63f4896a027c",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "The $8.2 Billion Price Tag",
+       "url": "https://siliconsandstudio.substack.com/p/the-82-billion-price-tag",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD\u2019s $8.2 Billion World Labs Deal Could Strengthen Its AI Growth Story",
+       "url": "https://www.barchart.com/story/news/6188743/amds-8-2-billion-world-labs-deal-could-strengthen-its-ai-growth-story",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD to buy Fei-Fei Li\u2019s World Labs in $8.2 billion bet on \u2018physical AI\u2019",
+       "url": "https://935thelloyd.com/2026/09/28/amd-to-acquire-fei-fei-lis-world-labs-in-8-2-billion-deal/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's World Labs Buyout Boosts AI Prospects: Can It Rival NVDA & AVGO?",
+       "url": "https://WWW.ZACKS.COM/stock/news/2998237/amds-world-labs-buyout-boosts-ai-prospects-can-it-rival-nvda-avgo",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_d961c011-51d2-4eea-81ff-9c39621d69be",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD Helion launch October 2026"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "AMD Helion Sizes a Rack Around the Work Agents Do Between Model Calls",
+       "url": "http://dev.to/echakiri/amd-helion-sizes-a-rack-around-the-work-agents-do-between-model-calls-423o",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD introduces Helion: AMD stock sits 16.83 percent below its 52-week high",
+       "url": "https://www.ad-hoc-news.de/boerse/corporate-news/amd-introduces-helion-amd-stock-sits-16-83-percent-below-its-52-week-high/70359744",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD introduces Helion and AMD stock trades at EUR 483.88",
+       "url": "https://www.ad-hoc-news.de/boerse/corporate-news/amd-introduces-helion-and-amd-stock-trades-at-eur-483-88/70382128",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's Helion Rack Separates Agent Execution From Model Inference, With an All-in-One Enterprise Option",
+       "url": "https://www.back2gaming.com/news/amd-helion-agentic-ai-rack-32768-epyc-cores/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Helion racks for AI agents hold up to 32,768 CPU cores",
+       "url": "https://aistockwire.com/blog/amd-helion-agentic-ai-rack-32768-cpu-cores-ocp-november-2026",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Introducing AMD Helion, Agentic AI Compute at Rack Scale",
+       "url": "https://www.globenewswire.com/news-release/2026/10/12/3378907/0/en/introducing-amd-helion-agentic-ai-compute-at-rack-scale.html",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Introducing AMD Helion, Agentic AI Compute at Rack Scale",
+       "url": "https://d1io3yog0oux5.cloudfront.net/_a1ea66ac66320e6b92c6f4d1c6bc55f3/amd/news/2026-10-12_Introducing_AMD_Helion_Agentic_AI_Compute_at_Rack__1301.pdf",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "About Us - Great American Insurance Group - Specialty Property & Casualty Insurance",
+       "url": "https://markets.financialcontent.com/gafri/article/gnwcq-2026-10-12-introducing-amd-helion-agentic-ai-compute-at-rack-scale",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Introducing AMD Helion, Agentic AI Compute at Rack Scale",
+       "url": "https://lifestyle.q923radio.com/story/493963/introducing-amd-helion-agentic-ai-compute-at-rack-scale/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Helion Rack: 32,768 Cores for Agentic AI [2026]",
+       "url": "https://tech-insider.org/amd-helion-agentic-ai-rack-32768-cores-2026/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Introducing AMD Helion, Agentic AI Compute at Rack Scale",
+       "url": "https://usanewshour.com/introducing-amd-helion-agentic-ai-compute-at-rack-scale/397892/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Introducing AMD Helion, Agentic AI Compute at Rack Scale",
+       "url": "https://lifestyle.californiaconsumerbanking.com/story/914629/introducing-amd-helion-agentic-ai-compute-at-rack-scale/",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_0968c8de-022f-4fc3-9c89-eca5a790e186",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD Q2 2026 revenue data center guidance Q3"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "AMD Reports After Bell: AI Chip War Earnings Setup",
+       "url": "https://www.bitrue.com/blog/amd-q2-2026-earnings-ai-chip-war",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Q2 2026 Revenue $11.536B (+50%), Data Center $6.7B (+107%), Q3 $13B Guidance, Helios AI, Taalas Acquisition",
+       "url": "https://www.mitrade.com/au/insights/news/live-news/article-8-2031733-20260826",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD stock rangebound near key support as bearish momentum dominates: weekly analysis",
+       "url": "https://tradersunion.com/news/stocks/show/3910721-amd-rises-1-17percent-this-week/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Q2 2026 Revenue $11.536B (+50%), Data Center $6.7B (+107%), Q3 $13B Guidance, Helios AI, Taalas Acquisition",
+       "url": "https://www.tradingkey.com/analysis/stocks/us-stocks/262130382-amd-q2-2026-11-536b-revenue-50-pct-data-center-6-7b-107-pct-q3-13b-helios-taalas-tradingkey",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock Ahead of Q3 2026 Earnings: Revenue, AI Demand, and Key Risks to Watch",
+       "url": "https://www.weex.com/news/detail/amd-stock-ahead-of-q3-2026-earnings-revenue-ai-demand-and-key-risks-to-watch-sdlqpowdr2lxh4nhk0mun94b",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Key facts: AMD Q2 Data-Center Revenue $6.7B; Price Target Raised to $620",
+       "url": "https://www.tradingview.com/news/tradingview:c9ff0f790a502:0-key-facts-amd-q2-data-center-revenue-6-7b-price-target-raised-to-620/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Price Prediction: Post-Trillion Dollar Hangover or the Next Leg Higher?",
+       "url": "https://cryptospiel.com/amd-price-prediction-post-trillion-dollar-hangover-or-the-next-leg-higher/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's Account Payables Grew By $2.36 Billion Last Quarter, Partially Masking A Free Cash Flow Squeeze Behind Record Earnings",
+       "url": "https://wccftech.com/amd-withheld-2-36-billion-in-supplier-payments-last-quarter-masking-a-free-cash-flow-squeeze-behind-record-earnings/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Advanced Micro Devices (AMD) Financials Overview: Earnings, Revenue, Statements & Ratios | AInvest",
+       "url": "https://www.ainvest.com/stocks/NASDAQ-AMD/financials/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD stock steadies after sector selloff as Q2 2026 AI revenue surge supports outlook",
+       "url": "https://www.ad-hoc-news.de/boerse/news/corporate-news/amd-stock-steadies-after-sector-selloff-as-q2-2026-ai-revenue-surge-supports-outlook/70026862",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_0d70c82b-1934-4f2f-9c6c-4fdffee7b030",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD OpenAI 6 gigawatts EPYC Instinct deal"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "AMD's Trillion-Dollar Threshold: Gigawatt Commitments Meet a Valuation That Demands Perfection",
+       "url": "https://www.ad-hoc-news.de/boerse/news/unternehmensnachrichten/amd-s-trillion-dollar-threshold-gigawatt-commitments-meet-a-valuation-that-demands-perfection/70168030",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD stock jumps as Meta strikes multiyear AI chip deal",
+       "url": "https://stockhouse.com/news/the-market-online-news/2026/02/24/amd-stock-jumps-as-meta-strikes-multiyear-ai-chip-deal",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Investment Report: The AI Datacenter's Credible Second Source",
+       "url": "https://www.dalalbytes.com/research/amd-investment-report.html",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Strikes $60 Billion Multi-Year AI Chip Deal With Meta, Grants Option for Up to 10% Stake to Challenge Nvidia's Footprint",
+       "url": "https://www.ainvest.com/news/amd-strikes-60-billion-multi-year-ai-chip-deal-meta-grants-option-10-stake-challenge-nvidia-footprint-2602/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock Price Forecast \u2014 AMD ($577.31) Drops 4.7% as Hot CPI Hits AI Chips \u2014 $560 Support, $613.50 Trillion Line Overhead",
+       "url": "https://www.tradingnews.com/news/amd-slides-to-577-usd-as-2-beta-meets-5-percent-yields-but-hlios-and-2027-doubling",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "OpenAI's Multi-Billion Dollar Chip Deal with AMD Ignites New AI Hardware Race",
+       "url": "https://markets.financialcontent.com/kelownadailycourier/article/marketminute-2025-10-6-openais-multi-billion-dollar-chip-deal-with-amd-ignites-new-ai-hardware-race",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "OpenAI's $1 Trillion Bet: Custom Chips, Gigawatt Clusters and the Race for AI Supremacy",
+       "url": "https://www.webpronews.com/openais-1-trillion-bet-custom-chips-gigawatt-clusters-and-the-race-for-ai-supremacy/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "An $8.2 Billion Reason to Buy AMD Stock",
+       "url": "https://www.barchart.com/story/news/4925401/an-8-2-billion-reason-to-buy-amd-stock",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Signed OpenAI, Meta and Anthropic. Consensus Already Has Every Gigawatt.",
+       "url": "https://profitmonk.vercel.app/research/2026-09-21-amd-bull",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Is Winning AI Customers \u2014 the Catch Is What Each Win Costs",
+       "url": "https://www.ainvest.com/news/amd-winning-ai-customers-catch-win-costs-2608/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Who Is Lisa Su? AMD's CEO and the AI Chip Bet | TECHi",
+       "url": "https://www.techi.com/leaders/lisa-su/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "How AMD Stock Surged 58% Last Month",
+       "url": "https://www.fool.com/investing/2025/11/04/how-amd-stock-surged-58-last-month/",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_1e0dcbf6-6652-409b-a1a7-1e9eb91d12a0",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD Meta deal MI450 6 gigawatts date"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "Advanced Micro Devices, Inc.",
+       "url": "https://intickers.com/reports/amd/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's $60B Meta Deal: How It Breaks NVIDIA's AI Monopoly",
+       "url": "https://www.techi.com/amd-meta-60b-deal-nvidia-ai-monopoly/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Earnings: $5.8B Data Center, Stock Jumps 14% [2026]",
+       "url": "https://tech-insider.org/amd-stock-ai-data-center-2026/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock Price Forecast \u2014 AMD ($577.31) Drops 4.7% as Hot CPI Hits AI Chips \u2014 $560 Support, $613.50 Trillion Line Overhead",
+       "url": "https://www.tradingnews.com/news/amd-slides-to-577-usd-as-2-beta-meets-5-percent-yields-but-hlios-and-2027-doubling",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's Saudi AI Joint Venture Goes Live \u2014 But the Real Story Is the Pipeline Behind It",
+       "url": "https://www.ainvest.com/news/amd-saudi-ai-joint-venture-live-real-story-pipeline-2609/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock Soars On Q1 Data Center Revenue Surge, Upbeat Q2 Guidance",
+       "url": "https://stocktwits.com/news-articles/markets/equity/amd-stock-soars-q1-data-center-revenue-surge-upbeat-q2-guidance/cZQDf99Re9x",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock's $65 Billion Day: The Meta Deal Cuts Both Ways",
+       "url": "https://www.techi.com/amd-stock-meta-deal-cuts-both-ways/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD, Meta sign 6GW AI deal with big share warrant | AMD 8-K Filing",
+       "url": "https://www.stocktitan.net/sec-filings/AMD/8-k-advanced-micro-devices-inc-reports-material-event-578e7f40272b.html",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "vasudev-gm.github.io/source/_posts/amd-and-meta-expand-partnership-with-6-gw-amd-gpu-deployment.md at 94b6032d5028ef609604a16b92e34c925c7aa582 \u00b7 vasudev-gm/vasudev-gm.github.io",
+       "url": "https://github.com/vasudev-gm/vasudev-gm.github.io/blob/HEAD/source/_posts/amd-and-meta-expand-partnership-with-6-gw-amd-gpu-deployment.md",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Racing to Catch Up With Nvidia, AMD Signs Chips-for-Stock Deal With Meta",
+       "url": "https://medium.com/@muskelone118/racing-to-catch-up-with-nvidia-amd-signs-chips-for-stock-deal-with-meta-c6a3940fed39",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD and Meta Announce Expanded Strategic Partnership to Deploy 6 Gigawatts of AMD GPUs",
+       "url": "https://www.storagenewsletter.com/2026/03/06/amd-and-meta-announce-expanded-strategic-partnership-to-deploy-6-gigawatts-of-amd-gpus/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD's 137% Run Is Pricing the Gigawatts Before They Ship: What the MI450 Proof Has to Show",
+       "url": "https://www.ainvest.com/news/amd-137-run-pricing-gigawatts-ship-mi450-proof-show-2609/",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_f9a7c209-dbf5-49fd-ace2-d7bb6f7f5bb8",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD company description what does EPYC Ryzen Instinct"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "AMD Investment Report: The AI Datacenter's Credible Second Source",
+       "url": "https://www.dalalbytes.com/research/amd-investment-report.html",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Advanced Micro Devices (AMD) earnings date, AI exposure, insider trades",
+       "url": "https://trackaistocks.com/amd",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Price Prediction 2026: Can AI Growth Push AMD Toward $700?",
+       "url": "https://bingx.com/en/learn/article/advanced-micro-devices-amd-stock-outlook-and-price-prediction-is-amd-a-good-investment",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Advanced Micro Devices (AMD) Explained: What Is It? | COINOTAG Glossary",
+       "url": "http://en.coinotag.com/glossary/amd",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock Analysis: Can Its AI Business Escape NVIDIA's Shadow?",
+       "url": "https://cryptoaimeta.com/investments/amd-stock-analysis/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "How AMD's full-stack approach matches the infrastructure demands of agentic AI",
+       "url": "https://creativestrategies.com/research/how-amds-full-stack-approach-matches-the-infrastructure-demands-of-agentic-ai/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Advanced Micro Devices (AMD) Company Profile & Description",
+       "url": "https://stockanalysis.com/stocks/amd/company/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Advanced Micro Devices (1AMD) Stock Price, Quote & Analysis | TipRanks",
+       "url": "https://www.tipranks.com/stocks/it:1amd",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD for IT Managers in India | EPYC & Ryzen PRO",
+       "url": "https://siriusstar.in/it-hardware-solutions/amd-for-it-managers-in-india/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Intel vs AMD: Which CPU Brand Is Better?",
+       "url": "https://thebrandhopper.com/lets-compare/intel-vs-amd-which-cpu-brand-is-better/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD investors Semiconductors",
+       "url": "https://finvincio.com/tag/amd-investors-semiconductors/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock Price & Forecast | NASDAQ \u2014 Advanced Micro Devices, Inc.",
+       "url": "https://meyka.com/stock/AMD/",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "reasoning",
+     "id": "rs_6ae0710868723cc5c48a4f23:rs_245bb155-9167-4341-ac90-6dcddd8364ba",
+     "summary": [],
+     "status": "completed"
+    },
+    {
+     "type": "message",
+     "id": "rs_f8ac2cb3-3096-4d06-b5e6-9a64dad4d0d0",
+     "role": "assistant",
+     "content": [
+      {
+       "type": "output_text",
+       "text": "I've mapped AMD's core business and major AI deals \u2014 now verifying the final details for your brief.",
+       "annotations": [],
+       "logprobs": []
+      }
+     ],
+     "phase": "commentary",
+     "status": "completed"
+    },
+    {
+     "type": "web_search_call",
+     "id": "ws_call_fc0a47da-89e6-473b-aa19-37d6fc49afce",
+     "status": "completed",
+     "action": {
+      "type": "search",
+      "query": "AMD Anthropic 2 gigawatts deal July 2026"
+     },
+     "results": [
+      {
+       "type": "text_result",
+       "title": "AMD and Anthropic Announce Strategic Partnership to Deploy Up to 2 Gigawatts of AMD Instinct MI450 Series GPUs",
+       "url": "https://ir.amd.com/news-events/press-releases/detail/1292/amd-and-anthropic-announce-strategic-partnership-to-deploy-up-to-2-gigawatts-of-amd-instinct-mi450-series-gpus",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD CEO doubles down on AI and the stock market",
+       "url": "https://www.thestreet.com/investing/stocks/amd-ceo-doubles-down-on-ai-stock-market-cpu-meaningful-work",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD CEO doubles down on AI and the stock market",
+       "url": "http://therisktolerance.com/amd-ceo-doubles-down-on-ai-and-the-stock-market/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AI Hardware: Anthropic Builds Chips to Cut Compute Costs",
+       "url": "https://autonainews.com/anthropic-builds-custom-chips-to-cut-its-19b-annual-compute-bill/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Anthropic's $517B compute contracts, and what is public",
+       "url": "https://aistockwire.com/blog/anthropic-517-billion-compute-commitments-nasdaq-september-2026",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD and Anthropic Announce Strategic Partnership to Deploy Up to 2 Gigawatts of AMD Instinct MI450 Series GPUs | FinancialContent",
+       "url": "https://www.financialcontent.com/article/gnwcq-2026-7-22-amd-and-anthropic-announce-strategic-partnership-to-deploy-up-to-2-gigawatts-of-amd-instinct-mi450-series-gpus",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "Nvidia weighs $10B anchor stake in Anthropic's IPO",
+       "url": "https://temperature2.com/p/2026-09-12-nvidia-anchor-investor-anthropic-ipo/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "2026-07-22 | AMD and Anthropic Announce Strategic Partnership to Deploy Up to 2 Gigawatts of AMD Instinct MI450 Series GPUs | TSX:AMD | Press Release",
+       "url": "https://stockhouse.com/news/press-releases/2026/07/22/amd-and-anthropic-announce-strategic-partnership-to-deploy-up-to-2-gigawatts-of",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Committed Up to $5 Billion to Anthropic, and Anthropic's IPO Prospectus Is Reportedly Days Away",
+       "url": "https://WWW.FOOL.COM/investing/2026/09/05/amd-committed-up-to-usd5-billion-to-anthropic-and-anthropic-s-ipo-prospectus-is-reportedly-days-away/",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Anthropic Partnership 2026: $5B Investment, 2GW MI450 GPUs",
+       "url": "https://www.bitrue.com/blog/amd-anthropic-partnership-2026-5-billion-2gw",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Stock Surges 10% on Anthropic AI Deal: Can It Challenge Nvidia?",
+       "url": "https://www.kucoin.com/blog/amd-anthropic-ai-deal-nvidia-competition",
+       "snippet": ""
+      },
+      {
+       "type": "text_result",
+       "title": "AMD Anthropic Partnership to Deploy Up to 2GW of MI450 GPUs | AMD Stock News",
+       "url": "https://www.stocktitan.net/news/AMD/amd-and-anthropic-announce-strategic-partnership-to-deploy-up-to-2-izl13ls5y2s9.html",
+       "snippet": ""
+      }
+     ]
+    },
+    {
+     "type": "reasoning",
+     "id": "rs_6ae0710868723cc5c48a4f23:rs_daca06d1-c081-401e-bfa1-ab414558a8ac",
+     "summary": [],
+     "status": "completed"
+    },
+    {
+     "type": "message",
+     "id": "msg_e5a755f3-34f8-4e4f-871c-949573a8889a",
+     "role": "assistant",
+     "content": [
+      {
+       "type": "output_text",
+       "text": "GUEST:\nDr. Lisa Tzu-Fang Su is President and CEO of AMD (2014-present) and Chair of AMD (2022-present).\nShe joined AMD in 2012 as senior vice president and general manager of Global Business Units, and was promoted to president and CEO in 2014.\nShe became Chair in February 2022 after the Xilinx acquisition closed.\nShe holds a Ph.D. in electrical engineering from MIT and was previously vice president of IBM's Semiconductor Research and Development Center.\nBefore AMD, she was Chief Technology Officer and VP and General Manager of Networking and Multimedia at Freescale Semiconductor.\n\nCOMPANY:\nAdvanced Micro Devices, Inc. (NASDAQ: AMD) is a fabless semiconductor company.\nIt sells into three reporting segments: Data Center (EPYC server CPUs, Instinct AI accelerators, Pensando networking), Client and Gaming (Ryzen processors, Radeon graphics, semi-custom console APUs), and Embedded (Xilinx FPGAs and adaptive SoCs).\nIts portfolio includes EPYC server CPUs, Instinct data-center GPUs, Ryzen client processors, Radeon graphics, embedded products, networking technology, and ROCm AI software.\nIt is listed on Nasdaq. Market quote for October 26, 2026: $531.28, previous close $516.79, up 2.8% on the day.\n\nRECENT:\n1. July 22, 2026 - Strategic partnership with Anthropic. AMD and Anthropic announced a partnership to deploy up to 2 gigawatts of AMD Instinct MI450 Series GPUs in AMD Helios rack-scale solutions, with first gigawatt beginning in first half of 2027.\nAs part of that announcement, AMD committed to make a strategic equity investment of up to $5 billion in Anthropic.\n\n2. August 4, 2026 - Q2 2026 financial results. AMD reported record Q2 revenue of $11.5 billion, with Data Center revenue of $6.7 billion accounting for 58% of total revenue.\nNon-GAAP earnings were $1.66 per share, beating Wall Street consensus of $1.62 but below the $1.69 Whisper Number estimate.\nFor Q3 the company guided revenue of approximately $13 billion plus or minus $300 million.\n\n3. September 28, 2026 - Agreement to acquire World Labs. AMD said it would acquire Fei-Fei Li's AI startup World Labs in an all-stock deal valued at $8.2 billion.\nThe startup builds AI models of three dimensional spaces and tools for training robots, and the deal is expected to close by the end of 2026.\nLi is set to join AMD as executive vice president and chief scientist, reporting directly to Su.\n\n4. October 12, 2026 - Introduction of AMD Helion. AMD introduced the AMD Helion agentic AI rack, an open blueprint for agentic AI infrastructure based on an Open Compute Project spec-design and powered by AMD compute.\nExamples include a CPU-only rack with up to 32,768 CPU cores and an enterprise configuration combining AMD EPYC processors with AMD Instinct MI350P GPUs.\n\nNUMBERS:\n- Q2 2026 revenue $11.536 billion, up 50% year over year. Source: AMD Q2 2026 earnings release via Nasdaq / FinanceFeeds, August 4, 2026.\n- Q2 2026 Data Center revenue $6.7 billion, up 107% year over year, 58% of total revenue. Source: AMD Q2 2026 earnings reporting, August 2026.\n- Q2 2026 non-GAAP EPS $1.66, GAAP diluted EPS $1.38, up 156% year over year on GAAP basis. Source: AMD Q2 2026 results, August 4, 2026.\n- Q3 2026 guidance: revenue approximately $13.0 billion plus or minus $300 million. Source: AMD Q2 earnings call / guidance, August 4, 2026.\n- World Labs acquisition value approximately $8.2 billion in AMD stock, expected close by end of 2026 subject to approvals. Source: AMD announcement, September 28, 2026, via Reuters.\n- Anthropic partnership: up to 2 gigawatts of MI450 Series GPUs plus AMD equity investment up to $5 billion. Source: AMD press release, July 22, 2026.\n- Helion platform: up to 32,768 CPU cores in CPU-only rack example. Source: AMD announcement coverage, October 12, 2026.\n- AMD share price $531.28 on Nasdaq as of October 26, 2026, 52-week range $188.22 to $658.52. Source: market_quote via Yahoo Finance, October 26, 2026.\n\nQUESTIONS:\nExplain for a non-technical audience how agentic AI changes what a data-center rack has to do, and where Helion fits in.\nCritics argue gigawatt announcements and equity-linked AI deals pull forward demand that may be slow to convert to revenue - how do you answer that concern for AMD?\nLooking toward first Helios-based gigawatt deployments in late 2026 and first half of 2027, what milestones should viewers watch to judge progress?\nYou personally led AMD's turn toward high-performance computing more than a decade ago - what lesson from that period guides you most in this AI build-out?\n\nCAUTION:\nWorld Labs $8.2 billion deal completion by end of 2026 is pending regulatory approvals and customary closing conditions, not yet confirmed closed.\nAnthropic first-gigawatt deployment in H1 2027 and OpenAI/Meta gigawatt frameworks starting H2 2026 are forward commitments, not delivered revenue - treat as planned.\nThird-party estimates of cumulative revenue from gigawatt deals and of AMD's share of data-center AI accelerator revenue (e.g. 5% to 7% in 2026) are analyst estimates, not AMD guidance.\nReports of a roughly 10% supply-price increase in Q4 2026 trace to supply-chain firms via tech press, not confirmed by AMD - do not present as company policy.\nMarket capitalization near $1 trillion claims in some coverage could not be confirmed for broadcast date - use current market_quote instead.\nQ3 2026 results are scheduled for November 3, 2026 - Q3 guidance figures remain outlook, not results.\n",
+       "annotations": [],
+       "logprobs": []
+      }
+     ],
+     "status": "completed"
+    }
+   ],
+   "instructions": "You are Scout, the researcher for IoMarkets.tv, a business-news channel. Write the brief an\nanchor reads before a live interview.\n\nSearch the web for recent, reputable reporting. If the company is listed, call market_quote\nfor its ticker and use that price rather than one from a search result.\n\nWrite plain text with these sections, each a few short lines:\nGUEST: who they are and their role.\nCOMPANY: what it does, size, listed or private.\nRECENT: the two to four most newsworthy developments of the last six months, each dated.\nNUMBERS: figures the guest is likely to cite, each with its source and date.\nQUESTIONS: four open questions, each a different style (explain, challenge, forward-looking,\npersonal). Never the same opening twice.\nCAUTION: anything unconfirmed, disputed or out of date.\n\nThis is journalism, not investment advice: no buy, sell or price-target language. Leave out\npolitics. If you cannot confirm something, say so instead of guessing.\n",
+   "usage": {
+    "input_tokens": 91841,
+    "input_tokens_details": {
+     "cached_tokens": 39974
+    },
+    "output_tokens": 3831,
+    "output_tokens_details": {
+     "reasoning_tokens": 1565
+    },
+    "total_tokens": 95672
+   },
+   "parallel_tool_calls": true,
+   "store": true,
+   "max_output_tokens": 6000
+  }
+ }
+]
