@@ -109,7 +109,9 @@ def test_live_interview_round_trip(app_and_replay):
     app, replay = app_and_replay
     with TestClient(app).websocket_connect("/ws/live") as ws:
         ws.send_json({"type": "start", "brief": "GUEST: Margherita", "keywords": ["Vodafone"]})
-        assert ws.receive_json() == {"type": "ready", "session": "fake"}
+        ready = ws.receive_json()
+        assert ready["type"] == "ready" and ready["session"] == "fake"
+        assert len(ready["room"]) >= 24  # an unguessable key for this interview's media
         seen = _receive_until(ws, "anchor_line")
         assert seen[-1]["text"] == "Welcome, Margherita."
         ws.send_json({"type": "anchor", "speaking": True})

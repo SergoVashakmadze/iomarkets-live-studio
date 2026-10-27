@@ -11,6 +11,20 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: the segment, built while the interview runs
+
+- `src/studio/segment.py` + page: the page records the guest's camera and mic, restarting at
+  each turn boundary, and uploads each answer with the offset where the guest began (so the
+  first word is kept). Each answer is cut out with SAM 3.1 in the background, two at a time;
+  at the end the session drains the cut-outs before closing, and **Build segment** joins the
+  answers in turn order into one MP4.
+- A consent checkbox gates Go live. Raw uploads are deleted when their cut-out is done; cut
+  clips are deleted 30 minutes after the interview ends. Media URLs need the interview's
+  unguessable key (and the token when set); only server-made file names are served.
+- Measured live: two answers (12 s and 4 s) cut out in 29 s and 22 s, concurrently, while the
+  interview carried on; the 16 s segment was ready 17 s after the interview ended.
+- Also: `secret rotation` (`docs/SECRETS.md`, `STUDIO_TOKEN_PREV`).
+
 ### Oct 27: Scout's editor on Muse Spark Open (open weights)
 
 - `src/studio/meta/open_weights.py`: Muse Spark Open served by Fireworks, over the same

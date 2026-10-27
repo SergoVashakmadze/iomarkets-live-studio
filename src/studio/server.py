@@ -26,8 +26,8 @@ from collections.abc import Callable
 from importlib.resources import files
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 from studio.agents.anchor import Anchor
@@ -37,6 +37,7 @@ from studio.asr import AsrError, GuestListener
 from studio.live import LiveSession
 from studio.meta.open_weights import open_weights_client
 from studio.meta.responses import ResponsesClient
+from studio.segment import MAX_CLIP_BYTES, ROOMS, SegmentRoom
 
 MAX_BRIEF_CHARS = 20_000
 MAX_FRAME_BYTES = 3_000_000  # one JPEG camera frame
@@ -95,6 +96,51 @@ def create_app(
             "edited_by": brief.edited_by,
         }
 
+    def _room(key: str, token: str | None) -> SegmentRoom:
+        if not _token_ok(token):
+            raise HTTPException(403, "bad token")
+        room = ROOMS.get(key)
+        if room is None:
+            raise HTTPException(404, "no such interview")
+        return room
+
+    @app.post("/api/answers/{key}/{turn}")
+    async def answer(
+        key: str,
+        turn: int,
+        request: Request,
+        start: float = Query(0.0, ge=0, le=600),
+        token: str | None = Query(None),
+    ) -> dict[str, str]:
+        """One guest answer as WebM, recorded by the page; cut out in the background."""
+        room = _room(key, token)
+        if not 0 <= turn < 10_000:
+            raise HTTPException(400, "bad turn")
+        body = bytearray()
+        async for chunk in request.stream():
+            body += chunk
+            if len(body) > MAX_CLIP_BYTES:
+                raise HTTPException(413, "clip too large")
+        if not body:
+            raise HTTPException(400, "empty clip")
+        room.add_answer(turn, bytes(body), start)
+        return {"status": "accepted"}
+
+    @app.post("/api/segment/{key}")
+    async def segment(key: str, token: str | None = Query(None)) -> dict[str, str]:
+        room = _room(key, token)
+        try:
+            return {"file": await room.build_segment()}
+        except ValueError as e:
+            raise HTTPException(409, str(e)) from e
+
+    @app.get("/media/{key}/{name}")
+    async def media(key: str, name: str, token: str | None = Query(None)) -> FileResponse:
+        path = _room(key, token).media_path(name)
+        if path is None:
+            raise HTTPException(404, "no such file")
+        return FileResponse(path, media_type="video/mp4", filename=name)
+
     @app.websocket("/ws/live")
     async def live(ws: WebSocket, token: str | None = Query(None)) -> None:
         if not _token_ok(token):
@@ -109,11 +155,14 @@ def create_app(
         try:
             await _run_live(ws, start, client_factory, listener_factory)
         except WebSocketDisconnect:
-            pass
+            return
         except AsrError as e:
             with contextlib.suppress(Exception):
                 await ws.send_json({"type": "error", "message": f"speech recognition: {e}"})
                 await ws.close(code=1011)
+            return
+        with contextlib.suppress(Exception):  # a clean close once the cut-outs are done
+            await ws.close(code=1000)
 
     return app
 
@@ -130,8 +179,9 @@ async def _run_live(
         listener = listener_factory(
             keywords=start.keywords, anchor_speaking=lambda: session.anchor_speaking
         )
+        room = SegmentRoom(client, session.send)
         async with listener:
-            await session.send({"type": "ready", "session": listener.session_id})
+            await session.send({"type": "ready", "session": listener.session_id, "room": room.key})
             await session.open()
 
             async def from_page() -> None:
@@ -158,10 +208,14 @@ async def _run_live(
                 async for event in listener.events():
                     await session.on_event(event)
                 with contextlib.suppress(Exception):  # the page may already be gone
-                    await session.send({"type": "ended"})
+                    await session.send({"type": "ended", "cutouts_pending": room.busy})
             finally:
                 reader.cancel()
                 await session.close()
+                await room.drain()
+                room.close()
+                with contextlib.suppress(Exception):
+                    await session.send({"type": "cutouts_done"})
 
 
 def _jpeg(b64: Any) -> bytes | None:
