@@ -17,9 +17,11 @@ Two things the docs and our own measurements (2026-10-26) make us handle here:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import random
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -216,9 +218,67 @@ class ResponsesClient:
             )
         return resp
 
-    async def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+    async def create_raw(self, body: dict[str, Any], *, timeout: float | None = None) -> Response:
+        """A Responses call with a caller-built body, for models without roles (SAM)."""
+        return Response.parse(await self._post("/responses", body, timeout=timeout))
+
+    async def stream_text(
+        self, body: dict[str, Any], *, timeout: float | None = None
+    ) -> AsyncIterator[str]:
+        """Stream a Responses call and yield its output text deltas as they arrive.
+
+        Not retried: a stream that fails part-way cannot be resumed.
+        """
+        body = {**body, "stream": True}
+        async with self._http.stream("POST", "/responses", json=body, timeout=timeout) as r:
+            if r.status_code >= 400:
+                await r.aread()
+                raise _error(r)
+            async for line in r.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if not data or data == "[DONE]":
+                    continue
+                event = json.loads(data)
+                kind = event.get("type")
+                if kind == "response.output_text.delta":
+                    yield event.get("delta", "")
+                elif kind in ("response.failed", "response.incomplete", "error"):
+                    err = event.get("error") or (event.get("response") or {}).get("error") or {}
+                    raise MetaAPIError(200, err.get("message") or f"stream ended: {kind}")
+                elif kind == "response.completed":
+                    return
+
+    async def upload_file(self, path: str, *, expires_seconds: int = 3600) -> str:
+        """Upload to the Files API for inference; returns the file id.
+
+        Files never expire unless told to, so every upload sets an expiry (one hour, the
+        minimum) as a backstop to deleting it explicitly.
+        """
+        data = {
+            "purpose": "user_data",
+            "expires_after[anchor]": "created_at",
+            "expires_after[seconds]": str(expires_seconds),
+        }
+        with open(path, "rb") as f:
+            name = os.path.basename(path)
+            r = await self._http.post("/files", data=data, files={"file": (name, f)}, timeout=600)
+        if r.status_code >= 400:
+            raise _error(r)
+        return r.json()["id"]
+
+    async def delete_file(self, file_id: str) -> None:
+        r = await self._http.delete(f"/files/{file_id}")
+        if r.status_code >= 400 and r.status_code != 404:
+            raise _error(r)
+
+    async def _post(
+        self, path: str, body: dict[str, Any], *, timeout: float | None = None
+    ) -> dict[str, Any]:
+        extra = {"timeout": timeout} if timeout else {}
         for attempt in range(self.max_retries + 1):
-            r = await self._http.post(path, json=body)
+            r = await self._http.post(path, json=body, **extra)
             if r.status_code < 400:
                 return r.json()
             if r.status_code not in RETRYABLE or attempt == self.max_retries:

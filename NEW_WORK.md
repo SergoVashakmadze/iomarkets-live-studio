@@ -11,6 +11,20 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: guest cutout (SAM 3.1)
+
+- `src/studio/cutout.py` + `studio cutout IN OUT [--background IMG]`: normalise any clip
+  (WebM included) to H.264 MP4, upload it with a one-hour expiry, stream SAM 3.1 ("person"),
+  delete the upload, pick the guest (most mask area), build full-frame mattes from box-local
+  masks, and composite the guest over the studio background with ffmpeg.
+- Masks are decoded with Meta's `meta-sam-parser` (a dependency, not vendored). Its full parser
+  decodes each mask twice in pure Python (~0.76 s a frame); lines are split here to the grammar
+  it documents and each mask decoded once, in a process pool, while SAM is still streaming.
+  A test checks every mask against Meta's parser.
+- Measured: a 12 s clip goes from 251 s to 25 s end to end (SAM itself 1.6x real time); $0.06.
+- Test footage was one of IoMarkets.tv's synthetic anchors over a generated background, never
+  a real guest; no footage is in the repo.
+
 ### Oct 27: the live studio (page, socket, Anchor, barge-in)
 
 - `src/studio/server.py` + `src/studio/web/index.html` (`studio serve`): one page to prepare a
