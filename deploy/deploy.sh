@@ -14,7 +14,7 @@ umask 077
 cd "$(dirname "$0")/.."
 ENV_FILE="${1:-.env}"
 BUDGET="${2:-10}"
-MODAL=(uv run --no-project --with "modal==1.6.1" modal)
+MODAL=(uv run --no-project --with "modal==1.6.1" --with "python-dotenv==1.2.4" modal)  # --from-dotenv needs it
 OUT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/iomarkets-studio"
 LINK_FILE="$OUT_DIR/judges-link.txt"
 

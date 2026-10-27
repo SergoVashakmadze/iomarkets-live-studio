@@ -30,7 +30,10 @@ is the daily Meta budget in USD. The script:
 4. checks the page and `/api/budget`, and writes the judges' link (URL with the token) to
    `~/.config/iomarkets-studio/judges-link.txt`, mode 600.
 
-Re-running redeploys and rotates the token. Once judges have a link, rotate with overlap
+To ship new code without touching the secret or the judges' link:
+`uv run --no-project --with modal==1.6.1 modal deploy deploy/modal_app.py`.
+
+Re-running `deploy.sh` redeploys and rotates the token. Once judges have a link, rotate with overlap
 instead (`docs/SECRETS.md`).
 
 ## Limits that shaped the setup

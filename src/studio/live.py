@@ -121,6 +121,13 @@ class LiveSession:
         if self.desk:
             self._spawn(self._read_chart(jpeg))
 
+    async def drain(self, timeout: float = 30) -> None:
+        """At the end: let fact checks and research already running finish, so the guest's
+        last answer is checked too. Measured on Modal 2026-10-27: a check could still be in
+        flight several seconds after the interview ended, and was being cancelled."""
+        if self._background:
+            await asyncio.wait(list(self._background), timeout=timeout)
+
     async def close(self) -> None:
         self._cancel_reply()
         for task in list(self._background):
