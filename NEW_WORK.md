@@ -11,7 +11,22 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
-_Nothing yet: the building period opens Oct 27._
+### Oct 27: Responses client, tool loop, Scout brief
+
+- `src/studio/meta/responses.py`: client for Meta's Responses API. Each call names a role with
+  its own `reasoning.effort` and `max_output_tokens`; an empty answer (budget spent on
+  reasoning) raises instead of returning blank; 429/500/503 retry with `Retry-After`. Progress
+  messages (`phase: "commentary"`) are kept out of the answer text.
+- `src/studio/agents/loop.py`: tool loop on `previous_response_id`, pydantic-validated
+  arguments (Meta's `strict` is off), bad calls returned to the model as errors, turn cap.
+  Built-in `web_search` with `include: ["web_search_call.results"]`, the only way sources come
+  back (measured: Spark adds no `url_citation` annotations).
+- `src/studio/tools/market.py`: `market_quote(ticker)` function tool.
+- `src/studio/agents/scout.py` + `studio brief "<guest, company>"` CLI: a pre-interview brief
+  with the web pages it consulted.
+- Tests replay a live recording (`tests/fixtures/scout_amd_2026-10-27.json`), so CI needs no key.
+
+Commits: see the `feat/day1-responses-agent-loop` PR.
 
 ## Pre-existing, called but not contained here
 

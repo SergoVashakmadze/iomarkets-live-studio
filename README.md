@@ -14,10 +14,20 @@ broadcast-ready segment.
 See [`NEW_WORK.md`](NEW_WORK.md). It lists every feature built in the event window and, separately,
 every pre-existing service this repo calls but does not contain.
 
+## Try it
+
+```sh
+uv sync
+cp .env.example .env   # add your META_API_KEY
+uv run studio brief "Margherita Della Valle, CEO of Vodafone"
+uv run pytest          # no key needed: tests replay recorded responses
+```
+
 ## Meta models used
 
-Filled in as each piece lands: Muse Spark (agents), Muse Voice Transcribe (live guest speech),
-SAM 3.1 (guest cutout), and Muse Spark Open (one agent on open weights).
+- **In use:** Muse Spark 1.3 on the Responses API, with built-in web search (Scout, since Oct 27).
+- **Planned:** Muse Voice Transcribe (live guest speech), SAM 3.1 (guest cutout), and Muse Spark
+  Open (one agent on open weights).
 
 ## Licence
 
