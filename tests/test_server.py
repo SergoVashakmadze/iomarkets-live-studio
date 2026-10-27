@@ -78,6 +78,7 @@ def app_and_replay():
     app = create_app(
         client_factory=lambda: ResponsesClient(api_key="k", transport=httpx.MockTransport(router)),
         listener_factory=FakeListener,
+        editor_factory=lambda: None,
     )
     return app, router
 
@@ -101,6 +102,7 @@ def test_page_is_served(app_and_replay):
     r = TestClient(app).get("/")
     assert r.status_code == 200 and "IoMarkets Live Studio" in r.text
     assert "AI system" in r.text  # the synthetic-anchor disclosure stays on the page
+    assert "Built with Muse Spark Open" in r.text  # required by the Muse Model License
 
 
 def test_live_interview_round_trip(app_and_replay):

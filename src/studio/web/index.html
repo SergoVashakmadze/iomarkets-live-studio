@@ -115,7 +115,7 @@
 
   <footer>The anchor is an AI system and its voice is synthetic. Guest speech is transcribed
     by Meta's Muse Voice Transcribe; the anchor, chart reading and fact-checks run on Muse Spark. Nothing here is investment
-    advice.</footer>
+    advice. Built with Muse Spark Open.</footer>
 </main>
 
 <script>
@@ -155,7 +155,8 @@ $("prepare").onclick = async () => {
     const data = await r.json();
     $("brief").value = data.text;
     $("sources").textContent =
-      `${data.searches.length} searches, ${data.sources.length} pages consulted.`;
+      `${data.searches.length} searches, ${data.sources.length} pages consulted.` +
+      (data.edited_by ? ` Edited on Muse Spark Open.` : "");
     setStatus("Brief ready");
   } catch (e) {
     setStatus("Brief failed");
