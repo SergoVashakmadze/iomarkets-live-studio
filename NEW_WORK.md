@@ -11,6 +11,18 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: live guest speech (Muse Voice Transcribe)
+
+- `src/studio/asr.py`: realtime ASR session in ENDPOINTING mode: handshake with guest
+  keywords, a pacer that holds audio to real time and fills gaps with silence, `endStream` to
+  finish. A turn tracker keyed by `turnId` turns server messages into guest-started (flagged as
+  a barge-in when the anchor is speaking), partial, paused and final-turn events.
+- `studio listen [--file F] [--keyword K]`: the microphone or a file, transcribed turn by turn.
+- Measured live: `speechStart` 0.2-0.4 s after the guest starts, final text 0.3-0.7 s after
+  they stop; connect plus handshake 1.9 s, so the session opens before the guest speaks.
+- Tests replay the recorded session (`tests/fixtures/asr_two_turns_2026-10-27.json`; the audio
+  was synthesised with ffmpeg's flite, no real voice).
+
 ### Oct 27: Responses client, tool loop, Scout brief
 
 - `src/studio/meta/responses.py`: client for Meta's Responses API. Each call names a role with

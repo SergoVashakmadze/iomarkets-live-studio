@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.9",
     # httpx pulls certifi in; 2026.10.23 dropped emSign roots (CLAUDE.md, eMudhra compromise).
     "certifi>=2026.10.23",
+    "websockets>=14",
 ]
 
 [project.scripts]
