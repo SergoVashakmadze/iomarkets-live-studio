@@ -14,21 +14,24 @@ Meta is the real cost. The app meters it (`studio/ledger.py`) and refuses new wo
 day's spend reaches `STUDIO_DAILY_BUDGET_USD`; the Meta console's spend limit is the backstop.
 $10 a day is about 7 full sessions; raise it for the judging window if needed.
 
-## One-time setup (operator)
+## Deploying (operator, about 5 minutes)
 
-1. Log in to Modal: `uvx modal token new` (opens a browser).
-2. Make a studio token for the judges' link, without it passing through chat:
-   `umask 077; python3 -c "import secrets; print(secrets.token_urlsafe(32))" > studio-token.txt`
-3. Create the secret in the Modal dashboard (Secrets → Create → Custom), named
-   `iomarkets-studio`, with keys `META_API_KEY`, `FIREWORKS_API_KEY`, `STUDIO_TOKEN` (the
-   contents of `studio-token.txt`) and `STUDIO_DAILY_BUDGET_USD` (e.g. `10`). Pasting there keeps
-   the values out of shell history; never put them on a command line.
-4. Deploy from the repo root: `uvx modal deploy deploy/modal_app.py`. Modal prints the URL
-   (`https://<workspace>--iomarkets-live-studio-web.modal.run`).
-5. The judges' link is `<URL>/?token=<contents of studio-token.txt>`. Then `shred -u studio-token.txt`
-   once the link is saved where you submit it.
+```sh
+bash deploy/deploy.sh ../iomarkets.tv-newsroom/.env 10
+```
 
-Rotation of every value above: `docs/SECRETS.md`.
+The first argument is the `.env` holding `META_API_KEY` (and `FIREWORKS_API_KEY`); the second
+is the daily Meta budget in USD. The script:
+
+1. logs in to Modal if needed (`modal token new` opens a browser: the one manual step);
+2. creates the Modal secret `iomarkets-studio` from those two keys, a newly generated
+   `STUDIO_TOKEN` and the budget; nothing is printed, and the temporary file is shredded;
+3. deploys `deploy/modal_app.py` (Modal 1.6.1, pinned);
+4. checks the page and `/api/budget`, and writes the judges' link (URL with the token) to
+   `~/.config/iomarkets-studio/judges-link.txt`, mode 600.
+
+Re-running redeploys and rotates the token. Once judges have a link, rotate with overlap
+instead (`docs/SECRETS.md`).
 
 ## Limits that shaped the setup
 
