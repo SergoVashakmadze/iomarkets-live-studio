@@ -15,6 +15,7 @@ dependencies = [
     "uvicorn>=0.32",
     "meta-sam-parser>=0.1.0",
     "numpy>=2.1",
+    "edge-tts>=7.3.1",
 ]
 
 [project.scripts]

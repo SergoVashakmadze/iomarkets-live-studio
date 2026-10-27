@@ -40,6 +40,7 @@ from studio.live import LiveSession
 from studio.meta.open_weights import open_weights_client
 from studio.meta.responses import ResponsesClient
 from studio.segment import MAX_CLIP_BYTES, ROOMS, SegmentRoom
+from studio.tts import synthesize
 
 MAX_BRIEF_CHARS = 20_000
 MAX_FRAME_BYTES = 1_400_000  # one JPEG frame; base64 must fit a 2 MiB WebSocket message (Modal)
@@ -208,7 +209,8 @@ async def _run_live(
 ) -> None:
     async with client_factory() as client:
         desk = FactDesk(client, start.brief)
-        session = LiveSession(Anchor(client, start.brief), ws.send_json, desk)
+        voice = None if os.environ.get("STUDIO_VOICE") == "browser" else synthesize
+        session = LiveSession(Anchor(client, start.brief), ws.send_json, desk, voice)
         listener = listener_factory(
             keywords=start.keywords, anchor_speaking=lambda: session.anchor_speaking
         )

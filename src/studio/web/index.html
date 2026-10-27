@@ -133,7 +133,7 @@
     </div>
   </section>
 
-  <footer>The anchor is an AI system and its voice is synthetic. Guest speech is transcribed
+  <footer>The anchor is an AI system and its voice is synthetic (Microsoft Edge text-to-speech). Guest speech is transcribed
     by Meta's Muse Voice Transcribe; the anchor, chart reading and fact-checks run on Muse Spark. Nothing here is investment
     advice. Built with Muse Spark Open.</footer>
 </main>
@@ -294,15 +294,78 @@ function stopMic() {
   stream = audio = null;
 }
 
-// Anchor voice: the browser's speech synthesis for now; it stops instantly on barge-in.
+// Anchor voice: the server's neural voice, a sentence at a time as it arrives; the browser's
+// own voice if that audio is late (3 s) or fails. Both stop at once on barge-in.
 
-function speak(text) {
+let player = null;                       // AudioContext for anchor audio
+let voiceLine = null;                    // {id, text, parts: Map, next, source, timer, fallback}
+let speakingFlag = false;
+
+function setSpeaking(on) {
+  if (on === speakingFlag) return;
+  speakingFlag = on;
+  send({ type: "anchor", speaking: on });
+  setStatus(on ? "Anchor speaking" : "Listening", true);
+}
+
+function stopVoice() {
+  if (voiceLine) {
+    clearTimeout(voiceLine.timer);
+    try { voiceLine.source?.stop(); } catch {}
+    voiceLine = null;
+  }
+  speechSynthesis.cancel();
+  setSpeaking(false);
+}
+
+function browserVoice(text) {
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-GB";
-  u.onstart = () => { send({ type: "anchor", speaking: true }); setStatus("Anchor speaking", true); };
-  u.onend = u.onerror = () => { send({ type: "anchor", speaking: false }); setStatus("Listening", true); };
+  u.onstart = () => setSpeaking(true);
+  u.onend = u.onerror = () => setSpeaking(false);
   speechSynthesis.speak(u);
+}
+
+function speak(id, text) {
+  stopVoice();
+  const line = { id, text, parts: new Map(), next: 0, source: null, fallback: false };
+  line.timer = setTimeout(() => fallBack(line), 3000);
+  voiceLine = line;
+}
+
+function fallBack(line) {
+  if (voiceLine !== line || line.next > 0 || line.source) return;
+  line.fallback = true;
+  browserVoice(line.text);
+}
+
+async function onAudio(m) {
+  const line = voiceLine;
+  if (!line || line.id !== m.id || line.fallback) return;   // stopped, superseded or fell back
+  const bytes = Uint8Array.from(atob(m.mp3), (c) => c.charCodeAt(0));
+  player ??= new AudioContext();
+  line.parts.set(m.part, { buffer: await player.decodeAudioData(bytes.buffer), last: m.last });
+  if (!line.source) playNext(line);
+}
+
+function playNext(line) {
+  if (voiceLine !== line) return;
+  const part = line.parts.get(line.next);
+  if (!part) { line.source = null; return; }               // wait for the next sentence
+  clearTimeout(line.timer);
+  const src = player.createBufferSource();
+  src.buffer = part.buffer;
+  src.connect(player.destination);
+  src.onended = () => {
+    if (voiceLine !== line) return;
+    line.next += 1;
+    line.source = null;
+    if (part.last) { voiceLine = null; setSpeaking(false); } else playNext(line);
+  };
+  line.source = src;
+  setSpeaking(true);
+  src.start();
 }
 
 function send(msg) {
@@ -312,6 +375,8 @@ function send(msg) {
 // Live session
 
 $("go").onclick = async () => {
+  player ??= new AudioContext();         // created on a click, so the browser lets it play
+  player.resume();
   const brief = $("brief").value.trim();
   if (!brief) { setStatus("Prepare a brief first"); return; }
   if (!$("consent").checked) { setStatus("Confirm the guest's consent first"); return; }
@@ -327,7 +392,7 @@ $("go").onclick = async () => {
   setStatus("Connecting…");
   ws.onopen = () => ws.send(JSON.stringify({ type: "start", brief, keywords }));
   ws.onmessage = (e) => onMessage(JSON.parse(e.data));
-  ws.onclose = () => { stopRecorder(); stopMic(); speechSynthesis.cancel(); setStatus("Off air");
+  ws.onclose = () => { stopRecorder(); stopMic(); stopVoice(); setStatus("Off air");
                        $("go").disabled = false; $("end").disabled = true; $("chart").disabled = true; };
 };
 
@@ -335,7 +400,7 @@ $("end").onclick = () => {
   send({ type: "stop" });
   stopRecorder();
   stopMic();
-  speechSynthesis.cancel();
+  stopVoice();
   $("end").disabled = true;
 };
 
@@ -393,10 +458,16 @@ async function onMessage(m) {
       break;
     case "anchor_line":
       addLine("Anchor (AI)", m.text, "anchor");
-      speak(m.text);
+      speak(m.id, m.text);
+      break;
+    case "anchor_audio":
+      onAudio(m);
+      break;
+    case "anchor_audio_failed":
+      if (voiceLine?.id === m.id && !voiceLine.source && voiceLine.next === 0) fallBack(voiceLine);
       break;
     case "stop_anchor":
-      speechSynthesis.cancel();
+      stopVoice();
       break;
     case "guest_started":
       guestEl = addLine(m.barge_in ? "Guest · interrupted" : "Guest", "…", "guest partial");

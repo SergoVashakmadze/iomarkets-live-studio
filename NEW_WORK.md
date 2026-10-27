@@ -11,6 +11,15 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: the anchor's voice
+
+- `src/studio/tts.py` + `live.py` + page: each anchor line is sent as text at once, then as
+  audio sentence by sentence (Microsoft Edge TTS, parallel synthesis); the page plays sentences
+  in order as they arrive, stops at once on barge-in, ignores audio for a stopped line, and
+  uses the browser's own voice if audio is 3 s late or fails. Only the anchor's own lines are
+  sent to Edge TTS, never the guest's words. `STUDIO_VOICE=browser` turns it off.
+- Measured live: audio for a line's first sentence 1.8-2.1 s after its text.
+
 ### Oct 27: deployment for judges (Modal)
 
 - `deploy/modal_app.py`, `deploy/requirements.txt` (exported from `uv.lock`, checked in CI),
