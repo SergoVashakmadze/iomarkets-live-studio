@@ -42,3 +42,13 @@ def no_sleep(monkeypatch):
         return None
 
     monkeypatch.setattr("studio.meta.responses.asyncio.sleep", instant)
+
+
+@pytest.fixture(autouse=True)
+def isolated_ledger(tmp_path, monkeypatch):
+    """Never write to the real spend ledger; start each test unmetered."""
+    from studio import ledger
+
+    monkeypatch.setenv("STUDIO_LEDGER", str(tmp_path / "ledger.json"))
+    monkeypatch.delenv("STUDIO_DAILY_BUDGET_USD", raising=False)
+    monkeypatch.setattr(ledger, "current", None)

@@ -11,6 +11,15 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: spend ledger and daily cap
+
+- `src/studio/ledger.py`: every Meta call is metered from the usage the API reports (tokens,
+  cached tokens, web searches, SAM frames, seconds of audio), priced at Meta's published
+  Standard rates, and written to a small ledger. New briefs, interviews and answers are
+  refused once today's spend reaches `STUDIO_DAILY_BUDGET_USD` (default $10);
+  `GET /api/budget` shows it. Interviews stop at 15 minutes and 12 cut-out answers.
+- Why: judges use the live product on our Meta credit, and a full interview costs about $1.30.
+
 ### Oct 27: the segment, built while the interview runs
 
 - `src/studio/segment.py` + page: the page records the guest's camera and mic, restarting at
