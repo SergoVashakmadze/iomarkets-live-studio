@@ -18,7 +18,7 @@ every pre-existing service this repo calls but does not contain.
 
 ```sh
 uv sync
-cp .env.example .env   # add your META_API_KEY
+cp .env.example .env   # add META_API_KEY (and FIREWORKS_API_KEY for the open-weights editor)
 uv run studio brief "Margherita Della Valle, CEO of Vodafone"
 uv run studio listen --keyword Vodafone   # live transcription from the microphone
 uv run studio serve                       # the studio page at http://127.0.0.1:8000
@@ -33,7 +33,8 @@ uv run pytest          # no key needed: tests replay recorded responses
   Muse Spark 1.3 as the live Anchor (since Oct 27); SAM 3.1, hosted, for the guest cutout,
   decoded with Meta's `meta-sam-parser` (SAM License) (since Oct 27); Muse Spark 1.3 with image
   input and strict JSON for chart reading, and with web search for Fact-Check (since Oct 27).
-- **Planned:** Muse Spark Open (one agent on open weights).
+- **Open weights:** Muse Spark Open, served by Fireworks, edits Scout's brief (since Oct 27).
+  **Built with Muse Spark Open.**
 
 ## Licence
 

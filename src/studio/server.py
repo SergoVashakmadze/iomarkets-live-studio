@@ -31,9 +31,10 @@ from pydantic import BaseModel, Field
 
 from studio.agents.anchor import Anchor
 from studio.agents.factcheck import FactDesk
-from studio.agents.scout import write_brief
+from studio.agents.scout import prepare_brief
 from studio.asr import AsrError, GuestListener
 from studio.live import LiveSession
+from studio.meta.open_weights import open_weights_client
 from studio.meta.responses import ResponsesClient
 
 MAX_BRIEF_CHARS = 20_000
@@ -60,6 +61,7 @@ def _token_ok(given: str | None) -> bool:
 def create_app(
     client_factory: Callable[[], ResponsesClient] = ResponsesClient,
     listener_factory: Callable[..., GuestListener] = GuestListener,
+    editor_factory: Callable[[], ResponsesClient | None] = open_weights_client,
 ) -> FastAPI:
     app = FastAPI(title="IoMarkets Live Studio")
     page = files("studio.web").joinpath("index.html").read_text()
@@ -72,12 +74,18 @@ def create_app(
     async def brief(req: BriefRequest, token: str | None = Query(None)) -> dict[str, Any]:
         if not _token_ok(token):
             raise HTTPException(403, "bad token")
+        editor = editor_factory()
         async with client_factory() as client:
-            result = await write_brief(client, req.subject)
+            try:
+                brief = await prepare_brief(client, req.subject, editor)
+            finally:
+                if editor:
+                    await editor.aclose()
         return {
-            "text": result.text,
-            "sources": [{"title": c.title, "url": c.url} for c in result.citations],
-            "searches": result.searches,
+            "text": brief.text,
+            "sources": [{"title": c.title, "url": c.url} for c in brief.research.citations],
+            "searches": brief.research.searches,
+            "edited_by": brief.edited_by,
         }
 
     @app.websocket("/ws/live")

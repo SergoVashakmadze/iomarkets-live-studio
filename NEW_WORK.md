@@ -11,6 +11,16 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: Scout's editor on Muse Spark Open (open weights)
+
+- `src/studio/meta/open_weights.py`: Muse Spark Open served by Fireworks, over the same
+  Responses client. Measured: built-in web search is accepted there but never runs.
+- `src/studio/agents/scout.py`: Scout in two stages. Research stays on Muse Spark 1.3 (web
+  search, `market_quote`); the editor on Muse Spark Open turns the draft into the anchor's
+  brief, adds no facts, and falls back to the draft if it fails or drops a section. It sees
+  only public research, never guest media or words.
+- "Built with Muse Spark Open" is shown in the page footer and the README (Muse Model License).
+
 ### Oct 27: vision fact-check
 
 - `src/studio/agents/factcheck.py`: chart reading (a camera frame to Muse Spark as an image,

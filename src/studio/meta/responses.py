@@ -46,6 +46,7 @@ ROLE_BUDGETS: dict[str, Budget] = {
     "factcheck": Budget("medium", 4000),
     "vision": Budget("low", 4000),
     "scout": Budget("medium", 6000),
+    "editor": Budget("low", 6000),  # Scout's editor, on Muse Spark Open
 }
 
 RETRYABLE = {429, 500, 503}

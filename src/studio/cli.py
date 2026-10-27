@@ -15,7 +15,8 @@ import sys
 from urllib.parse import urlsplit
 
 from studio import asr
-from studio.agents.scout import write_brief
+from studio.agents.scout import prepare_brief
+from studio.meta.open_weights import open_weights_client
 from studio.meta.responses import Citation, ResponsesClient
 
 SOURCES_SHOWN = 12
@@ -45,9 +46,15 @@ def _one_per_site(citations: list[Citation]) -> list[Citation]:
 
 
 async def _brief(subject: str) -> int:
+    editor = open_weights_client()
     async with ResponsesClient() as client:
-        result = await write_brief(client, subject)
-    print(result.text)
+        try:
+            brief = await prepare_brief(client, subject, editor)
+        finally:
+            if editor:
+                await editor.aclose()
+    result = brief.research
+    print(brief.text)
     if result.citations:
         # Every page web search returned, not a per-line citation: Fact-Check ranks them later.
         shown = _one_per_site(result.citations)[:SOURCES_SHOWN]
@@ -57,8 +64,10 @@ async def _brief(subject: str) -> int:
     tools = ", ".join(
         f"{r.name}({r.arguments}){'' if r.ok else ' FAILED'}" for r in result.tool_runs
     )
+    edited = brief.edited_by or "not edited (no FIREWORKS_API_KEY, or the editor failed)"
     print(
-        f"\n({result.turns} turns, {len(result.searches)} searches; tools: {tools or 'none'})",
+        f"\n({result.turns} turns, {len(result.searches)} searches; tools: {tools or 'none'}; "
+        f"{edited})",
         file=sys.stderr,
     )
     return 0
