@@ -295,14 +295,17 @@ class ResponsesClient:
         Files never expire unless told to, so every upload sets an expiry (one hour, the
         minimum) as a backstop to deleting it explicitly.
         """
-        data = {
+        with open(path, "rb") as f:
+            return await self.upload_bytes(os.path.basename(path), f, expires_seconds)
+
+    async def upload_bytes(self, name: str, data: Any, expires_seconds: int = 3600) -> str:
+        """`upload_file` for bytes (or an open file) already in hand."""
+        form = {
             "purpose": "user_data",
             "expires_after[anchor]": "created_at",
             "expires_after[seconds]": str(expires_seconds),
         }
-        with open(path, "rb") as f:
-            name = os.path.basename(path)
-            r = await self._http.post("/files", data=data, files={"file": (name, f)}, timeout=600)
+        r = await self._http.post("/files", data=form, files={"file": (name, data)}, timeout=600)
         if r.status_code >= 400:
             raise _error(r)
         return r.json()["id"]

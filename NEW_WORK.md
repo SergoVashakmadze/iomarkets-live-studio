@@ -11,6 +11,18 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: video materials
+
+- Paste a YouTube or Vimeo link: the studio reads the title and channel through the platform's
+  official oEmbed endpoint and the description from the page, and Scout searches the web for
+  coverage and transcripts. It never downloads from those platforms (their terms forbid it, and
+  Meta's API rejects page URLs: "unsupported media type text/html").
+- Paste a direct .mp4 link: Muse Spark watches and listens to it by URL.
+- Drop an MP4 (up to 200 MB) the producer has the rights to: it is uploaded to the Files API for
+  the brief and deleted straight after, even if the brief fails.
+- Measured live: Spark read a 16 s MP4 (picture and sound) in 9.6 s; a brief built from a
+  dropped MP4 in 82 s, with the video's claims treated as the guest's to check.
+
 ### Oct 27: guest materials, the Devil's Advocate, cold start
 
 - `src/studio/materials.py` + page: paste links (LinkedIn, website, company page) and drop
