@@ -26,6 +26,11 @@ uv run studio cutout answer.webm out.mp4  # cut the guest into the studio with S
 uv run pytest          # no key needed: tests replay recorded responses
 ```
 
+## Secrets
+
+See [`docs/SECRETS.md`](docs/SECRETS.md): every secret by name and how to rotate each one
+without downtime.
+
 ## Meta models used
 
 - **In use:** Muse Spark 1.3 on the Responses API, with built-in web search (Scout, since Oct 27);
