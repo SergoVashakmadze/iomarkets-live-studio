@@ -1,7 +1,9 @@
 """A small client for Meta's Responses API (`POST /v1/responses`).
 
 Responses, not Chat Completions: only Responses carries reasoning across turns for external keys,
-via `previous_response_id`.
+via `previous_response_id`. That chaining is slow, though: ~10 s per call against 1-2 s for the
+same call with the history resent (measured 2026-10-27). Use it where reasoning must carry over
+(tool loops); a live speaker resends its history instead (see agents/anchor.py).
 
 Two things the docs and our own measurements (2026-10-26) make us handle here:
 
@@ -15,6 +17,7 @@ Two things the docs and our own measurements (2026-10-26) make us handle here:
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import random
 from dataclasses import dataclass, field
@@ -44,6 +47,8 @@ ROLE_BUDGETS: dict[str, Budget] = {
 }
 
 RETRYABLE = {429, 500, 503}
+
+log = logging.getLogger(__name__)
 
 
 class MetaAPIError(RuntimeError):
@@ -218,7 +223,9 @@ class ResponsesClient:
                 return r.json()
             if r.status_code not in RETRYABLE or attempt == self.max_retries:
                 raise _error(r)
-            await asyncio.sleep(_delay(r, attempt))
+            delay = _delay(r, attempt)
+            log.warning("Meta %s on %s, retry %d in %.1fs", r.status_code, path, attempt + 1, delay)
+            await asyncio.sleep(delay)
         raise AssertionError("unreachable")
 
 

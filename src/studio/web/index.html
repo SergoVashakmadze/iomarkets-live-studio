@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IoMarkets Live Studio</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --ink: #1b1d21; --muted: #626872; --line: #dcdee2;
+    --accent: #0b5cad; --live: #c62828; --guest: #1f6f43; --warn: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121417; --panel: #1b1e23; --ink: #e8eaed; --muted: #9aa1ab; --line: #2c3037;
+      --accent: #6aa8ff; --live: #ff6b6b; --guest: #5fd08f; --warn: #e0b04f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121417; --panel: #1b1e23; --ink: #e8eaed; --muted: #9aa1ab; --line: #2c3037;
+    --accent: #6aa8ff; --live: #ff6b6b; --guest: #5fd08f; --warn: #e0b04f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 1.25rem; margin: 0; letter-spacing: .01em; }
+  .status { font-size: .85rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+  .dot.live { background: var(--live); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 16px; margin-top: 16px; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  input, textarea {
+    font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 10px; width: 100%;
+  }
+  .row input { flex: 1 1 260px; width: auto; }
+  textarea { min-height: 160px; font-size: .9rem; resize: vertical; }
+  button {
+    font: inherit; border: 1px solid var(--accent); background: var(--accent); color: #fff;
+    border-radius: 6px; padding: 8px 14px; cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--accent); }
+  button.stop { border-color: var(--live); background: var(--live); }
+  button:disabled { opacity: .45; cursor: default; }
+  #log { display: flex; flex-direction: column; gap: 10px; min-height: 120px; }
+  .line { max-width: 85%; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); }
+  .line .who { font-size: .75rem; color: var(--muted); display: block; }
+  .anchor { align-self: flex-start; }
+  .guest { align-self: flex-end; border-color: var(--guest); }
+  .partial { opacity: .65; font-style: italic; }
+  .note { font-size: .8rem; color: var(--muted); margin: 8px 0 0; }
+  .error { color: var(--live); }
+  .tag { font-size: .7rem; color: var(--warn); margin-left: 6px; }
+  footer { margin-top: 24px; font-size: .8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>IoMarkets Live Studio</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="status">Off air</span></div>
+  </header>
+
+  <section>
+    <label for="subject">Guest and company</label>
+    <div class="row">
+      <input id="subject" placeholder="Margherita Della Valle, CEO of Vodafone" autocomplete="off">
+      <button id="prepare">Prepare brief</button>
+    </div>
+    <label for="brief" style="margin-top:12px">Brief (Scout, editable)</label>
+    <textarea id="brief" placeholder="Prepare a brief, or paste one."></textarea>
+    <p class="note" id="sources"></p>
+  </section>
+
+  <section>
+    <div class="row">
+      <button id="go">Go live</button>
+      <button id="end" class="stop" disabled>End interview</button>
+    </div>
+    <p class="note">Use headphones: the anchor's voice must not reach the microphone, or it
+      counts as the guest talking.</p>
+    <div id="log" aria-live="polite" style="margin-top:12px"></div>
+  </section>
+
+  <footer>The anchor is an AI system and its voice is synthetic. Guest speech is transcribed
+    by Meta's Muse Voice Transcribe; the anchor runs on Muse Spark. Nothing here is investment
+    advice.</footer>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const token = new URLSearchParams(location.search).get("token");
+const withToken = (path) => token ? `${path}?token=${encodeURIComponent(token)}` : path;
+
+function setStatus(text, live) {
+  $("status").textContent = text;
+  $("dot").classList.toggle("live", !!live);
+}
+
+function addLine(who, text, cls) {
+  const el = document.createElement("div");
+  el.className = `line ${cls}`;
+  el.innerHTML = `<span class="who"></span><span class="text"></span>`;
+  el.querySelector(".who").textContent = who;
+  el.querySelector(".text").textContent = text;
+  $("log").append(el);
+  el.scrollIntoView({ block: "nearest" });
+  return el;
+}
+
+// Brief
+
+$("prepare").onclick = async () => {
+  const subject = $("subject").value.trim();
+  if (!subject) return;
+  $("prepare").disabled = true;
+  setStatus("Scout is researching…");
+  try {
+    const r = await fetch(withToken("/api/brief"), {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    $("brief").value = data.text;
+    $("sources").textContent =
+      `${data.searches.length} searches, ${data.sources.length} pages consulted.`;
+    setStatus("Brief ready");
+  } catch (e) {
+    setStatus("Brief failed");
+    $("sources").innerHTML = "";
+    $("sources").append(Object.assign(document.createElement("span"),
+      { className: "error", textContent: String(e) }));
+  } finally {
+    $("prepare").disabled = false;
+  }
+};
+
+// Microphone: capture at the device rate, resample to 24 kHz s16le mono, 80 ms per message.
+
+const WORKLET = `
+class Pcm24k extends AudioWorkletProcessor {
+  constructor() { super(); this.ratio = sampleRate / 24000; this.pos = 0; this.out = []; }
+  process(inputs) {
+    const ch = inputs[0][0];
+    if (!ch) return true;
+    while (this.pos < ch.length) {
+      const i = Math.floor(this.pos), f = this.pos - i;
+      const a = ch[i], b = i + 1 < ch.length ? ch[i + 1] : a;
+      const s = Math.max(-1, Math.min(1, a + (b - a) * f));
+      this.out.push(s < 0 ? s * 0x8000 : s * 0x7fff);
+      this.pos += this.ratio;
+      if (this.out.length === 1920) {
+        this.port.postMessage(Int16Array.from(this.out).buffer, []);
+        this.out = [];
+      }
+    }
+    this.pos -= ch.length;
+    return true;
+  }
+}
+registerProcessor("pcm-24k", Pcm24k);`;
+
+let ws = null, audio = null, stream = null, guestEl = null;
+
+async function startMic(onChunk) {
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+  });
+  audio = new AudioContext();
+  const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
+  await audio.audioWorklet.addModule(url);
+  const node = new AudioWorkletNode(audio, "pcm-24k");
+  node.port.onmessage = (e) => onChunk(e.data);
+  audio.createMediaStreamSource(stream).connect(node);
+}
+
+function stopMic() {
+  stream?.getTracks().forEach((t) => t.stop());
+  audio?.close();
+  stream = audio = null;
+}
+
+// Anchor voice: the browser's speech synthesis for now; it stops instantly on barge-in.
+
+function speak(text) {
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-GB";
+  u.onstart = () => { send({ type: "anchor", speaking: true }); setStatus("Anchor speaking", true); };
+  u.onend = u.onerror = () => { send({ type: "anchor", speaking: false }); setStatus("Listening", true); };
+  speechSynthesis.speak(u);
+}
+
+function send(msg) {
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+// Live session
+
+$("go").onclick = async () => {
+  const brief = $("brief").value.trim();
+  if (!brief) { setStatus("Prepare a brief first"); return; }
+  $("go").disabled = true;
+  $("log").innerHTML = "";
+  const keywords = $("subject").value.split(/[,;]/).map((s) => s.replace(/\b(CEO|CFO|of|the)\b/gi, "").trim()).filter(Boolean);
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}${withToken("/ws/live")}`);
+  ws.binaryType = "arraybuffer";
+  setStatus("Connecting…");
+  ws.onopen = () => ws.send(JSON.stringify({ type: "start", brief, keywords }));
+  ws.onmessage = (e) => onMessage(JSON.parse(e.data));
+  ws.onclose = () => { stopMic(); speechSynthesis.cancel(); setStatus("Off air");
+                       $("go").disabled = false; $("end").disabled = true; };
+};
+
+$("end").onclick = () => { send({ type: "stop" }); stopMic(); speechSynthesis.cancel(); };
+
+async function onMessage(m) {
+  switch (m.type) {
+    case "ready":
+      try {
+        await startMic((buf) => ws?.readyState === WebSocket.OPEN && ws.send(buf));
+      } catch (e) {
+        addLine("Studio", `Microphone unavailable: ${e.message}`, "anchor error");
+        ws.close();
+        return;
+      }
+      $("end").disabled = false;
+      setStatus("Live", true);
+      break;
+    case "anchor_thinking":
+      setStatus("Anchor thinking…", true);
+      break;
+    case "anchor_line":
+      addLine("Anchor (AI)", m.text, "anchor");
+      speak(m.text);
+      break;
+    case "stop_anchor":
+      speechSynthesis.cancel();
+      break;
+    case "guest_started":
+      guestEl = addLine(m.barge_in ? "Guest · interrupted" : "Guest", "…", "guest partial");
+      setStatus("Guest speaking", true);
+      break;
+    case "guest_partial":
+      if (guestEl) guestEl.querySelector(".text").textContent = m.text;
+      break;
+    case "guest_turn":
+      if (!guestEl) guestEl = addLine("Guest", "", "guest");
+      guestEl.querySelector(".text").textContent = m.text;
+      guestEl.classList.remove("partial");
+      guestEl = null;
+      break;
+    case "error":
+      addLine("Studio", m.message, "anchor error");
+      break;
+    case "ended":
+      setStatus("Off air");
+      break;
+  }
+}
+</script>
+</body>
+</html>
