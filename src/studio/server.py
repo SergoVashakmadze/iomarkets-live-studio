@@ -316,6 +316,7 @@ async def _run_live(
             finally:
                 reader.cancel()
                 limiter.cancel()
+                await session.drain()
                 await session.close()
                 await room.drain()
                 room.close()

@@ -203,3 +203,11 @@ async def test_check_with_nothing_found_still_closes_the_badge():
         {"type": "fact_check_started", "turn": 0},
         {"type": "fact_check", "turn": 0, "checks": []},
     ]
+
+
+async def test_drain_lets_the_last_check_finish():
+    s, sent = _session(FakeAnchor(), FakeDesk([WRONG], delay=0.05))
+    await s.on_event(GuestTurn(0, "We grew 9.1%.", 0))
+    await s.drain(timeout=1)
+    await s.close()
+    assert any(m["type"] == "fact_check" for m in sent)
