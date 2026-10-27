@@ -11,6 +11,16 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: the packaged segment
+
+- `src/studio/compose.py`: Build segment now makes a programme, not a reel of answers. Each
+  answer follows a card with the question it answered (studio background, labelled "AI
+  anchor", in the anchor's voice) and carries a lower third with the guest's name and role.
+  Parts are joined with ffmpeg's concat filter (any size or audio layout). Text reaches drawtext
+  only through files, so names and questions cannot inject into the filter graph.
+- `live.py` records which anchor line each guest turn answered.
+- Measured live: a 41 s segment (two cards, two answers) built in 7 s.
+
 ### Oct 27: the anchor's voice
 
 - `src/studio/tts.py` + `live.py` + page: each anchor line is sent as text at once, then as

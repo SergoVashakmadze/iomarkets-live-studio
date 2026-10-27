@@ -264,7 +264,11 @@ function answerSlot(turn) {
 $("build").onclick = async () => {
   $("build").disabled = true;
   $("segmentLink").textContent = "Joining answers…";
-  const r = await fetch(withToken(`/api/segment/${room}`), { method: "POST" });
+  const [name, ...rest] = $("subject").value.split(",");
+  const r = await fetch(withToken(`/api/segment/${room}`), {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: name.trim(), role: rest.join(",").trim() }),
+  });
   if (!r.ok) { $("segmentLink").textContent = `Failed: ${r.status}`; $("build").disabled = false; return; }
   const { file } = await r.json();
   $("segmentLink").innerHTML = "";
