@@ -50,13 +50,14 @@ from studio.asr import AsrError, GuestListener
 from studio.ledger import BudgetExceeded, Ledger
 from studio.live import LiveSession
 from studio.materials import (
-    MAX_FILE_BYTES,
     MAX_FILES,
     MAX_LINKS,
+    MAX_UPLOAD_BYTES,
     MaterialError,
     file_material,
     gather_links,
     input_parts,
+    upload_videos,
 )
 from studio.meta.open_weights import open_weights_client
 from studio.meta.responses import ResponsesClient
@@ -154,11 +155,16 @@ def create_app(
         private = any(m.private for m in found)
         editor = editor_factory()
         async with client_factory() as client:
+            uploaded: list[str] = []
             try:
+                uploaded = await upload_videos(client, found)
                 brief = await prepare_brief(
                     client, subject, editor, input_parts(found), private=private
                 )
             finally:
+                for file_id in uploaded:  # guest video is kept no longer than the brief
+                    with contextlib.suppress(Exception):
+                        await client.delete_file(file_id)
                 if editor:
                     await editor.aclose()
         return {
@@ -318,9 +324,9 @@ async def _run_live(
 
 
 async def _read_capped(upload: UploadFile) -> bytes:
-    data = await upload.read(MAX_FILE_BYTES + 1)
-    if len(data) > MAX_FILE_BYTES:
-        raise MaterialError(f"{upload.filename}: larger than {MAX_FILE_BYTES // 1_000_000} MB")
+    data = await upload.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise MaterialError(f"{upload.filename}: larger than {MAX_UPLOAD_BYTES // 1_000_000} MB")
     return data
 
 

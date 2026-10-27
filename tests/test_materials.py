@@ -291,3 +291,104 @@ async def test_challenges_reach_the_anchor_capped():
     await _settle()
     notes = anchor.calls[-1]["notes"]
     assert len(notes) == 3 and "You could ask: evidence for 0?" in notes[0]
+
+
+# Video: platform pages, direct MP4 links, dropped MP4 files.
+
+from studio.materials import upload_videos, video_platform  # noqa: E402
+
+YT = "https://www.youtube.com/watch?v=abc123"
+YT_PAGE = (
+    "<html><head><title>Jane Doe on hull robots - YouTube</title>"
+    '<meta property="og:description" content="Keynote at Port Tech 2026: 14 ports and counting.">'
+    "</head><body>" + "<script>var x=1;</script>" * 50 + "</body></html>"
+)
+
+
+def test_video_platforms_are_recognised():
+    assert video_platform(YT) == "https://www.youtube.com/oembed"
+    assert video_platform("https://youtu.be/abc123") == "https://www.youtube.com/oembed"
+    assert video_platform("https://m.youtube.com/watch?v=x") == "https://www.youtube.com/oembed"
+    assert video_platform("https://vimeo.com/12345") == "https://vimeo.com/api/oembed.json"
+    assert video_platform("https://example.com/talk") is None
+
+
+async def test_youtube_page_is_read_never_downloaded():
+    requested = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        requested.append(str(req.url))
+        if req.url.path == "/oembed":
+            meta = {"title": "Jane Doe on hull robots", "author_name": "Port Tech"}
+            return httpx.Response(200, json={**meta, "provider_name": "YouTube"})
+        return httpx.Response(200, text=YT_PAGE, headers={"content-type": "text/html"})
+
+    m = await fetch_link(YT, transport=httpx.MockTransport(handler), resolve=_public)
+    assert m.status == "read" and m.text.startswith("Video page (YouTube): Jane Doe on hull robots")
+    assert "by Port Tech" in m.text and "14 ports and counting" in m.text
+    assert "search the web" in m.text
+    assert all("googlevideo" not in u and ".mp4" not in u for u in requested)
+
+
+async def test_direct_mp4_link_goes_to_spark_by_url():
+    mp4 = httpx.Response(200, content=b"\x00\x00\x00\x18ftypmp42",
+                         headers={"content-type": "video/mp4"})  # fmt: skip
+    t = _transport({"https://cdn.example/talk.mp4": mp4})
+    m = await fetch_link("https://cdn.example/talk.mp4", transport=t, resolve=_public)
+    assert m.video_url == "https://cdn.example/talk.mp4" and m.data is None
+    [_, part] = input_parts([m])
+    assert part == {"type": "input_video", "video_url": "https://cdn.example/talk.mp4"}
+
+
+async def test_dropped_mp4_is_uploaded_then_referenced():
+    mp4 = file_material("old-interview.mp4", b"\x00\x00\x00\x18ftypisom" + b"0" * 100)
+    assert mp4.private and mp4.mime == "video/mp4"
+    with pytest.raises(ValueError, match="upload the video"):
+        input_parts([mp4])
+
+    class Files:
+        uploaded = []
+
+        async def upload_bytes(self, name, data):
+            self.uploaded.append(name)
+            return "file-v1"
+
+    ids = await upload_videos(Files(), [mp4, file_material("notes.md", b"x")])
+    assert ids == ["file-v1"] and Files.uploaded == ["old-interview.mp4"]
+    assert input_parts([mp4])[1] == {"type": "input_video", "file_id": "file-v1"}
+
+
+def test_video_files_are_checked():
+    with pytest.raises(MaterialError, match="not an MP4"):
+        file_material("clip.mp4", b"RIFF....AVI ")
+    with pytest.raises(MaterialError, match="unsupported"):
+        file_material("clip.mov", b"\x00\x00\x00\x14ftypqt  ")
+
+
+def test_brief_endpoint_deletes_uploaded_video_even_on_failure(monkeypatch):
+    calls = []
+
+    class Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return None
+
+        async def upload_bytes(self, name, data):
+            calls.append(("upload", name))
+            return "file-v9"
+
+        async def delete_file(self, file_id):
+            calls.append(("delete", file_id))
+
+    async def prepare(*a, **k):
+        raise RuntimeError("model down")
+
+    monkeypatch.setattr(server, "prepare_brief", prepare)
+    monkeypatch.delenv("STUDIO_TOKEN", raising=False)
+    app = server.create_app(client_factory=Client, editor_factory=lambda: None)
+    video = ("files", ("talk.mp4", b"\x00\x00\x00\x18ftypisom0000", "video/mp4"))
+    with pytest.raises(RuntimeError):
+        TestClient(app).post("/api/brief", data={"subject": "Jane Doe"}, files=[video])
+    assert calls == [("upload", "talk.mp4"), ("delete", "file-v9")]

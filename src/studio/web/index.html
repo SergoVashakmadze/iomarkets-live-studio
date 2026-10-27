@@ -115,16 +115,18 @@
       <button id="prepare">Prepare brief</button>
     </div>
     <label for="links" style="margin-top:12px">Links about the guest (one per line: LinkedIn,
-      website, company page)</label>
+      website, company page, YouTube or Vimeo talk, direct .mp4)</label>
     <textarea id="links" placeholder="https://www.linkedin.com/in/…&#10;https://example.com"></textarea>
     <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add files">
-      Drop a pitch deck, document or images here, or click to choose
-      (PDF, PNG, JPEG, WebP, TXT, MD; export slides as PDF)
+      Drop a pitch deck, document, images or a video here, or click to choose
+      (PDF, PNG, JPEG, WebP, TXT, MD, MP4 up to 200 MB; export slides as PDF)
     </div>
-    <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md" hidden>
+    <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,.mp4" hidden>
     <div class="chips" id="chips"></div>
     <p class="note">The guest's files stay with Meta's models: when any are attached, the
-      open-weights editor is skipped.</p>
+      open-weights editor is skipped. Videos are analysed (picture and sound) and deleted after
+      the brief. YouTube and Vimeo links are read from the page and searched for, never
+      downloaded.</p>
     <label for="brief" style="margin-top:12px">Brief (Scout and the Devil's Advocate, editable)</label>
     <textarea id="brief" placeholder="Prepare a brief, or paste one."></textarea>
     <p class="note" id="sources"></p>
