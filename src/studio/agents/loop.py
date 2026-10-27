@@ -71,6 +71,7 @@ async def run_agent(
     tools: list[FunctionTool] = (),
     web_search: bool = False,
     max_turns: int = 6,
+    schema: tuple[str, dict[str, Any]] | None = None,
 ) -> AgentResult:
     by_name = {t.name: t for t in tools}
     specs = [t.spec() for t in tools] + ([WEB_SEARCH] if web_search else [])
@@ -89,6 +90,7 @@ async def run_agent(
             tools=specs or None,
             previous_response_id=previous,
             include=WEB_SEARCH_INCLUDE if web_search else None,
+            schema=schema,
         )
         for c in resp.citations:
             cites.setdefault(c.url, c)

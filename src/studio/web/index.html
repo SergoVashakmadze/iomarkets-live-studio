@@ -57,6 +57,20 @@
   .error { color: var(--live); }
   .tag { font-size: .7rem; color: var(--warn); margin-left: 6px; }
   footer { margin-top: 24px; font-size: .8rem; color: var(--muted); }
+  .stage { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 12px; }
+  @media (min-width: 760px) { .stage { grid-template-columns: 3fr 2fr; } }
+  video { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; object-fit: cover; }
+  h2 { font-size: .9rem; margin: 0 0 8px; color: var(--muted); font-weight: 600; }
+  #checks { display: flex; flex-direction: column; gap: 8px; font-size: .9rem; }
+  .check { border-left: 3px solid var(--line); padding: 4px 0 4px 10px; }
+  .check.supported { border-color: var(--guest); }
+  .check.contradicted { border-color: var(--live); }
+  .check.unverifiable { border-color: var(--warn); }
+  .verdict { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+  .supported .verdict { color: var(--guest); }
+  .contradicted .verdict { color: var(--live); }
+  .unverifiable .verdict { color: var(--warn); }
+  .check a { color: var(--accent); word-break: break-all; }
 </style>
 </head>
 <body>
@@ -80,15 +94,27 @@
   <section>
     <div class="row">
       <button id="go">Go live</button>
+      <button id="chart" class="secondary" disabled>Show chart</button>
       <button id="end" class="stop" disabled>End interview</button>
     </div>
     <p class="note">Use headphones: the anchor's voice must not reach the microphone, or it
-      counts as the guest talking.</p>
-    <div id="log" aria-live="polite" style="margin-top:12px"></div>
+      counts as the guest talking. To check a chart, hold it up to the camera and press
+      Show chart.</p>
+    <div class="stage">
+      <div>
+        <video id="cam" muted playsinline autoplay></video>
+        <div id="log" aria-live="polite" style="margin-top:12px"></div>
+      </div>
+      <div>
+        <h2>Fact-check</h2>
+        <div id="checks" aria-live="polite"><p class="note">Figures the guest says or shows
+          are checked here as the interview runs.</p></div>
+      </div>
+    </div>
   </section>
 
   <footer>The anchor is an AI system and its voice is synthetic. Guest speech is transcribed
-    by Meta's Muse Voice Transcribe; the anchor runs on Muse Spark. Nothing here is investment
+    by Meta's Muse Voice Transcribe; the anchor, chart reading and fact-checks run on Muse Spark. Nothing here is investment
     advice.</footer>
 </main>
 
@@ -171,7 +197,9 @@ let ws = null, audio = null, stream = null, guestEl = null;
 async function startMic(onChunk) {
   stream = await navigator.mediaDevices.getUserMedia({
     audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
   });
+  $("cam").srcObject = stream;
   audio = new AudioContext();
   const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
   await audio.audioWorklet.addModule(url);
@@ -182,6 +210,7 @@ async function startMic(onChunk) {
 
 function stopMic() {
   stream?.getTracks().forEach((t) => t.stop());
+  $("cam").srcObject = null;
   audio?.close();
   stream = audio = null;
 }
@@ -216,10 +245,43 @@ $("go").onclick = async () => {
   ws.onopen = () => ws.send(JSON.stringify({ type: "start", brief, keywords }));
   ws.onmessage = (e) => onMessage(JSON.parse(e.data));
   ws.onclose = () => { stopMic(); speechSynthesis.cancel(); setStatus("Off air");
-                       $("go").disabled = false; $("end").disabled = true; };
+                       $("go").disabled = false; $("end").disabled = true; $("chart").disabled = true; };
 };
 
 $("end").onclick = () => { send({ type: "stop" }); stopMic(); speechSynthesis.cancel(); };
+
+// Show chart: grab the current camera frame as a JPEG for the chart reader.
+$("chart").onclick = () => {
+  const cam = $("cam");
+  if (!cam.videoWidth) return;
+  const canvas = document.createElement("canvas");
+  canvas.width = cam.videoWidth;
+  canvas.height = cam.videoHeight;
+  canvas.getContext("2d").drawImage(cam, 0, 0);
+  const jpeg = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+  send({ type: "frame", jpeg });
+};
+
+function addCheck(c) {
+  const box = $("checks");
+  box.querySelector("p.note")?.remove();
+  const el = document.createElement("div");
+  el.className = `check ${c.verdict}`;
+  const verdict = Object.assign(document.createElement("div"), { className: "verdict", textContent: c.verdict });
+  const claim = Object.assign(document.createElement("div"), { textContent: c.claim });
+  const why = Object.assign(document.createElement("div"), {
+    className: "note",
+    textContent: (c.correct_value && c.verdict !== "supported" ? `Sources: ${c.correct_value}. ` : "") + c.explanation,
+  });
+  el.append(verdict, claim, why);
+  if (/^https?:\/\//.test(c.source_url)) {
+    const a = Object.assign(document.createElement("a"), {
+      href: c.source_url, textContent: new URL(c.source_url).hostname, target: "_blank", rel: "noopener noreferrer",
+    });
+    el.append(a);
+  }
+  box.prepend(el);
+}
 
 async function onMessage(m) {
   switch (m.type) {
@@ -232,6 +294,7 @@ async function onMessage(m) {
         return;
       }
       $("end").disabled = false;
+      $("chart").disabled = false;
       setStatus("Live", true);
       break;
     case "anchor_thinking":
@@ -256,6 +319,17 @@ async function onMessage(m) {
       guestEl.querySelector(".text").textContent = m.text;
       guestEl.classList.remove("partial");
       guestEl = null;
+      break;
+    case "chart_reading_started":
+      addLine("Studio", "Reading the chart…", "anchor");
+      break;
+    case "chart":
+      addLine("Studio", m.legible
+        ? `Chart: ${m.title || "untitled"}. ${m.figures.map((f) => `${f.label} ${f.value}${f.unit}`).join(", ")}`
+        : "No legible chart in that frame.", "anchor");
+      break;
+    case "fact_check":
+      m.checks.forEach(addCheck);
       break;
     case "error":
       addLine("Studio", m.message, "anchor error");

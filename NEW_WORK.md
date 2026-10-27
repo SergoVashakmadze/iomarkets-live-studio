@@ -11,6 +11,19 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: vision fact-check
+
+- `src/studio/agents/factcheck.py`: chart reading (a camera frame to Muse Spark as an image,
+  figures back as strict JSON) and Fact-Check (web search plus `market_quote`, a strict verdict
+  per figure: supported, contradicted or unverifiable, with the sourced value and a link).
+  Only turns containing a figure are checked.
+- `live.py`: checks run in the background and never delay the anchor; a contradicted figure
+  becomes a note the anchor raises, politely, with the guest's next words.
+- Page: camera preview, Show chart (sends one JPEG frame), and a fact-check panel.
+- Measured live: chart read 4.8 s after the frame; a spoken figure checked 6-8 s after the
+  guest's turn; anchor replies unchanged at 1.3-1.8 s. On a test chart with a planted error
+  it flagged the wrong figures and gave the annual report's values with links.
+
 ### Oct 27: guest cutout (SAM 3.1)
 
 - `src/studio/cutout.py` + `studio cutout IN OUT [--background IMG]`: normalise any clip
