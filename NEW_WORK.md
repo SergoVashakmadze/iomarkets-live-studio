@@ -11,6 +11,21 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: the live studio (page, socket, Anchor, barge-in)
+
+- `src/studio/server.py` + `src/studio/web/index.html` (`studio serve`): one page to prepare a
+  brief and run a live interview. The guest's mic is resampled to 24 kHz PCM in an
+  AudioWorklet and streamed over `/ws/live`; `STUDIO_TOKEN` guards every request when set.
+- `src/studio/agents/anchor.py`: the Anchor on Muse Spark, one short spoken line per turn.
+- `src/studio/live.py`: turn-taking. A guest turn gets a reply; speaking over the anchor stops
+  its playback (barge-in) and the next line knows it was interrupted; a guest who resumes
+  before the reply is ready gets one reply to everything they said.
+- Measured live end to end: the anchor's line arrives 1.3-2.1 s after the guest stops;
+  playback stops 0.7 s after the guest starts over it. Chaining on `previous_response_id`
+  took ~10 s a turn against 1-2 s with the history resent, so the Anchor resends it.
+- The anchor's voice is the browser's speech synthesis for now, and the page discloses that
+  the anchor is AI and its voice synthetic.
+
 ### Oct 27: live guest speech (Muse Voice Transcribe)
 
 - `src/studio/asr.py`: realtime ASR session in ENDPOINTING mode: handshake with guest

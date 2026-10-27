@@ -2,6 +2,7 @@
 
 - `studio brief "<guest, company>"`: print a cited pre-interview brief.
 - `studio listen [--file F] [--keyword K ...]`: transcribe the guest live, turn by turn.
+- `studio serve [--host H] [--port P]`: the live studio page.
 """
 
 from __future__ import annotations
@@ -108,11 +109,23 @@ def main(argv: list[str] | None = None) -> int:
     listen.add_argument(
         "--keyword", action="append", default=[], help="a name or term to bias towards"
     )
+    serve = sub.add_parser("serve", help="run the live studio web app")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
     args = parser.parse_args(argv)
 
     _load_dotenv()
     if args.command == "brief":
         return asyncio.run(_brief(args.subject))
+    if args.command == "serve":
+        import uvicorn
+
+        from studio.server import create_app
+
+        if args.host not in ("127.0.0.1", "localhost") and not os.environ.get("STUDIO_TOKEN"):
+            parser.error("set STUDIO_TOKEN before serving beyond localhost")
+        uvicorn.run(create_app(), host=args.host, port=args.port)
+        return 0
     if args.command == "listen":
         try:
             return asyncio.run(_listen(args.file, args.keyword))

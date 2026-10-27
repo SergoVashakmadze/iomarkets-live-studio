@@ -21,13 +21,15 @@ uv sync
 cp .env.example .env   # add your META_API_KEY
 uv run studio brief "Margherita Della Valle, CEO of Vodafone"
 uv run studio listen --keyword Vodafone   # live transcription from the microphone
+uv run studio serve                       # the studio page at http://127.0.0.1:8000
 uv run pytest          # no key needed: tests replay recorded responses
 ```
 
 ## Meta models used
 
 - **In use:** Muse Spark 1.3 on the Responses API, with built-in web search (Scout, since Oct 27);
-  Muse Voice Transcribe, realtime ENDPOINTING mode (live guest speech, since Oct 27).
+  Muse Voice Transcribe, realtime ENDPOINTING mode (live guest speech, since Oct 27);
+  Muse Spark 1.3 as the live Anchor (since Oct 27).
 - **Planned:** SAM 3.1 (guest cutout) and Muse Spark Open (one agent on open weights).
 
 ## Licence
