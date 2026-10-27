@@ -24,7 +24,7 @@
     margin: 0; background: var(--bg); color: var(--ink);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
-  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   h1 { font-size: 1.25rem; margin: 0; letter-spacing: .01em; }
   .status { font-size: .85rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
@@ -71,6 +71,17 @@
   .contradicted .verdict { color: var(--live); }
   .unverifiable .verdict { color: var(--warn); }
   .check a { color: var(--accent); word-break: break-all; }
+  .models { display: grid; gap: 8px; margin-top: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .model { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .75rem;
+           line-height: 1.3; color: var(--muted); background: var(--panel); transition: all .15s; }
+  .model b { display: block; font-size: .8rem; color: var(--ink); font-weight: 600; }
+  .model .uses { float: right; margin-left: 8px; font-variant-numeric: tabular-nums; }
+  .model.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+              color: var(--ink); }
+  .model.on b::before { content: "● "; color: var(--live); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .model.on b::before { animation: none; } }
   .consent { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; margin: 12px 0 0; }
   .consent input { width: auto; margin-top: 4px; }
   #answers { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
@@ -86,6 +97,7 @@
     <h1>IoMarkets Live Studio</h1>
     <div class="status"><span class="dot" id="dot"></span><span id="status">Off air</span></div>
   </header>
+  <div class="models" id="models" aria-label="Meta models at work"></div>
 
   <section>
     <label for="subject">Guest and company</label>
@@ -129,6 +141,7 @@
     <div id="answers"></div>
     <div class="row" style="margin-top:12px">
       <button id="build" class="secondary" disabled>Build segment</button>
+      <button id="srt" class="secondary" disabled>Transcript (.srt)</button>
       <span id="segmentLink" class="note"></span>
     </div>
   </section>
@@ -140,6 +153,55 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+
+// Meta models at work: each badge lights while its model is busy and counts its uses.
+const MODELS = [
+  ["asr", "Muse Voice Transcribe", "live guest speech"],
+  ["anchor", "Muse Spark 1.3", "anchor"],
+  ["check", "Muse Spark 1.3 + web search", "Scout · fact-check"],
+  ["vision", "Muse Spark 1.3", "chart reading"],
+  ["sam", "SAM 3.1", "guest cutout"],
+  ["open", "Muse Spark Open", "brief editor (open weights)"],
+];
+const busy = {}, uses = {};
+for (const [key, name, role] of MODELS) {
+  const el = document.createElement("div");
+  el.className = "model";
+  el.id = `model-${key}`;
+  el.innerHTML = `<span class="uses">0</span><b></b><span></span>`;
+  el.querySelector("b").textContent = name;
+  el.querySelector("b + span").textContent = role;
+  $("models").append(el);
+  busy[key] = 0;
+  uses[key] = 0;
+}
+function model(key, delta) {
+  if (delta > 0) $(`model-${key}`).querySelector(".uses").textContent = ++uses[key];
+  busy[key] = Math.max(0, busy[key] + delta);
+  $(`model-${key}`).classList.toggle("on", busy[key] > 0);
+}
+const modelOff = (key) => { busy[key] = 0; $(`model-${key}`).classList.remove("on"); };
+
+// Transcript for captions: what was said and found, timed from going live.
+let liveAt = null, transcript = [];
+function note(kind, text, start = performance.now(), end = null) {
+  if (liveAt === null || !text) return;
+  transcript.push({ kind, text, start: start - liveAt, end: end === null ? null : end - liveAt });
+}
+function srtTime(ms) {
+  const t = Math.max(0, Math.round(ms));
+  const p = (n, w = 2) => String(n).padStart(w, "0");
+  return `${p(Math.floor(t / 3600000))}:${p(Math.floor(t / 60000) % 60)}:${p(Math.floor(t / 1000) % 60)},${p(t % 1000, 3)}`;
+}
+function toSrt() {
+  const rows = [...transcript].sort((a, b) => a.start - b.start);
+  return rows.map((r, i) => {
+    const next = rows[i + 1]?.start ?? r.start + 6000;
+    const end = r.end ?? Math.min(r.start + 6000, Math.max(next, r.start + 1500));
+    const label = { anchor: "ANCHOR (AI)", guest: "GUEST", check: "FACT-CHECK", chart: "CHART" }[r.kind];
+    return `${i + 1}\n${srtTime(r.start)} --> ${srtTime(end)}\n${label}: ${r.text}\n`;
+  }).join("\n");
+}
 const token = new URLSearchParams(location.search).get("token");
 const withToken = (path) => token ? `${path}?token=${encodeURIComponent(token)}` : path;
 
@@ -166,6 +228,7 @@ $("prepare").onclick = async () => {
   if (!subject) return;
   $("prepare").disabled = true;
   setStatus("Scout is researching…");
+  model("check", 1);
   try {
     const r = await fetch(withToken("/api/brief"), {
       method: "POST", headers: { "content-type": "application/json" },
@@ -174,6 +237,7 @@ $("prepare").onclick = async () => {
     if (!r.ok) throw new Error(await r.text());
     const data = await r.json();
     $("brief").value = data.text;
+    if (data.edited_by) { model("open", 1); setTimeout(() => model("open", -1), 1500); }
     $("sources").textContent =
       `${data.searches.length} searches, ${data.sources.length} pages consulted.` +
       (data.edited_by ? ` Edited on Muse Spark Open.` : "");
@@ -184,6 +248,7 @@ $("prepare").onclick = async () => {
     $("sources").append(Object.assign(document.createElement("span"),
       { className: "error", textContent: String(e) }));
   } finally {
+    model("check", -1);
     $("prepare").disabled = false;
   }
 };
@@ -260,6 +325,15 @@ function answerSlot(turn) {
   }
   return fig;
 }
+
+$("srt").onclick = () => {
+  const a = Object.assign(document.createElement("a"), {
+    href: URL.createObjectURL(new Blob([toSrt()], { type: "application/x-subrip" })),
+    download: "interview.srt",
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
 
 $("build").onclick = async () => {
   $("build").disabled = true;
@@ -386,6 +460,9 @@ $("go").onclick = async () => {
   if (!$("consent").checked) { setStatus("Confirm the guest's consent first"); return; }
   $("go").disabled = true;
   $("log").innerHTML = "";
+  transcript = [];
+  liveAt = null;
+  $("srt").disabled = true;
   $("answers").innerHTML = "";
   $("segmentLink").textContent = "";
   $("build").disabled = true;
@@ -455,12 +532,17 @@ async function onMessage(m) {
       }
       $("end").disabled = false;
       $("chart").disabled = false;
+      $("srt").disabled = false;
+      liveAt = performance.now();
       setStatus("Live", true);
       break;
     case "anchor_thinking":
       setStatus("Anchor thinking…", true);
+      if (!busy.anchor) model("anchor", 1);
       break;
     case "anchor_line":
+      modelOff("anchor");
+      note("anchor", m.text);
       addLine("Anchor (AI)", m.text, "anchor");
       speak(m.id, m.text);
       break;
@@ -475,7 +557,9 @@ async function onMessage(m) {
       break;
     case "guest_started":
       guestEl = addLine(m.barge_in ? "Guest · interrupted" : "Guest", "…", "guest partial");
+      guestEl.startedAt = performance.now();
       if (guestAt === null) guestAt = performance.now();
+      if (!busy.asr) model("asr", 1);
       setStatus("Guest speaking", true);
       break;
     case "guest_partial":
@@ -483,15 +567,22 @@ async function onMessage(m) {
       break;
     case "guest_turn":
       if (!guestEl) guestEl = addLine("Guest", "", "guest");
+      modelOff("asr");
+      note("guest", m.text, guestEl.startedAt ?? performance.now(), performance.now());
       guestEl.querySelector(".text").textContent = m.text;
       guestEl.classList.remove("partial");
       guestEl = null;
       if (m.text) cutAnswer(m.turn);
       break;
+    case "fact_check_started":
+      model("check", 1);
+      break;
     case "cutout_started":
+      model("sam", 1);
       answerSlot(m.turn).querySelector("figcaption").textContent = `Answer ${m.turn + 1}: cutting out…`;
       break;
     case "cutout": {
+      model("sam", -1);
       const fig = answerSlot(m.turn);
       const v = Object.assign(document.createElement("video"), { src: media(m.file), controls: true, preload: "metadata" });
       fig.prepend(v);
@@ -504,19 +595,30 @@ async function onMessage(m) {
       setStatus("Off air");
       break;
     case "chart_reading_started":
+      model("vision", 1);
       addLine("Studio", "Reading the chart…", "anchor");
       break;
     case "chart":
+      model("vision", -1);
+      if (m.legible) note("chart", `${m.title}: ${m.figures.map((f) => `${f.label} ${f.value}${f.unit}`).join(", ")}`);
       addLine("Studio", m.legible
         ? `Chart: ${m.title || "untitled"}. ${m.figures.map((f) => `${f.label} ${f.value}${f.unit}`).join(", ")}`
         : "No legible chart in that frame.", "anchor");
       break;
     case "fact_check":
+      model("check", -1);
       m.checks.forEach(addCheck);
+      m.checks.forEach((c) => note("check",
+        `${c.verdict.toUpperCase()}: ${c.claim}` + (c.verdict === "supported" ? "" : ` (sources: ${c.correct_value})`)));
       break;
-    case "error":
+    case "error": {
+      const area = m.message.split(":")[0];
+      const key = { anchor: "anchor", chart: "vision", "fact-check": "check" }[area]
+        ?? (area.startsWith("cutout") ? "sam" : null);
+      if (key) model(key, -1);
       addLine("Studio", m.message, "anchor error");
       break;
+    }
     case "ended":
       setStatus(m.cutouts_pending ? `Finishing ${m.cutouts_pending} cut-out(s)…` : "Off air");
       break;

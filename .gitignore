@@ -10,3 +10,6 @@ node_modules/
 *.wav
 *.webm
 media/
+video/cards/
+video/*.mp4
+video/*.srt

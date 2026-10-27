@@ -29,6 +29,7 @@ uv run pytest          # no key needed: tests replay recorded responses
 ## Demo
 
 [`docs/DEMO.md`](docs/DEMO.md): choosing the guest, the run sheet, and the consent form.
+[`docs/VIDEO.md`](docs/VIDEO.md): the 3-minute video, shot by shot.
 
 ## Deploying
 

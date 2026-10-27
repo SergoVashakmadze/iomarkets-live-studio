@@ -133,3 +133,39 @@ async def join(parts: list[Path], out: Path, width: int, height: int) -> None:
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(out),
     )  # fmt: skip
+
+
+async def text_card(
+    lines: list[tuple[str, int, str]],
+    out: Path,
+    workdir: Path,
+    *,
+    width: int = 1920,
+    height: int = 1080,
+    seconds: float = 5.0,
+) -> None:
+    """A silent card of centred lines, each (text, size as a fraction 1/n of height, colour).
+
+    Used for the demo video's title, how-it-works and end cards (scripts/video_cards.py).
+    """
+    sizes = [height // n for _, n, _ in lines]
+    gap = height // 60
+    total = sum(sizes) + gap * (len(lines) - 1)
+    y = (height - total) // 2
+    drawn = []
+    for i, ((text, _, colour), size) in enumerate(zip(lines, sizes, strict=True)):
+        if text:
+            path = _text(workdir / f"{out.stem}.l{i}.txt", text)
+            drawn.append(
+                f"drawtext=font='{FONT}':textfile='{path}':expansion=none:fontcolor={colour}:"
+                f"fontsize={size}:x=(w-text_w)/2:y={y}"
+            )
+        y += size + gap
+    await _run(
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        "-f", "lavfi", "-i", f"color=c={STUDIO_BACKGROUND}:s={width}x{height}:r={FPS}:d={seconds}",
+        "-f", "lavfi", "-i", f"anullsrc=r=48000:cl=stereo:d={seconds}",
+        "-vf", ",".join(drawn) or "null", "-map", "0:v", "-map", "1:a",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-t", f"{seconds:.2f}", str(out),
+    )  # fmt: skip

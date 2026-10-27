@@ -71,3 +71,12 @@ async def test_session_records_the_question_each_turn_answers():
     await s.on_event(GuestStarted(1, barge_in=False))
     await s.on_event(GuestStarted(1, barge_in=False))  # repeated start keeps the first
     assert s.question_for_turn == {1: "Welcome. First question?"}
+
+
+@needs_ffmpeg
+async def test_text_card(tmp_path):
+    out = tmp_path / "title.mp4"
+    lines = [("Title: it's here", 12, "white"), ("", 40, "white"), ("sub", 30, "0x9fb3c8")]
+    await compose.text_card(lines, out, tmp_path, width=640, height=360, seconds=1.5)
+    w, h, d, audio = await compose.media_info(out)
+    assert (w, h, audio) == (640, 360, True) and 1.4 < d < 1.6

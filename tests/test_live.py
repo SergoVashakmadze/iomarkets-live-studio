@@ -176,7 +176,7 @@ async def test_chart_frame_is_read_then_checked():
     await s.on_frame(b"\xff\xd8jpeg")
     await _settle()
     types = [m["type"] for m in sent]
-    assert types == ["chart_reading_started", "chart", "fact_check"]
+    assert types == ["chart_reading_started", "chart", "fact_check_started", "fact_check"]
     assert desk.checked == [
         'Chart "Organic growth". Source shown: company results. FY26: 9.1 % (FY26)'
     ]
@@ -189,3 +189,15 @@ async def test_illegible_chart_is_not_checked():
     await s.on_frame(b"\xff\xd8")
     await _settle()
     assert desk.checked == [] and sent[-1]["type"] == "chart"
+
+
+async def test_check_with_nothing_found_still_closes_the_badge():
+    s, sent = _session(FakeAnchor(), FakeDesk([]))
+    await s.on_event(GuestTurn(0, "We grew 5%.", 0))
+    await s.on_event(GuestTurn(1, "Thanks for having me.", 0))  # no figure: no check messages
+    await _settle()
+    checks = [m for m in sent if m["type"].startswith("fact_check")]
+    assert checks == [
+        {"type": "fact_check_started", "turn": 0},
+        {"type": "fact_check", "turn": 0, "checks": []},
+    ]
