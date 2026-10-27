@@ -27,6 +27,8 @@ from typing import Any, Literal
 
 import httpx
 
+from studio import ledger
+
 DEFAULT_BASE_URL = "https://api.meta.ai/v1"
 DEFAULT_MODEL = "muse-spark-1.3"
 
@@ -177,6 +179,9 @@ class ResponsesClient:
             raise RuntimeError("META_API_KEY is not set (see .env.example)")
         self.model = model or os.environ.get("META_MODEL") or DEFAULT_MODEL
         self.max_retries = max_retries
+        base = base_url or os.environ.get("META_API_BASE_URL") or DEFAULT_BASE_URL
+        # Spend on Meta's API is metered against the daily budget (studio.ledger).
+        self.metered = "api.meta.ai" in base
         self._http = httpx.AsyncClient(
             base_url=base_url or os.environ.get("META_API_BASE_URL") or DEFAULT_BASE_URL,
             headers={"Authorization": f"Bearer {key}"},
@@ -267,7 +272,13 @@ class ResponsesClient:
                     err = event.get("error") or (event.get("response") or {}).get("error") or {}
                     raise MetaAPIError(200, err.get("message") or f"stream ended: {kind}")
                 elif kind == "response.completed":
+                    self._meter(event.get("response") or {})
                     return
+
+    def _meter(self, body: dict[str, Any]) -> None:
+        if self.metered and body.get("usage"):
+            kind = "sam" if body["usage"].get("video_frames_processed") else "spark"
+            ledger.charge(kind, ledger.response_cost(body))
 
     async def upload_file(self, path: str, *, expires_seconds: int = 3600) -> str:
         """Upload to the Files API for inference; returns the file id.
@@ -299,7 +310,9 @@ class ResponsesClient:
         for attempt in range(self.max_retries + 1):
             r = await self._http.post(path, json=body, **extra)
             if r.status_code < 400:
-                return r.json()
+                body = r.json()
+                self._meter(body)
+                return body
             if r.status_code not in RETRYABLE or attempt == self.max_retries:
                 raise _error(r)
             delay = _delay(r, attempt)

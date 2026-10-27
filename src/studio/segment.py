@@ -28,6 +28,7 @@ from studio.meta.responses import ResponsesClient
 KEEP_AFTER_END_S = 30 * 60
 MAX_CLIP_BYTES = 60_000_000  # about two minutes of 720p WebM
 MAX_CONCURRENT = 2
+MAX_ANSWERS = 12  # SAM is most of an interview's cost; about $0.10 per 20 s answer
 MEDIA_NAME = re.compile(r"^(turn-[0-9]{1,4}|segment)\.mp4$")
 
 ROOMS: dict[str, SegmentRoom] = {}
@@ -53,6 +54,8 @@ class SegmentRoom:
         return path if path.is_file() else None
 
     def add_answer(self, turn: int, webm: bytes, start_s: float) -> None:
+        if len(self.clips) + len(self._jobs) >= MAX_ANSWERS:
+            raise OverflowError(f"this interview already has {MAX_ANSWERS} answers")
         raw = self.dir / f"raw-{turn}.webm"
         raw.write_bytes(webm)
         task = asyncio.create_task(self._cut(turn, raw, start_s))

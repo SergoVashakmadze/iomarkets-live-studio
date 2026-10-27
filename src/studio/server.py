@@ -30,10 +30,12 @@ from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocket
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
+from studio import ledger
 from studio.agents.anchor import Anchor
 from studio.agents.factcheck import FactDesk
 from studio.agents.scout import prepare_brief
 from studio.asr import AsrError, GuestListener
+from studio.ledger import BudgetExceeded, Ledger
 from studio.live import LiveSession
 from studio.meta.open_weights import open_weights_client
 from studio.meta.responses import ResponsesClient
@@ -41,6 +43,7 @@ from studio.segment import MAX_CLIP_BYTES, ROOMS, SegmentRoom
 
 MAX_BRIEF_CHARS = 20_000
 MAX_FRAME_BYTES = 3_000_000  # one JPEG camera frame
+MAX_INTERVIEW_S = 15 * 60
 
 
 class BriefRequest(BaseModel):
@@ -70,8 +73,27 @@ def create_app(
     client_factory: Callable[[], ResponsesClient] = ResponsesClient,
     listener_factory: Callable[..., GuestListener] = GuestListener,
     editor_factory: Callable[[], ResponsesClient | None] = open_weights_client,
+    spend: Ledger | None = None,
 ) -> FastAPI:
     app = FastAPI(title="IoMarkets Live Studio")
+    ledger.current = spend or Ledger.from_env()
+
+    def _within_budget() -> None:
+        try:
+            ledger.current.check()
+        except BudgetExceeded as e:
+            raise HTTPException(429, str(e)) from e
+
+    @app.get("/api/budget")
+    async def budget(token: str | None = Query(None)) -> dict[str, Any]:
+        if not _token_ok(token):
+            raise HTTPException(403, "bad token")
+        return {
+            "spent_today_usd": ledger.current.spent_today(),
+            "budget_usd": ledger.current.budget_usd,
+            "by_kind": ledger.current.today(),
+        }
+
     page = files("studio.web").joinpath("index.html").read_text()
 
     @app.get("/", response_class=HTMLResponse)
@@ -82,6 +104,7 @@ def create_app(
     async def brief(req: BriefRequest, token: str | None = Query(None)) -> dict[str, Any]:
         if not _token_ok(token):
             raise HTTPException(403, "bad token")
+        _within_budget()
         editor = editor_factory()
         async with client_factory() as client:
             try:
@@ -123,7 +146,11 @@ def create_app(
                 raise HTTPException(413, "clip too large")
         if not body:
             raise HTTPException(400, "empty clip")
-        room.add_answer(turn, bytes(body), start)
+        _within_budget()
+        try:
+            room.add_answer(turn, bytes(body), start)
+        except OverflowError as e:
+            raise HTTPException(429, str(e)) from e
         return {"status": "accepted"}
 
     @app.post("/api/segment/{key}")
@@ -150,6 +177,12 @@ def create_app(
         try:
             start = Start.model_validate(await ws.receive_json())
         except (ValueError, WebSocketDisconnect):
+            await ws.close(code=1008)
+            return
+        try:
+            ledger.current.check()
+        except BudgetExceeded as e:
+            await ws.send_json({"type": "error", "message": str(e)})
             await ws.close(code=1008)
             return
         try:
@@ -204,6 +237,13 @@ async def _run_live(
                             listener.finish()
 
             reader = asyncio.create_task(from_page())
+
+            async def time_limit() -> None:
+                await asyncio.sleep(MAX_INTERVIEW_S)
+                await session.send({"type": "error", "message": "15-minute limit: ending."})
+                listener.finish()
+
+            limiter = asyncio.create_task(time_limit())
             try:
                 async for event in listener.events():
                     await session.on_event(event)
@@ -211,6 +251,7 @@ async def _run_live(
                     await session.send({"type": "ended", "cutouts_pending": room.busy})
             finally:
                 reader.cancel()
+                limiter.cancel()
                 await session.close()
                 await room.drain()
                 room.close()

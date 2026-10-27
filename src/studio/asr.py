@@ -30,6 +30,8 @@ from typing import Any
 import websockets
 from websockets.asyncio.client import ClientConnection
 
+from studio import ledger
+
 ASR_URL = "wss://api.meta.ai/v1/asr/realtime"
 ASR_MODEL = "muse-voice-transcribe-1.0"
 SAMPLE_RATE = 24_000
@@ -218,6 +220,7 @@ class GuestListener:
         return self
 
     async def __aexit__(self, *exc: object) -> None:
+        ledger.charge("asr", ledger.asr_cost(self.pacer.sent_ms / 1000))
         if self._sender:
             self._sender.cancel()
         if self._ws:
