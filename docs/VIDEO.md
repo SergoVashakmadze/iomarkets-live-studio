@@ -1,7 +1,8 @@
 # The demo video (3:00)
 
 Judging: Impact 30, **Use of Meta tooling 25**, **Demo 25**, Technical depth 20. The rules
-also say the demo may show only work built during the event, so every shot here is of this
+also say the video must open with one line stating what was pre-existing and what was built
+this week (the first shot below), and the demo may show only work built during the event, so every shot here is of this
 repo. The video carries three jobs: show a real interview working end to end, make each Meta
 model visible at the moment it works, and say plainly what was built when.
 
@@ -27,7 +28,7 @@ model visible at the moment it works, and say plainly what was built when.
 
 | Time | Shot | On screen | Voice-over (operator) | Scores |
 |---|---|---|---|---|
-| 0:00-0:06 | `01-title` card | | "IoMarkets Live Studio: a live business interview with an AI anchor." | |
+| 0:00-0:07 | `01-title` card | Disclosure line on the card | "Pre-existing: Meta's models, Microsoft's TTS voice and open-source libraries. Built this week: the whole studio. IoMarkets Live Studio: a live interview with an AI anchor." | Rules (the video must open with this line) |
 | 0:06-0:16 | `02-problem` card | | "A live interview takes a presenter, a researcher, a fact-checker and an editor. Small newsrooms go without. This does all four, live, on Meta's models." | Impact |
 | 0:16-0:34 | Screen: type the guest, paste a link, drop their deck, **Prepare brief** | Badges light; brief appears with PRESSURE POINTS | "Scout reads the guest's deck and links with Muse Spark and searches the web; the Devil's Advocate lists the claims to test, each with a question." | Meta tooling, Impact |
 | 0:34-1:00 | Screen: tick consent, **Go live**; anchor opens; guest answers | Voice Transcribe badge on while the guest talks; live transcript; anchor line | "The guest speaks; Muse Voice Transcribe hears every word as it is said, and the anchor, on Muse Spark, answers in about two seconds." | Demo |

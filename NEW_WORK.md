@@ -2,14 +2,20 @@
 
 **Disclosure.** IoMarkets.tv had a prior interview studio built on other providers, before this
 hackathon. This entry is a ground-up rebuild on Meta's stack: every line of code in this repo was
-written Oct 27 – Nov 4, 2026. No code was copied from the prior version. Where ideas or prompt
-wording carry over, the entry below says so. The demo video labels on screen which parts are new
-and which are pre-existing.
+written after building opened at the end of the Oct 26 kickoff (12:24 PM ET), through Nov 4,
+2026. No code, prompt or history was copied from the prior version, and this repo does not call
+it. The demo video opens with one line saying what was pre-existing and what was built this
+week.
+
+**Before kickoff.** Two commits predate 12:24 PM ET on Oct 26: `a4ac558` (09:32 ET: an empty
+README, this file's headings, the MIT licence, a `.gitignore`) and `08bc541` (12:16 ET: the
+disclosure paragraph above). They hold no code. The README and this file have since been rewritten; the licence is the
+standard MIT text and the `.gitignore` lines are generic ignores.
 
 The hackathon rules require that judges can tell what was built during the event. This file is
 the record. Every entry links to the commits that built it.
 
-## Built during the hackathon (Oct 27 – Nov 4, 2026)
+## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
 ### Oct 27: video materials
 
@@ -193,12 +199,24 @@ the record. Every entry links to the commits that built it.
 
 Commits: see the `feat/day1-responses-agent-loop` PR.
 
-## Pre-existing, called but not contained here
+## Pre-existing: what this repo builds on
 
-These are parts of IoMarkets.tv, a pre-launch product of Rainmaker Partners Ltd, built before the
-event. This repo calls them over HTTP; their code is not in this repo, and the demo does not
-present them as hackathon work.
+Nothing from IoMarkets.tv's earlier studio is used: not its code, not its backend, not its
+lip-sync or voice stack. (An earlier version of this section said the repo called that backend
+over HTTP. It never did; `src/` calls only the services below.)
 
-- The interview show backend (Scout, Anchor, Fact-Check, grader, approval gate) and its API.
-- The anchor lip-sync render (MuseTalk).
-- Text-to-speech (Edge TTS, Kokoro-82M fallback).
+Hosted services, called over HTTPS:
+
+- **Meta**: Muse Spark 1.3 (Responses API, web search, vision, Files API), Muse Voice Transcribe,
+  SAM 3.1 (`api.meta.ai`).
+- **Muse Spark Open** (open weights, Muse Model License), served by Fireworks (`api.fireworks.ai`).
+- **Microsoft Edge text-to-speech**, through the open-source `edge-tts` client (LGPL-3.0). The
+  service itself is Microsoft's and not open source; it only reads the anchor's own lines.
+- **Yahoo Finance** quote endpoint (Scout's `market_quote` tool), and the **YouTube / Vimeo
+  oEmbed** endpoints (title and channel of a pasted video).
+
+Open-source libraries (`pyproject.toml`): httpx (BSD-3), pydantic (MIT), certifi (MPL-2.0),
+websockets (BSD-3), FastAPI (MIT), uvicorn (BSD-3), numpy (BSD-3 and others), python-multipart
+(Apache-2.0), edge-tts (LGPL-3.0), and Meta's `meta-sam-parser` (SAM License).
+
+No pre-existing datasets are used. Test fixtures are recordings of this repo's own live calls.
