@@ -214,10 +214,15 @@ async def _run(*cmd: str) -> bytes:
     return out
 
 
-async def normalise(src: str | Path, dst: str | Path) -> ClipInfo:
-    """Any clip (WebM included) to H.264 MP4, 25 fps, at most 720p, with +faststart."""
+async def normalise(src: str | Path, dst: str | Path, start_s: float = 0.0) -> ClipInfo:
+    """Any clip (WebM included) to H.264 MP4, 25 fps, at most 720p, with +faststart.
+
+    `start_s` trims the head: the page records from the end of the guest's last turn and says
+    where this one began.
+    """
     await _run(
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src),
+        "-ss", f"{max(start_s, 0.0):.3f}",
         "-vf", f"fps={FPS},scale=-2:'min({MAX_HEIGHT},ih)'",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(dst),
@@ -347,9 +352,10 @@ async def cut_out_guest(
     *,
     workdir: str | Path,
     background: str | Path | None = None,
+    start_s: float = 0.0,
 ) -> CutoutReport:
-    clip = Path(workdir) / "normalised.mp4"
-    info = await normalise(src, clip)
+    clip = Path(workdir) / f"{Path(out).stem}.normalised.mp4"  # unique: cutouts can overlap
+    info = await normalise(src, clip, start_s)
     try:
         seg, upload_s, sam_s = await segment(client, clip, info)
         t = time.monotonic()
@@ -357,3 +363,18 @@ async def cut_out_guest(
         return CutoutReport(info.frames, guest_frames, upload_s, sam_s, time.monotonic() - t)
     finally:
         clip.unlink(missing_ok=True)
+
+
+async def join_clips(clips: list[Path], out: str | Path) -> None:
+    """Concatenate cut-out answers into one segment. They share codec settings (all made by
+    `composite`), so the streams are copied, not re-encoded."""
+    listing = Path(out).with_suffix(".txt")
+    # The concat demuxer resolves relative paths against the list file; use absolute ones.
+    listing.write_text("".join(f"file '{c.resolve()}'\n" for c in clips))
+    try:
+        await _run(
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
+            "-i", str(listing), "-c", "copy", "-movflags", "+faststart", str(out),
+        )  # fmt: skip
+    finally:
+        listing.unlink(missing_ok=True)

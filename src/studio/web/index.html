@@ -71,6 +71,13 @@
   .contradicted .verdict { color: var(--live); }
   .unverifiable .verdict { color: var(--warn); }
   .check a { color: var(--accent); word-break: break-all; }
+  .consent { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; margin: 12px 0 0; }
+  .consent input { width: auto; margin-top: 4px; }
+  #answers { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  #answers figure { margin: 0; }
+  #answers figcaption { font-size: .8rem; color: var(--muted); margin-top: 4px; }
+  #answers video { aspect-ratio: 16 / 9; }
+  #segmentLink a { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -100,6 +107,8 @@
     <p class="note">Use headphones: the anchor's voice must not reach the microphone, or it
       counts as the guest talking. To check a chart, hold it up to the camera and press
       Show chart.</p>
+    <label class="consent"><input type="checkbox" id="consent"> The guest has agreed to be
+      recorded, voice and video, for this segment, and to be cut out of their background.</label>
     <div class="stage">
       <div>
         <video id="cam" muted playsinline autoplay></video>
@@ -110,6 +119,17 @@
         <div id="checks" aria-live="polite"><p class="note">Figures the guest says or shows
           are checked here as the interview runs.</p></div>
       </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Segment</h2>
+    <p class="note">Each answer is cut out of its background by SAM 3.1 while the interview goes
+      on. Clips are deleted 30 minutes after the interview ends: download what you need.</p>
+    <div id="answers"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="build" class="secondary" disabled>Build segment</button>
+      <span id="segmentLink" class="note"></span>
     </div>
   </section>
 
@@ -194,6 +214,64 @@ class Pcm24k extends AudioWorkletProcessor {
 registerProcessor("pcm-24k", Pcm24k);`;
 
 let ws = null, audio = null, stream = null, guestEl = null;
+let room = null, recorder = null, recStart = 0, guestAt = null;
+const media = (name) => withToken(`/media/${room}/${name}`);
+
+// Answers: the recorder runs all the time and restarts at each turn boundary; the upload says
+// where in the recording the guest began (a second early, as speech is detected late).
+function startRecorder() {
+  const type = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+    .find((t) => MediaRecorder.isTypeSupported(t));
+  const chunks = [];
+  recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+  recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  recorder.chunks = chunks;
+  recorder.start(1000);
+  recStart = performance.now();
+}
+
+function cutAnswer(turn) {
+  if (!recorder) return;
+  const rec = recorder, startedAt = recStart;
+  const start = guestAt === null ? 0 : Math.max(0, (guestAt - startedAt) / 1000 - 1.0);
+  guestAt = null;
+  startRecorder();
+  rec.onstop = async () => {
+    const blob = new Blob(rec.chunks, { type: "video/webm" });
+    const url = withToken(`/api/answers/${room}/${turn}`) + (token ? "&" : "?") + `start=${start.toFixed(2)}`;
+    const r = await fetch(url, { method: "POST", body: blob, headers: { "content-type": "video/webm" } });
+    if (!r.ok) addLine("Studio", `Answer ${turn} upload failed: ${r.status}`, "anchor error");
+  };
+  rec.stop();
+}
+
+function stopRecorder() {
+  if (recorder && recorder.state !== "inactive") { recorder.onstop = null; recorder.stop(); }
+  recorder = null;
+}
+
+function answerSlot(turn) {
+  let fig = document.getElementById(`answer-${turn}`);
+  if (!fig) {
+    fig = document.createElement("figure");
+    fig.id = `answer-${turn}`;
+    fig.append(document.createElement("figcaption"));
+    $("answers").append(fig);
+  }
+  return fig;
+}
+
+$("build").onclick = async () => {
+  $("build").disabled = true;
+  $("segmentLink").textContent = "Joining answers…";
+  const r = await fetch(withToken(`/api/segment/${room}`), { method: "POST" });
+  if (!r.ok) { $("segmentLink").textContent = `Failed: ${r.status}`; $("build").disabled = false; return; }
+  const { file } = await r.json();
+  $("segmentLink").innerHTML = "";
+  $("segmentLink").append(Object.assign(document.createElement("a"),
+    { href: media(file), textContent: "Download segment.mp4", download: "segment.mp4" }));
+  $("build").disabled = false;
+};
 
 async function startMic(onChunk) {
   stream = await navigator.mediaDevices.getUserMedia({
@@ -236,8 +314,12 @@ function send(msg) {
 $("go").onclick = async () => {
   const brief = $("brief").value.trim();
   if (!brief) { setStatus("Prepare a brief first"); return; }
+  if (!$("consent").checked) { setStatus("Confirm the guest's consent first"); return; }
   $("go").disabled = true;
   $("log").innerHTML = "";
+  $("answers").innerHTML = "";
+  $("segmentLink").textContent = "";
+  $("build").disabled = true;
   const keywords = $("subject").value.split(/[,;]/).map((s) => s.replace(/\b(CEO|CFO|of|the)\b/gi, "").trim()).filter(Boolean);
   const proto = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(`${proto}://${location.host}${withToken("/ws/live")}`);
@@ -245,11 +327,17 @@ $("go").onclick = async () => {
   setStatus("Connecting…");
   ws.onopen = () => ws.send(JSON.stringify({ type: "start", brief, keywords }));
   ws.onmessage = (e) => onMessage(JSON.parse(e.data));
-  ws.onclose = () => { stopMic(); speechSynthesis.cancel(); setStatus("Off air");
+  ws.onclose = () => { stopRecorder(); stopMic(); speechSynthesis.cancel(); setStatus("Off air");
                        $("go").disabled = false; $("end").disabled = true; $("chart").disabled = true; };
 };
 
-$("end").onclick = () => { send({ type: "stop" }); stopMic(); speechSynthesis.cancel(); };
+$("end").onclick = () => {
+  send({ type: "stop" });
+  stopRecorder();
+  stopMic();
+  speechSynthesis.cancel();
+  $("end").disabled = true;
+};
 
 // Show chart: grab the current camera frame as a JPEG for the chart reader.
 $("chart").onclick = () => {
@@ -287,8 +375,10 @@ function addCheck(c) {
 async function onMessage(m) {
   switch (m.type) {
     case "ready":
+      room = m.room;
       try {
         await startMic((buf) => ws?.readyState === WebSocket.OPEN && ws.send(buf));
+        startRecorder();
       } catch (e) {
         addLine("Studio", `Microphone unavailable: ${e.message}`, "anchor error");
         ws.close();
@@ -310,6 +400,7 @@ async function onMessage(m) {
       break;
     case "guest_started":
       guestEl = addLine(m.barge_in ? "Guest · interrupted" : "Guest", "…", "guest partial");
+      if (guestAt === null) guestAt = performance.now();
       setStatus("Guest speaking", true);
       break;
     case "guest_partial":
@@ -320,6 +411,22 @@ async function onMessage(m) {
       guestEl.querySelector(".text").textContent = m.text;
       guestEl.classList.remove("partial");
       guestEl = null;
+      if (m.text) cutAnswer(m.turn);
+      break;
+    case "cutout_started":
+      answerSlot(m.turn).querySelector("figcaption").textContent = `Answer ${m.turn + 1}: cutting out…`;
+      break;
+    case "cutout": {
+      const fig = answerSlot(m.turn);
+      const v = Object.assign(document.createElement("video"), { src: media(m.file), controls: true, preload: "metadata" });
+      fig.prepend(v);
+      fig.querySelector("figcaption").textContent =
+        `Answer ${m.turn + 1}: guest in ${m.guest_frames}/${m.frames} frames, ready in ${m.seconds}s`;
+      $("build").disabled = false;
+      break;
+    }
+    case "cutouts_done":
+      setStatus("Off air");
       break;
     case "chart_reading_started":
       addLine("Studio", "Reading the chart…", "anchor");
@@ -336,7 +443,7 @@ async function onMessage(m) {
       addLine("Studio", m.message, "anchor error");
       break;
     case "ended":
-      setStatus("Off air");
+      setStatus(m.cutouts_pending ? `Finishing ${m.cutouts_pending} cut-out(s)…` : "Off air");
       break;
   }
 }
