@@ -53,6 +53,21 @@ RETRYABLE = {429, 500, 503}
 log = logging.getLogger(__name__)
 
 
+def json_format(name: str, schema: dict[str, Any]) -> dict[str, Any]:
+    """`text.format` for strict structured output (works alongside images and web search)."""
+    return {"format": {"type": "json_schema", "name": name, "schema": schema, "strict": True}}
+
+
+def strict_object(properties: dict[str, Any]) -> dict[str, Any]:
+    """An object schema in the form strict mode requires: every key required, nothing extra."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(properties),
+        "properties": properties,
+    }
+
+
 class MetaAPIError(RuntimeError):
     def __init__(self, status: int, message: str, type_: str | None = None):
         super().__init__(f"Meta API {status}: {message}")
@@ -187,6 +202,7 @@ class ResponsesClient:
         previous_response_id: str | None = None,
         include: list[str] | None = None,
         allow_empty: bool = False,
+        schema: tuple[str, dict[str, Any]] | None = None,
     ) -> Response:
         """One Responses call under `role`'s budget.
 
@@ -208,6 +224,8 @@ class ResponsesClient:
             body["previous_response_id"] = previous_response_id
         if include:
             body["include"] = include
+        if schema:
+            body["text"] = json_format(*schema)
 
         resp = Response.parse(await self._post("/responses", body))
         if not allow_empty and not resp.text and not resp.function_calls:

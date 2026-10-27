@@ -4,8 +4,9 @@
 
 `/ws/live` protocol. The page sends `{"type": "start", "brief": ..., "keywords": [...]}`
 first, then binary frames of 24 kHz s16le mono PCM from the guest's microphone, plus
-`{"type": "anchor", "speaking": bool}` as playback starts and stops, and `{"type": "stop"}`
-to end. The server answers with the LiveSession messages (see `live.py`).
+`{"type": "anchor", "speaking": bool}` as playback starts and stops,
+`{"type": "frame", "jpeg": <base64>}` when the guest shows a chart, and `{"type": "stop"}` to
+end. The server answers with the LiveSession messages (see `live.py`).
 
 If `STUDIO_TOKEN` is set, every request must carry it as `?token=`; set it whenever the page
 is reachable from anywhere but this machine.
@@ -14,6 +15,8 @@ is reachable from anywhere but this machine.
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import contextlib
 import hmac
 import json
@@ -27,12 +30,14 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from studio.agents.anchor import Anchor
+from studio.agents.factcheck import FactDesk
 from studio.agents.scout import write_brief
 from studio.asr import AsrError, GuestListener
 from studio.live import LiveSession
 from studio.meta.responses import ResponsesClient
 
 MAX_BRIEF_CHARS = 20_000
+MAX_FRAME_BYTES = 3_000_000  # one JPEG camera frame
 
 
 class BriefRequest(BaseModel):
@@ -105,7 +110,8 @@ async def _run_live(
     listener_factory: Callable[..., GuestListener],
 ) -> None:
     async with client_factory() as client:
-        session = LiveSession(Anchor(client, start.brief), ws.send_json)
+        desk = FactDesk(client, start.brief)
+        session = LiveSession(Anchor(client, start.brief), ws.send_json, desk)
         listener = listener_factory(
             keywords=start.keywords, anchor_speaking=lambda: session.anchor_speaking
         )
@@ -125,6 +131,10 @@ async def _run_live(
                         control = _json(msg["text"])
                         if control.get("type") == "anchor":
                             session.set_anchor_speaking(bool(control.get("speaking")))
+                        elif control.get("type") == "frame":
+                            jpeg = _jpeg(control.get("jpeg"))
+                            if jpeg:
+                                await session.on_frame(jpeg)
                         elif control.get("type") == "stop":
                             listener.finish()
 
@@ -137,6 +147,16 @@ async def _run_live(
             finally:
                 reader.cancel()
                 await session.close()
+
+
+def _jpeg(b64: Any) -> bytes | None:
+    if not isinstance(b64, str) or len(b64) > MAX_FRAME_BYTES * 4 // 3 + 4:
+        return None
+    try:
+        data = base64.b64decode(b64, validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    return data if data.startswith(b"\xff\xd8") else None  # JPEG magic
 
 
 def _json(text: str) -> dict[str, Any]:

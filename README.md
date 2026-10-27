@@ -31,7 +31,8 @@ uv run pytest          # no key needed: tests replay recorded responses
 - **In use:** Muse Spark 1.3 on the Responses API, with built-in web search (Scout, since Oct 27);
   Muse Voice Transcribe, realtime ENDPOINTING mode (live guest speech, since Oct 27);
   Muse Spark 1.3 as the live Anchor (since Oct 27); SAM 3.1, hosted, for the guest cutout,
-  decoded with Meta's `meta-sam-parser` (SAM License) (since Oct 27).
+  decoded with Meta's `meta-sam-parser` (SAM License) (since Oct 27); Muse Spark 1.3 with image
+  input and strict JSON for chart reading, and with web search for Fact-Check (since Oct 27).
 - **Planned:** Muse Spark Open (one agent on open weights).
 
 ## Licence

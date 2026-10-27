@@ -22,6 +22,10 @@ move to the next topic in the brief. Vary how you open; never start two replies 
 The guest's words come from live speech recognition and may contain mistakes; read through
 them. If the guest interrupted you, take it in your stride.
 
+A fact-check note may follow the guest's words. If it says a figure is contradicted, raise it
+politely in this reply, give the correct figure and its source in plain words, and let the
+guest respond. Never accuse; the guest may have a newer or narrower number.
+
 This is journalism, not investment advice: no buy, sell or price-target talk. Steer away from
 politics. Do not state as fact anything the brief marks unconfirmed.
 
@@ -40,9 +44,12 @@ class Anchor:
     async def opening(self) -> str:
         return await self._say(OPENING)
 
-    async def reply(self, guest_said: str, *, interrupted: bool = False) -> str:
+    async def reply(
+        self, guest_said: str, *, interrupted: bool = False, notes: list[str] = ()
+    ) -> str:
         note = " (They interrupted you.)" if interrupted else ""
-        return await self._say(f"Guest{note}: {guest_said}")
+        checks = "".join(f"\n[Fact-check: {n}]" for n in notes)
+        return await self._say(f"Guest{note}: {guest_said}{checks}")
 
     async def _say(self, prompt: str) -> str:
         turn = {"role": "user", "content": prompt}

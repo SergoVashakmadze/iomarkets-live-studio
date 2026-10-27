@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 
 import httpx
 import pytest
@@ -52,26 +54,46 @@ class FakeListener:
         await self.finished.wait()
 
 
+class Router:
+    """Answers anchor calls in order, and fact-check calls with one supported check."""
+
+    def __init__(self, anchor_lines: list[str]):
+        self.anchor = Replay([_answer(t, f"r{i}") for i, t in enumerate(anchor_lines, 1)])
+        self.factchecks: list[dict] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if (body.get("text") or {}).get("format", {}).get("name") == "fact_checks":
+            self.factchecks.append(body)
+            check = {"claim": "5%", "verdict": "supported", "correct_value": "5%"}
+            checks = {"checks": [{**check, "explanation": "Matches.", "source_url": ""}]}
+            return _answer(json.dumps(checks), "fc")
+        return self.anchor(request)
+
+
 @pytest.fixture
 def app_and_replay():
     FakeListener.instances.clear()
-    replay = Replay(
-        [_answer("Welcome, Margherita.", "r1"), _answer("Where did it come from?", "r2")]
-    )
+    router = Router(["Welcome, Margherita.", "Where did it come from?"])
     app = create_app(
-        client_factory=lambda: ResponsesClient(api_key="k", transport=replay.transport()),
+        client_factory=lambda: ResponsesClient(api_key="k", transport=httpx.MockTransport(router)),
         listener_factory=FakeListener,
     )
-    return app, replay
+    return app, router
 
 
-def _receive_until(ws, kind: str) -> list[dict]:
-    seen = []
-    while True:
+def _receive_until(ws, *kinds: str) -> list[dict]:
+    """Receive until every one of `kinds` has arrived, in any order."""
+    seen, waiting = [], set(kinds)
+    while waiting:
         msg = ws.receive_json()
         seen.append(msg)
-        if msg["type"] == kind:
-            return seen
+        waiting.discard(msg["type"])
+    return seen
+
+
+def _last(seen: list[dict], kind: str) -> dict:
+    return [m for m in seen if m["type"] == kind][-1]
 
 
 def test_page_is_served(app_and_replay):
@@ -90,16 +112,17 @@ def test_live_interview_round_trip(app_and_replay):
         assert seen[-1]["text"] == "Welcome, Margherita."
         ws.send_json({"type": "anchor", "speaking": True})
         ws.send_bytes(b"\x00" * 3840)
-        seen = _receive_until(ws, "anchor_line")
+        seen = _receive_until(ws, "anchor_line", "fact_check")
         assert {"type": "stop_anchor"} in seen  # the guest spoke over the anchor
-        assert seen[-1]["text"] == "Where did it come from?"
+        assert _last(seen, "anchor_line")["text"] == "Where did it come from?"
+        assert _last(seen, "fact_check")["checks"][0]["verdict"] == "supported"
         ws.send_json({"type": "stop"})
         _receive_until(ws, "ended")
 
     listener = FakeListener.instances[0]
     assert listener.keywords == ["Vodafone"]
     assert bytes(listener.audio) == b"\x00" * 3840
-    second = replay.bodies()[1]
+    second = replay.anchor.bodies()[1]
     assert "previous_response_id" not in second  # chaining costs ~10 s a turn; see anchor.py
     opening, welcome, guest = second["input"]
     assert welcome == {"role": "assistant", "content": "Welcome, Margherita."}
@@ -129,3 +152,13 @@ def test_token_required_when_set(app_and_replay, monkeypatch):
     with client.websocket_connect("/ws/live?token=s3cret") as ws:
         ws.send_json({"type": "start", "brief": "x"})
         assert ws.receive_json()["type"] == "ready"
+
+
+def test_bad_frames_are_ignored(app_and_replay):
+    from studio.server import _jpeg
+
+    assert _jpeg(base64.b64encode(b"\xff\xd8\xff\xe0rest").decode()) == b"\xff\xd8\xff\xe0rest"
+    assert _jpeg(base64.b64encode(b"GIF89a").decode()) is None  # not a JPEG
+    assert _jpeg("%%%not base64") is None
+    assert _jpeg(None) is None
+    assert _jpeg("A" * 5_000_000) is None  # too large
