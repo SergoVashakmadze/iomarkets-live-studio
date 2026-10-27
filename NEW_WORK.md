@@ -11,6 +11,16 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: demo video kit
+
+- Page: a **Meta models** strip, one badge per model role (Voice Transcribe, Spark anchor,
+  Spark + web search, Spark vision, SAM 3.1, Spark Open) that lights while that model works
+  and counts its uses; **Transcript (.srt)** exports the anchor's lines, the guest's turns and
+  the fact-check verdicts, timed from going live, for captions. Wider layout for 1080p capture.
+- `scripts/video_cards.py` + `compose.text_card`: title, problem, how-it-works, new-work and
+  end cards, rendered in the studio's own style.
+- `docs/VIDEO.md`: a 3-minute storyboard, shot by shot, mapped to the judging weights.
+
 ### Oct 27: the packaged segment
 
 - `src/studio/compose.py`: Build segment now makes a programme, not a reel of answers. Each

@@ -27,7 +27,7 @@ from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any, Protocol
 
 from studio.agents.anchor import Anchor
-from studio.agents.factcheck import ChartReading, Check
+from studio.agents.factcheck import HAS_FIGURE, ChartReading, Check
 from studio.asr import Event, GuestPartial, GuestPaused, GuestStarted, GuestTurn
 from studio.tts import sentences
 
@@ -123,12 +123,17 @@ class LiveSession:
 
     async def _check(self, said: str, *, turn: int | None) -> None:
         assert self.desk is not None
+        started = bool(HAS_FIGURE.search(said))
+        if started:  # the page lights its Fact-Check badge until the matching fact_check
+            await self.send({"type": "fact_check_started", "turn": turn})
         try:
             checks = await self.desk.check(said)
         except Exception as e:
             await self.send({"type": "error", "message": f"fact-check: {e}"})
             return
         if not checks:
+            if started:
+                await self.send({"type": "fact_check", "turn": turn, "checks": []})
             return
         for c in checks:
             if c.verdict == "contradicted":
