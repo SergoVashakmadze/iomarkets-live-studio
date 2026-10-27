@@ -26,6 +26,10 @@ uv run studio cutout answer.webm out.mp4  # cut the guest into the studio with S
 uv run pytest          # no key needed: tests replay recorded responses
 ```
 
+## Demo
+
+[`docs/DEMO.md`](docs/DEMO.md): choosing the guest, the run sheet, and the consent form.
+
 ## Deploying
 
 See [`docs/DEPLOY.md`](docs/DEPLOY.md) (Modal, one container, about $0.13 of compute per judge
