@@ -3,7 +3,9 @@
 The page records the guest's camera and mic continuously, restarting the recorder at each turn
 boundary, and uploads each answer as WebM with the offset where the guest began speaking. Each
 answer goes through `cut_out_guest` (SAM 3.1) in the background, at most two at a time, and the
-page is told when it is ready. At the end the producer joins the answers into one segment.
+page is told when it is ready. At the end the producer builds the segment: each answer after a
+card with the question it answered, in the anchor's voice, and a lower third with the guest's
+name (`compose.py`).
 
 Guest media is kept no longer than the work needs: the raw upload is deleted as soon as its
 cutout is done (or fails), SAM's copy is deleted by `segment()`, and the cut-out clips are
@@ -21,8 +23,9 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from studio.cutout import cut_out_guest, join_clips
-from studio.live import Send
+from studio import compose
+from studio.cutout import cut_out_guest
+from studio.live import Send, Voice
 from studio.meta.responses import ResponsesClient
 
 KEEP_AFTER_END_S = 30 * 60
@@ -41,6 +44,8 @@ class SegmentRoom:
     key: str = field(default_factory=lambda: secrets.token_urlsafe(18))
     dir: Path = field(default_factory=lambda: Path(tempfile.mkdtemp(prefix="studio-")))
     clips: dict[int, Path] = field(default_factory=dict)
+    questions: dict[int, str] = field(default_factory=dict)  # the session's question_for_turn
+    voice: Voice | None = None
     _slots: asyncio.Semaphore = field(default_factory=lambda: asyncio.Semaphore(MAX_CONCURRENT))
     _jobs: set[asyncio.Task] = field(default_factory=set)
 
@@ -87,12 +92,43 @@ class SegmentRoom:
             }
         )
 
-    async def build_segment(self) -> str:
+    async def build_segment(self, name: str = "", role: str = "") -> str:
+        """Question card (if the question is known), then the captioned answer, per turn."""
         if not self.clips:
             raise ValueError("no cut-out answers yet")
-        out = self.dir / "segment.mp4"
-        await join_clips([self.clips[t] for t in sorted(self.clips)], out)
-        return out.name
+        work = Path(tempfile.mkdtemp(prefix="pack-", dir=self.dir))
+        try:
+            turns = sorted(self.clips)
+            width, height, _, _ = await compose.media_info(self.clips[turns[0]])
+            parts: list[Path] = []
+            shown: str | None = None
+            for t in turns:
+                question = self.questions.get(t)
+                # The same question again means the guest was still answering it: no new card.
+                if question and question != shown:
+                    shown = question
+                    card = work / f"card-{t}.mp4"
+                    mp3 = await self._voice(question, work / f"q-{t}.mp3")
+                    await compose.question_card(question, mp3, card, width, height, work)
+                    parts.append(card)
+                answer = work / f"answer-{t}.mp4"
+                await compose.captioned_answer(self.clips[t], answer, name, role, work)
+                parts.append(answer)
+            out = self.dir / "segment.mp4"
+            await compose.join(parts, out, width, height)
+            return out.name
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+
+    async def _voice(self, text: str, path: Path) -> Path | None:
+        """The question in the anchor's voice, or None for a silent card."""
+        if self.voice is None:
+            return None
+        try:
+            path.write_bytes(await self.voice(text))
+        except Exception:
+            return None
+        return path
 
     async def _safe_send(self, msg: dict) -> None:
         with contextlib.suppress(Exception):  # the page has gone; clips are kept until cleanup

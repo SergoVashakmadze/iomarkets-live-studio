@@ -48,6 +48,9 @@ class LiveSession:
         self.desk = desk
         self.voice = voice
         self._line_id = 0
+        self.last_line: str | None = None
+        # The anchor line each guest turn was answering, for the segment's question cards.
+        self.question_for_turn: dict[int, str] = {}
         self.notes: list[str] = []
         self._background: set[asyncio.Task] = set()
         self._send = send
@@ -71,6 +74,8 @@ class LiveSession:
     async def on_event(self, event: Event) -> None:
         match event:
             case GuestStarted(turn_id, barge_in):
+                if self.last_line and turn_id not in self.question_for_turn:
+                    self.question_for_turn[turn_id] = self.last_line
                 if barge_in:
                     self.interrupted = True
                     self.anchor_speaking = False
@@ -165,6 +170,7 @@ class LiveSession:
             del self.notes[:noted]
         self.interrupted = False
         self._line_id += 1
+        self.last_line = line
         await self.send({"type": "anchor_line", "id": self._line_id, "text": line})
         if self.voice:
             self._spawn(self._speak(self._line_id, line))

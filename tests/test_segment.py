@@ -117,6 +117,14 @@ async def test_media_names_are_whitelisted(cutter):
         room.discard()
 
 
+def _duration(path) -> float:
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+        capture_output=True, text=True, check=True,
+    ).stdout  # fmt: skip
+    return float(out)
+
+
 @needs_ffmpeg
 async def test_segment_joins_answers_in_turn_order(monkeypatch):
     monkeypatch.setattr(segment_mod, "cut_out_guest", Cutter(real_clip=True))
@@ -125,14 +133,25 @@ async def test_segment_joins_answers_in_turn_order(monkeypatch):
         for turn in (2, 0):
             room.add_answer(turn, b"x", 0)
         await room.drain()
-        name = await room.build_segment()
-        out = room.media_path(name)
-        duration = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-             "-of", "csv=p=0", str(out)],
-            capture_output=True, text=True, check=True,
-        ).stdout  # fmt: skip
-        assert 1.9 < float(duration) < 2.2
+        out = room.media_path(await room.build_segment("Jane Doe", "CFO, Example plc"))
+        assert 1.9 < _duration(out) < 2.3  # two 1 s answers, no questions known
+    finally:
+        room.discard()
+
+
+@needs_ffmpeg
+async def test_segment_has_a_card_per_new_question(monkeypatch):
+    monkeypatch.setattr(segment_mod, "cut_out_guest", Cutter(real_clip=True))
+    room, _ = _room()
+    room.questions.update({0: "Welcome. How is it going?", 1: "Welcome. How is it going?",
+                           2: "And next year?"})  # fmt: skip
+    try:
+        for turn in (0, 1, 2):
+            room.add_answer(turn, b"x", 0)
+        await room.drain()
+        out = room.media_path(await room.build_segment("Jane Doe", "CFO"))
+        # Two silent cards (the repeated question gets none) of 3.5 s, three 1 s answers.
+        assert 9.6 < _duration(out) < 10.4
     finally:
         room.discard()
 

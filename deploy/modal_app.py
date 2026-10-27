@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .apt_install("ffmpeg")
+    .apt_install("ffmpeg", "fonts-dejavu-core")  # drawtext in the segment needs a font
     .pip_install_from_requirements(str(ROOT / "deploy" / "requirements.txt"))
     .env({"STUDIO_LEDGER": "/data/ledger.json"})
     .add_local_dir(str(ROOT / "src" / "studio"), remote_path="/root/studio")

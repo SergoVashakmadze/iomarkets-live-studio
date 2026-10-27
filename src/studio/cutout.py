@@ -363,18 +363,3 @@ async def cut_out_guest(
         return CutoutReport(info.frames, guest_frames, upload_s, sam_s, time.monotonic() - t)
     finally:
         clip.unlink(missing_ok=True)
-
-
-async def join_clips(clips: list[Path], out: str | Path) -> None:
-    """Concatenate cut-out answers into one segment. They share codec settings (all made by
-    `composite`), so the streams are copied, not re-encoded."""
-    listing = Path(out).with_suffix(".txt")
-    # The concat demuxer resolves relative paths against the list file; use absolute ones.
-    listing.write_text("".join(f"file '{c.resolve()}'\n" for c in clips))
-    try:
-        await _run(
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
-            "-i", str(listing), "-c", "copy", "-movflags", "+faststart", str(out),
-        )  # fmt: skip
-    finally:
-        listing.unlink(missing_ok=True)

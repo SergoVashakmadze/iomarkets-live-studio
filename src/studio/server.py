@@ -51,6 +51,11 @@ class BriefRequest(BaseModel):
     subject: str = Field(min_length=3, max_length=200)
 
 
+class SegmentRequest(BaseModel):
+    name: str = Field("", max_length=80)
+    role: str = Field("", max_length=120)
+
+
 class Start(BaseModel):
     type: str
     brief: str = Field(min_length=1, max_length=MAX_BRIEF_CHARS)
@@ -155,10 +160,13 @@ def create_app(
         return {"status": "accepted"}
 
     @app.post("/api/segment/{key}")
-    async def segment(key: str, token: str | None = Query(None)) -> dict[str, str]:
+    async def segment(
+        key: str, req: SegmentRequest | None = None, token: str | None = Query(None)
+    ) -> dict[str, str]:
         room = _room(key, token)
+        req = req or SegmentRequest()
         try:
-            return {"file": await room.build_segment()}
+            return {"file": await room.build_segment(req.name.strip(), req.role.strip())}
         except ValueError as e:
             raise HTTPException(409, str(e)) from e
 
@@ -214,7 +222,7 @@ async def _run_live(
         listener = listener_factory(
             keywords=start.keywords, anchor_speaking=lambda: session.anchor_speaking
         )
-        room = SegmentRoom(client, session.send)
+        room = SegmentRoom(client, session.send, questions=session.question_for_turn, voice=voice)
         async with listener:
             await session.send({"type": "ready", "session": listener.session_id, "room": room.key})
             await session.open()
