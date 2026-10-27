@@ -3,6 +3,7 @@
 - `studio brief "<guest, company>"`: print a cited pre-interview brief.
 - `studio listen [--file F] [--keyword K ...]`: transcribe the guest live, turn by turn.
 - `studio serve [--host H] [--port P]`: the live studio page.
+- `studio cutout IN OUT [--background IMG]`: cut the guest out of a clip into the studio.
 """
 
 from __future__ import annotations
@@ -99,6 +100,21 @@ async def _listen(source: str | None, keywords: list[str]) -> int:
     return 0
 
 
+async def _cutout(src: str, out: str, background: str | None) -> int:
+    import tempfile
+
+    from studio.cutout import cut_out_guest
+
+    with tempfile.TemporaryDirectory() as work:
+        async with ResponsesClient() as client:
+            r = await cut_out_guest(client, src, out, workdir=work, background=background)
+    print(
+        f"{out}: guest in {r.guest_frames}/{r.frames} frames; upload {r.upload_s:.1f}s, "
+        f"SAM {r.sam_s:.1f}s, composite {r.composite_s:.1f}s; about ${r.cost_usd:.3f}"
+    )
+    return 0 if r.guest_frames else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="studio")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -112,6 +128,10 @@ def main(argv: list[str] | None = None) -> int:
     serve = sub.add_parser("serve", help="run the live studio web app")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
+    cutout = sub.add_parser("cutout", help="cut the guest out of a clip with SAM 3.1")
+    cutout.add_argument("src")
+    cutout.add_argument("out")
+    cutout.add_argument("--background", help="studio background image (default: plain)")
     args = parser.parse_args(argv)
 
     _load_dotenv()
@@ -126,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("set STUDIO_TOKEN before serving beyond localhost")
         uvicorn.run(create_app(), host=args.host, port=args.port)
         return 0
+    if args.command == "cutout":
+        return asyncio.run(_cutout(args.src, args.out, args.background))
     if args.command == "listen":
         try:
             return asyncio.run(_listen(args.file, args.keyword))
