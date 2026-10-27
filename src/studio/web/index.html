@@ -89,6 +89,15 @@
   #answers figcaption { font-size: .8rem; color: var(--muted); margin-top: 4px; }
   #answers video { aspect-ratio: 16 / 9; }
   #segmentLink a { color: var(--accent); }
+  .drop { margin-top: 8px; border: 2px dashed var(--line); border-radius: 8px; padding: 14px;
+          text-align: center; color: var(--muted); font-size: .9rem; cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 6px 2px 10px; font-size: .8rem; }
+  .chip button { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer; }
+  #links { min-height: 64px; }
+  #research { font-size: .85rem; margin-bottom: 12px; white-space: pre-line; }
+  .check .ask { font-size: .85rem; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -105,7 +114,18 @@
       <input id="subject" placeholder="Eliud Kipchoge, marathon runner, on training for a sub-two-hour race" autocomplete="off">
       <button id="prepare">Prepare brief</button>
     </div>
-    <label for="brief" style="margin-top:12px">Brief (Scout, editable)</label>
+    <label for="links" style="margin-top:12px">Links about the guest (one per line: LinkedIn,
+      website, company page)</label>
+    <textarea id="links" placeholder="https://www.linkedin.com/in/…&#10;https://example.com"></textarea>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add files">
+      Drop a pitch deck, document or images here, or click to choose
+      (PDF, PNG, JPEG, WebP, TXT, MD; export slides as PDF)
+    </div>
+    <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md" hidden>
+    <div class="chips" id="chips"></div>
+    <p class="note">The guest's files stay with Meta's models: when any are attached, the
+      open-weights editor is skipped.</p>
+    <label for="brief" style="margin-top:12px">Brief (Scout and the Devil's Advocate, editable)</label>
     <textarea id="brief" placeholder="Prepare a brief, or paste one."></textarea>
     <p class="note" id="sources"></p>
   </section>
@@ -113,6 +133,7 @@
   <section>
     <div class="row">
       <button id="go">Go live</button>
+      <button id="cold" class="secondary" title="No brief: the anchor improvises; research runs live">Cold start</button>
       <button id="chart" class="secondary" disabled>Show chart</button>
       <button id="end" class="stop" disabled>End interview</button>
     </div>
@@ -127,9 +148,10 @@
         <div id="log" aria-live="polite" style="margin-top:12px"></div>
       </div>
       <div>
-        <h2>Fact-check</h2>
-        <div id="checks" aria-live="polite"><p class="note">Figures the guest says or shows
-          are checked here as the interview runs.</p></div>
+        <h2>Devil's Advocate</h2>
+        <div id="research" aria-live="polite" hidden></div>
+        <div id="checks" aria-live="polite"><p class="note">What the guest says or shows is
+          checked here as the interview runs, and challenges go to the anchor.</p></div>
       </div>
     </div>
   </section>
@@ -158,7 +180,7 @@ const $ = (id) => document.getElementById(id);
 const MODELS = [
   ["asr", "Muse Voice Transcribe", "live guest speech"],
   ["anchor", "Muse Spark 1.3", "anchor"],
-  ["check", "Muse Spark 1.3 + web search", "Scout · fact-check"],
+  ["check", "Muse Spark 1.3 + web search", "Scout · Devil's Advocate"],
   ["vision", "Muse Spark 1.3", "chart reading"],
   ["sam", "SAM 3.1", "guest cutout"],
   ["open", "Muse Spark Open", "brief editor (open weights)"],
@@ -221,26 +243,55 @@ function addLine(who, text, cls) {
   return el;
 }
 
+// Materials: files to drop or choose, shown as removable chips.
+
+const files = [];
+function showFiles() {
+  $("chips").innerHTML = "";
+  files.forEach((f, i) => {
+    const chip = Object.assign(document.createElement("span"), { className: "chip", textContent: f.name });
+    const x = Object.assign(document.createElement("button"), { textContent: "×", title: `Remove ${f.name}` });
+    x.onclick = () => { files.splice(i, 1); showFiles(); };
+    chip.append(x);
+    $("chips").append(chip);
+  });
+}
+function addFiles(list) {
+  for (const f of list) if (files.length < 5 && !files.some((g) => g.name === f.name)) files.push(f);
+  showFiles();
+}
+$("drop").onclick = () => $("fileInput").click();
+$("drop").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") $("fileInput").click(); };
+$("fileInput").onchange = (e) => { addFiles(e.target.files); e.target.value = ""; };
+$("drop").ondragover = (e) => { e.preventDefault(); $("drop").classList.add("over"); };
+$("drop").ondragleave = () => $("drop").classList.remove("over");
+$("drop").ondrop = (e) => { e.preventDefault(); $("drop").classList.remove("over"); addFiles(e.dataTransfer.files); };
+
 // Brief
 
 $("prepare").onclick = async () => {
   const subject = $("subject").value.trim();
   if (!subject) return;
   $("prepare").disabled = true;
-  setStatus("Scout is researching…");
+  setStatus(files.length || $("links").value.trim() ? "Reading materials and researching…" : "Scout is researching…");
   model("check", 1);
   try {
-    const r = await fetch(withToken("/api/brief"), {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ subject }),
-    });
-    if (!r.ok) throw new Error(await r.text());
+    const form = new FormData();
+    form.append("subject", subject);
+    form.append("links", $("links").value);
+    files.forEach((f) => form.append("files", f, f.name));
+    const r = await fetch(withToken("/api/brief"), { method: "POST", body: form });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? r.statusText);
     const data = await r.json();
     $("brief").value = data.text;
     if (data.edited_by) { model("open", 1); setTimeout(() => model("open", -1), 1500); }
+    const unread = data.materials.filter((m) => m.status !== "read");
     $("sources").textContent =
-      `${data.searches.length} searches, ${data.sources.length} pages consulted.` +
-      (data.edited_by ? ` Edited on Muse Spark Open.` : "");
+      `${data.searches.length} searches, ${data.sources.length} pages consulted` +
+      (data.materials.length ? `, ${data.materials.length - unread.length}/${data.materials.length} materials read` : "") +
+      `, ${data.pressure_points.length} pressure points.` +
+      (data.edited_by ? " Edited on Muse Spark Open." : data.editor_note ? ` Editor ${data.editor_note}.` : "") +
+      unread.map((m) => ` ${m.name}: ${m.status}.`).join("");
     setStatus("Brief ready");
   } catch (e) {
     setStatus("Brief failed");
@@ -452,13 +503,17 @@ function send(msg) {
 
 // Live session
 
-$("go").onclick = async () => {
+$("go").onclick = () => startLive(false);
+$("cold").onclick = () => startLive(true);
+
+async function startLive(cold) {
   player ??= new AudioContext();         // created on a click, so the browser lets it play
   player.resume();
-  const brief = $("brief").value.trim();
-  if (!brief) { setStatus("Prepare a brief first"); return; }
+  const brief = cold ? "" : $("brief").value.trim();
+  if (!cold && !brief) { setStatus("Prepare a brief first, or use Cold start"); return; }
   if (!$("consent").checked) { setStatus("Confirm the guest's consent first"); return; }
-  $("go").disabled = true;
+  $("go").disabled = $("cold").disabled = true;
+  $("research").hidden = true;
   $("log").innerHTML = "";
   transcript = [];
   liveAt = null;
@@ -474,11 +529,11 @@ $("go").onclick = async () => {
   ws = new WebSocket(`${proto}://${location.host}${withToken("/ws/live")}`);
   ws.binaryType = "arraybuffer";
   setStatus("Connecting…");
-  ws.onopen = () => ws.send(JSON.stringify({ type: "start", brief, keywords }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: "start", brief, cold, keywords }));
   ws.onmessage = (e) => onMessage(JSON.parse(e.data));
   ws.onclose = () => { stopRecorder(); stopMic(); stopVoice(); setStatus("Off air");
-                       $("go").disabled = false; $("end").disabled = true; $("chart").disabled = true; };
-};
+                       $("go").disabled = $("cold").disabled = false; $("end").disabled = true; $("chart").disabled = true; };
+}
 
 $("end").onclick = () => {
   send({ type: "stop" });
@@ -512,6 +567,7 @@ function addCheck(c) {
     textContent: (c.correct_value && c.verdict !== "supported" ? `Sources: ${c.correct_value}. ` : "") + c.explanation,
   });
   el.append(verdict, claim, why);
+  if (c.challenge) el.append(Object.assign(document.createElement("div"), { className: "ask", textContent: `Ask: ${c.challenge}` }));
   if (/^https?:\/\//.test(c.source_url)) {
     const a = Object.assign(document.createElement("a"), {
       href: c.source_url, textContent: new URL(c.source_url).hostname, target: "_blank", rel: "noopener noreferrer",
@@ -577,6 +633,18 @@ async function onMessage(m) {
       guestEl = null;
       if (m.text) cutAnswer(m.turn);
       break;
+    case "research_started":
+      model("check", 1);
+      break;
+    case "research": {
+      model("check", -1);
+      const box = $("research");
+      box.hidden = false;
+      box.textContent = `Live research: ${m.who}\n` + m.facts.map((f) => `• ${f}`).join("\n") +
+        (m.angles.length ? "\nAngles: " + m.angles.join("; ") : "");
+      note("check", `RESEARCH: ${m.who}`);
+      break;
+    }
     case "fact_check_started":
       model("check", 1);
       break;
@@ -616,7 +684,7 @@ async function onMessage(m) {
       break;
     case "error": {
       const area = m.message.split(":")[0];
-      const key = { anchor: "anchor", chart: "vision", "fact-check": "check" }[area]
+      const key = { anchor: "anchor", chart: "vision", "fact-check": "check", research: "check" }[area]
         ?? (area.startsWith("cutout") ? "sam" : null);
       if (key) model(key, -1);
       addLine("Studio", m.message, "anchor error");

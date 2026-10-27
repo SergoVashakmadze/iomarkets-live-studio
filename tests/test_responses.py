@@ -137,3 +137,32 @@ def test_missing_key_is_a_clear_error(monkeypatch):
     monkeypatch.delenv("META_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="META_API_KEY"):
         ResponsesClient()
+
+
+def test_search_reference_marks_are_stripped():
+    body = {
+        "id": "r",
+        "output": [
+            {
+                "type": "message",
+                "content": [
+                    {"type": "output_text", "text": "Revenue rose 5.4% 【27694†L13-L16】 [AJ Bell]"}
+                ],
+            }
+        ],
+    }
+    assert Response.parse(body).text == "Revenue rose 5.4% [AJ Bell]"
+
+
+async def test_truncated_structured_output_is_an_error():
+    cut = {
+        "id": "r",
+        "status": "incomplete",
+        "incomplete_details": {"reason": "max_output_tokens"},
+        "output": [
+            {"type": "message", "content": [{"type": "output_text", "text": '{"checks": [{"cl'}]}
+        ],
+    }
+    async with _client(Replay([httpx.Response(200, json=cut)])) as client:
+        with pytest.raises(EmptyOutputError, match="cut off"):
+            await client.create("factcheck", "x", schema=("s", {"type": "object"}))

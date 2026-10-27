@@ -56,7 +56,7 @@ class Anchor:
     async def opening(self):
         return "Welcome. First question?"
 
-    async def reply(self, said, *, interrupted=False, notes=()):
+    async def reply(self, said, *, interrupted=False, notes=(), research=""):
         return "Thanks. Next?"
 
 

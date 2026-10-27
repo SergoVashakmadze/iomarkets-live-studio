@@ -43,7 +43,7 @@ staged error as a real one.
 
 | When | Who | What |
 |---|---|---|
-| −15 min | operator | Prepare the brief (guest name, company). Read it; edit if anything looks off. |
+| −15 min | operator | Guest, role and topic; paste their links and drop their deck or notes; **Prepare brief**. Read the PRESSURE POINTS. (Or skip all this and use **Cold start**.) |
 | −10 min | operator + guest | Sign the consent form. Headphones on. Tick the consent box on the page. |
 | −2 min | operator | Start the screen recording. |
 | 0:00 | guest | Go live. The anchor opens; the guest answers. |

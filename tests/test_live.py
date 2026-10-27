@@ -21,7 +21,9 @@ class FakeAnchor:
         await asyncio.sleep(self.delay)
         return "Welcome."
 
-    async def reply(self, guest_said: str, *, interrupted: bool = False, notes=()) -> str:
+    async def reply(
+        self, guest_said: str, *, interrupted: bool = False, notes=(), research=""
+    ) -> str:
         self.started.append(guest_said)
         await asyncio.sleep(self.delay)
         self.asked.append((guest_said, interrupted))
@@ -131,7 +133,7 @@ async def test_empty_turn_gets_no_reply():
 
 async def test_anchor_failure_is_reported_and_keeps_pending():
     class Broken(FakeAnchor):
-        async def reply(self, guest_said, *, interrupted=False, notes=()):
+        async def reply(self, guest_said, *, interrupted=False, notes=(), research=""):
             raise RuntimeError("budget spent")
 
     s, sent = _session(Broken())

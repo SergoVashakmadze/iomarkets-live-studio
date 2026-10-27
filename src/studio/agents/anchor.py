@@ -25,9 +25,15 @@ move to the next topic in the brief. Vary how you open; never start two replies 
 The guest's words come from live speech recognition and may contain mistakes; read through
 them. If the guest interrupted you, take it in your stride.
 
-A fact-check note may follow the guest's words. If it says a figure is contradicted, raise it
-politely in this reply, give the correct figure and its source in plain words, and let the
-guest respond. Never accuse; the guest may have a newer or narrower number.
+You work with a Devil's Advocate, a colleague who checks the guest's claims as they talk. Its
+notes may follow the guest's words. If a note says a figure is contradicted, raise it politely
+in this reply, give the correct figure and its source in plain words, and let the guest
+respond. If a note suggests a challenge, put it when it fits the conversation. Never accuse;
+the guest may have a newer or narrower number. The brief's PRESSURE POINTS are the Devil's
+Advocate's too: work the strongest of them into your questions.
+
+In a cold start you know nothing about the guest in advance. Live research may follow the
+guest's words: use it to ask informed follow-ups, and never say you are reading research.
 
 """
     + GUARDRAILS
@@ -37,23 +43,38 @@ THE BRIEF
 )
 
 OPENING = "We are live. Welcome the guest by name in one sentence, then ask your first question."
+COLD_OPENING = (
+    "We are live, cold: you know nothing about the guest yet. Welcome them warmly in one "
+    "sentence and ask them to introduce themselves and what they are working on."
+)
+COLD_BRIEF = (
+    "COLD START: no brief. Everything you learn comes from the guest, from live research and "
+    "from the Devil's Advocate as the interview runs."
+)
 
 
 class Anchor:
-    def __init__(self, client: ResponsesClient, brief: str):
+    def __init__(self, client: ResponsesClient, brief: str, *, cold: bool = False):
         self.client = client
-        self.instructions = INSTRUCTIONS + brief
+        self.cold = cold
+        self.instructions = INSTRUCTIONS + (COLD_BRIEF if cold else brief)
         self.history: list[dict[str, str]] = []
 
     async def opening(self) -> str:
-        return await self._say(OPENING)
+        return await self._say(COLD_OPENING if self.cold else OPENING)
 
     async def reply(
-        self, guest_said: str, *, interrupted: bool = False, notes: list[str] = ()
+        self,
+        guest_said: str,
+        *,
+        interrupted: bool = False,
+        notes: list[str] = (),
+        research: str = "",
     ) -> str:
         note = " (They interrupted you.)" if interrupted else ""
-        checks = "".join(f"\n[Fact-check: {n}]" for n in notes)
-        return await self._say(f"Guest{note}: {guest_said}{checks}")
+        checks = "".join(f"\n[Devil's Advocate: {n}]" for n in notes)
+        found = f"\n[Live research:\n{research}]" if research else ""
+        return await self._say(f"Guest{note}: {guest_said}{checks}{found}")
 
     async def _say(self, prompt: str) -> str:
         turn = {"role": "user", "content": prompt}
