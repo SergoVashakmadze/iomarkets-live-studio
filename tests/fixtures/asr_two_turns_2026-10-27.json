@@ -1,0 +1,290 @@
+[
+ {
+  "t": 1.9,
+  "msg": {}
+ },
+ {
+  "t": 2.12,
+  "msg": {
+   "type": "speechStart",
+   "audioProcessedMs": 0,
+   "turnId": 0
+  }
+ },
+ {
+  "t": 2.8,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks",
+   "final": false,
+   "audioProcessedMs": 1200
+  }
+ },
+ {
+  "t": 2.97,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having",
+   "final": false,
+   "audioProcessedMs": 1360
+  }
+ },
+ {
+  "t": 3.21,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me,",
+   "final": false,
+   "audioProcessedMs": 1600
+  }
+ },
+ {
+  "t": 4.08,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone",
+   "final": false,
+   "audioProcessedMs": 2480
+  }
+ },
+ {
+  "t": 4.49,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone girl",
+   "final": false,
+   "audioProcessedMs": 2880
+  }
+ },
+ {
+  "t": 4.86,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone girl organic",
+   "final": false,
+   "audioProcessedMs": 3280
+  }
+ },
+ {
+  "t": 5.05,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone girl organic service",
+   "final": false,
+   "audioProcessedMs": 3440
+  }
+ },
+ {
+  "t": 5.67,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone girl organic service revenue",
+   "final": false,
+   "audioProcessedMs": 4080
+  }
+ },
+ {
+  "t": 5.91,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone girl organic service revenue by",
+   "final": false,
+   "audioProcessedMs": 4320
+  }
+ },
+ {
+  "t": 7.31,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone girl organic service revenue by 5.4%",
+   "final": false,
+   "audioProcessedMs": 5680
+  }
+ },
+ {
+  "t": 7.75,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone girl organic service revenue by 5.4% last",
+   "final": false,
+   "audioProcessedMs": 6160
+  }
+ },
+ {
+  "t": 7.82,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Thanks for having me, Vodafone girl organic service revenue by 5.4% last year.",
+   "final": false,
+   "audioProcessedMs": 6240
+  }
+ },
+ {
+  "t": 8.16,
+  "msg": {
+   "type": "speechEnd",
+   "audioProcessedMs": 6060,
+   "turnId": 0
+  }
+ },
+ {
+  "t": 8.16,
+  "msg": {
+   "type": "speechComplete",
+   "audioProcessedMs": 6060,
+   "turnId": 0,
+   "transcript": "Thanks for having me, Vodafone girl organic service revenue by 5.4% last year."
+  }
+ },
+ {
+  "t": 10.7,
+  "msg": {
+   "type": "speechStart",
+   "audioProcessedMs": 8620,
+   "turnId": 1
+  }
+ },
+ {
+  "t": 11.27,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry,",
+   "final": false,
+   "audioProcessedMs": 9680
+  }
+ },
+ {
+  "t": 11.6,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can",
+   "final": false,
+   "audioProcessedMs": 10000
+  }
+ },
+ {
+  "t": 11.75,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I",
+   "final": false,
+   "audioProcessedMs": 10160
+  }
+ },
+ {
+  "t": 12.5,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in",
+   "final": false,
+   "audioProcessedMs": 10880
+  }
+ },
+ {
+  "t": 12.9,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there,",
+   "final": false,
+   "audioProcessedMs": 11280
+  }
+ },
+ {
+  "t": 13.1,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there, the",
+   "final": false,
+   "audioProcessedMs": 11520
+  }
+ },
+ {
+  "t": 13.69,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there, the 4.3",
+   "final": false,
+   "audioProcessedMs": 12080
+  }
+ },
+ {
+  "t": 14.08,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there, the 4.3 billion",
+   "final": false,
+   "audioProcessedMs": 12480
+  }
+ },
+ {
+  "t": 14.72,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there, the 4.3 billion pound",
+   "final": false,
+   "audioProcessedMs": 13120
+  }
+ },
+ {
+  "t": 14.81,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there, the 4.3 billion pound deal",
+   "final": false,
+   "audioProcessedMs": 13200
+  }
+ },
+ {
+  "t": 15.62,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there, the 4.3 billion pound deal closes in the",
+   "final": false,
+   "audioProcessedMs": 14000
+  }
+ },
+ {
+  "t": 15.69,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there, the 4.3 billion pound deal closes in the second",
+   "final": false,
+   "audioProcessedMs": 14080
+  }
+ },
+ {
+  "t": 15.99,
+  "msg": {
+   "type": "transcript",
+   "transcript": "Sorry, can I jump in there, the 4.3 billion pound deal closes in the second half.",
+   "final": false,
+   "audioProcessedMs": 14400
+  }
+ },
+ {
+  "t": 16.07,
+  "msg": {
+   "type": "speechEnd",
+   "audioProcessedMs": 13980,
+   "turnId": 1
+  }
+ },
+ {
+  "t": 16.07,
+  "msg": {
+   "type": "speechComplete",
+   "audioProcessedMs": 13980,
+   "turnId": 1,
+   "transcript": "Sorry, can I jump in there, the 4.3 billion pound deal closes in the second half."
+  }
+ },
+ {
+  "t": 18.06,
+  "msg": {
+   "type": "transcript",
+   "transcript": "",
+   "final": true,
+   "audioProcessedMs": 16480
+  }
+ }
+]
