@@ -3,7 +3,8 @@
 An entry to the **Meta Global AI Developer Hackathon** (Oct 27 – Nov 4, 2026), problem
 statement *Build for Your World*.
 
-A live business-news interview studio: a guest talks to an AI anchor in real time, Meta models
+A live interview studio for any topic (business news first: IoMarkets.tv): a guest talks to an
+AI anchor in real time, Meta models
 listen, check the facts and cut the guest out of their background, and the result is a
 broadcast-ready segment.
 
@@ -19,7 +20,7 @@ every pre-existing service this repo calls but does not contain.
 ```sh
 uv sync
 cp .env.example .env   # add META_API_KEY (and FIREWORKS_API_KEY for the open-weights editor)
-uv run studio brief "Margherita Della Valle, CEO of Vodafone"
+uv run studio brief "Eliud Kipchoge, marathon runner"   # any guest, any topic
 uv run studio listen --keyword Vodafone   # live transcription from the microphone
 uv run studio serve                       # the studio page at http://127.0.0.1:8000
 uv run studio cutout answer.webm out.mp4  # cut the guest into the studio with SAM 3.1

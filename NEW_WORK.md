@@ -11,6 +11,17 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: any topic, not just business
+
+- `src/studio/agents/policy.py`: one set of guardrails shared by Scout, the anchor and
+  Fact-Check: any topic the guest knows, but no politics or war and no medical, legal or
+  financial advice.
+- Scout's brief sections are now GUEST, CONTEXT, RECENT, FACTS, QUESTIONS, CAUTION; the anchor
+  and Fact-Check are topic-neutral; Fact-Check also checks records and rankings ("the first",
+  "the largest"), not only figures. Page, cards, README and the demo guide follow.
+- Checked live: briefs on a marathon runner and a climate scientist; spoken records checked
+  "supported" against ESPN and Guinness World Records; an opinion was correctly left alone.
+
 ### Oct 27: demo video kit
 
 - Page: a **Meta models** strip, one badge per model role (Voice Transcribe, Spark anchor,
