@@ -150,7 +150,7 @@ def test_token_required_when_set(app_and_replay, monkeypatch):
     app, _ = app_and_replay
     monkeypatch.setenv("STUDIO_TOKEN", "s3cret")
     client = TestClient(app)
-    assert client.post("/api/brief", json={"subject": "Jane Doe, Example"}).status_code == 403
+    assert client.post("/api/brief", data={"subject": "Jane Doe, Example"}).status_code == 403
     with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/live") as ws:
         ws.receive_json()
     with client.websocket_connect("/ws/live?token=s3cret") as ws:

@@ -68,7 +68,7 @@ def test_server_refuses_new_work_over_budget(tmp_path):
     spend.charge("sam", 0.6)
     app = create_app(editor_factory=lambda: None, spend=spend)
     http = TestClient(app)
-    r = http.post("/api/brief", json={"subject": "Jane Doe, Example plc"})
+    r = http.post("/api/brief", data={"subject": "Jane Doe, Example plc"})
     assert r.status_code == 429 and "budget" in r.json()["detail"]
     assert http.get("/api/budget").json()["spent_today_usd"] == pytest.approx(0.6)
     with http.websocket_connect("/ws/live") as ws:

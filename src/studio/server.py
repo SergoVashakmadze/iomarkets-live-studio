@@ -23,20 +23,41 @@ import hmac
 import json
 import os
 from collections.abc import Callable
+from functools import partial
 from importlib.resources import files
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import FileResponse, HTMLResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from studio import ledger
-from studio.agents.anchor import Anchor
+from studio.agents import live_scout
+from studio.agents.anchor import COLD_BRIEF, Anchor
 from studio.agents.factcheck import FactDesk
 from studio.agents.scout import prepare_brief
 from studio.asr import AsrError, GuestListener
 from studio.ledger import BudgetExceeded, Ledger
 from studio.live import LiveSession
+from studio.materials import (
+    MAX_FILE_BYTES,
+    MAX_FILES,
+    MAX_LINKS,
+    MaterialError,
+    file_material,
+    gather_links,
+    input_parts,
+)
 from studio.meta.open_weights import open_weights_client
 from studio.meta.responses import ResponsesClient
 from studio.segment import MAX_CLIP_BYTES, ROOMS, SegmentRoom
@@ -47,10 +68,6 @@ MAX_FRAME_BYTES = 1_400_000  # one JPEG frame; base64 must fit a 2 MiB WebSocket
 MAX_INTERVIEW_S = 15 * 60
 
 
-class BriefRequest(BaseModel):
-    subject: str = Field(min_length=3, max_length=200)
-
-
 class SegmentRequest(BaseModel):
     name: str = Field("", max_length=80)
     role: str = Field("", max_length=120)
@@ -58,8 +75,15 @@ class SegmentRequest(BaseModel):
 
 class Start(BaseModel):
     type: str
-    brief: str = Field(min_length=1, max_length=MAX_BRIEF_CHARS)
+    brief: str = Field("", max_length=MAX_BRIEF_CHARS)
+    cold: bool = False  # no brief: the anchor improvises and Live Scout researches as it goes
     keywords: list[str] = Field(default_factory=list, max_length=50)
+
+    @model_validator(mode="after")
+    def _brief_or_cold(self) -> Start:
+        if not self.cold and not self.brief.strip():
+            raise ValueError("a brief, or a cold start")
+        return self
 
 
 def _token_ok(given: str | None) -> bool:
@@ -107,14 +131,33 @@ def create_app(
         return page
 
     @app.post("/api/brief")
-    async def brief(req: BriefRequest, token: str | None = Query(None)) -> dict[str, Any]:
+    async def brief(
+        subject: str = Form(min_length=3, max_length=300),
+        links: str = Form("", max_length=4000),
+        files: Annotated[list[UploadFile] | None, File()] = None,
+        token: str | None = Query(None),
+    ) -> dict[str, Any]:
+        """Scout's brief on a guest, from the web and from any links and files attached."""
         if not _token_ok(token):
             raise HTTPException(403, "bad token")
         _within_budget()
+        urls = [u.strip() for u in links.splitlines() if u.strip()]
+        if len(urls) > MAX_LINKS or len(files or []) > MAX_FILES:
+            raise HTTPException(400, f"at most {MAX_LINKS} links and {MAX_FILES} files")
+        try:
+            found = [
+                file_material(f.filename or "file", await _read_capped(f)) for f in files or []
+            ]
+            found += await gather_links(urls)
+        except MaterialError as e:
+            raise HTTPException(400, str(e)) from e
+        private = any(m.private for m in found)
         editor = editor_factory()
         async with client_factory() as client:
             try:
-                brief = await prepare_brief(client, req.subject, editor)
+                brief = await prepare_brief(
+                    client, subject, editor, input_parts(found), private=private
+                )
             finally:
                 if editor:
                     await editor.aclose()
@@ -123,6 +166,9 @@ def create_app(
             "sources": [{"title": c.title, "url": c.url} for c in brief.research.citations],
             "searches": brief.research.searches,
             "edited_by": brief.edited_by,
+            "editor_note": brief.editor_note,
+            "materials": [m.summary() for m in found],
+            "pressure_points": [p.model_dump() for p in brief.pressure],
         }
 
     def _room(key: str, token: str | None) -> SegmentRoom:
@@ -216,9 +262,11 @@ async def _run_live(
     listener_factory: Callable[..., GuestListener],
 ) -> None:
     async with client_factory() as client:
-        desk = FactDesk(client, start.brief)
+        desk = FactDesk(client, start.brief or COLD_BRIEF)
+        researcher = partial(live_scout.research, client) if start.cold else None
         voice = None if os.environ.get("STUDIO_VOICE") == "browser" else synthesize
-        session = LiveSession(Anchor(client, start.brief), ws.send_json, desk, voice)
+        anchor = Anchor(client, start.brief, cold=start.cold)
+        session = LiveSession(anchor, ws.send_json, desk, voice, researcher)
         listener = listener_factory(
             keywords=start.keywords, anchor_speaking=lambda: session.anchor_speaking
         )
@@ -267,6 +315,13 @@ async def _run_live(
                 room.close()
                 with contextlib.suppress(Exception):
                     await session.send({"type": "cutouts_done"})
+
+
+async def _read_capped(upload: UploadFile) -> bytes:
+    data = await upload.read(MAX_FILE_BYTES + 1)
+    if len(data) > MAX_FILE_BYTES:
+        raise MaterialError(f"{upload.filename}: larger than {MAX_FILE_BYTES // 1_000_000} MB")
+    return data
 
 
 def _jpeg(b64: Any) -> bytes | None:

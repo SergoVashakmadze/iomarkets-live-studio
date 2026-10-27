@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import random
+import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -45,13 +46,16 @@ class Budget:
 ROLE_BUDGETS: dict[str, Budget] = {
     "anchor": Budget("minimal", 800),
     "producer": Budget("low", 1500),
-    "factcheck": Budget("medium", 4000),
+    # 4000 truncated a three-figure chart check mid-JSON (2026-10-27).
+    "factcheck": Budget("medium", 8000),
     "vision": Budget("low", 4000),
     "scout": Budget("medium", 6000),
     "editor": Budget("low", 6000),  # Scout's editor, on Muse Spark Open
 }
 
 RETRYABLE = {429, 500, 503}
+# Spark sometimes leaves its internal search references in the text, e.g. 【2769…†L13-L16】.
+_CITE_MARK = re.compile(r"\s?【[^】]*】")
 
 log = logging.getLogger(__name__)
 
@@ -153,7 +157,7 @@ class Response:
         return cls(
             id=body["id"],
             status=body.get("status", ""),
-            text="".join(texts).strip(),
+            text=_CITE_MARK.sub("", "".join(texts)).strip(),
             function_calls=calls,
             citations=list(cites.values()),
             commentary=[c.strip() for c in commentary if c.strip()],
@@ -234,6 +238,11 @@ class ResponsesClient:
             body["text"] = json_format(*schema)
 
         resp = Response.parse(await self._post("/responses", body))
+        if schema and resp.incomplete_reason and not resp.function_calls:
+            raise EmptyOutputError(
+                f"{role}: structured output cut off ({resp.incomplete_reason}); "
+                f"raise max_output_tokens above {budget.max_output_tokens}"
+            )
         if not allow_empty and not resp.text and not resp.function_calls:
             reason = resp.incomplete_reason or resp.status or "unknown"
             raise EmptyOutputError(

@@ -9,13 +9,21 @@
 
 If the editor is unavailable, fails, or drops a section, the research draft is used as is and
 the result says so.
+
+Materials: links and files the producer attaches (a LinkedIn profile, a company site, a pitch
+deck) go to the research stage and to the Devil's Advocate, whose PRESSURE POINTS are appended
+to the brief. When the guest's own files are attached, the editor is skipped: a brief built
+from private material is not sent to a second host.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
+from studio.agents.factcheck import PressurePoint, format_points, pressure_points
 from studio.agents.loop import AgentResult, run_agent
 from studio.agents.policy import GUARDRAILS
 from studio.meta.open_weights import ATTRIBUTION
@@ -51,11 +59,25 @@ These rules are for you; follow them, but do not restate them in the brief:
 )
 
 
-async def write_brief(client: ResponsesClient, subject: str) -> AgentResult:
+MATERIALS_NOTE = """
+The producer attached the guest's materials below (links, documents, slides). Read them first.
+Ground CONTEXT, FACTS and QUESTIONS in them, and treat what they say as the guest's claims:
+check them on the web and note in CAUTION anything you cannot confirm.
+"""
+
+
+async def write_brief(
+    client: ResponsesClient, subject: str, materials: list[dict[str, Any]] = ()
+) -> AgentResult:
+    ask = f"Brief me for an interview with: {subject}"
+    prompt: str | list[dict[str, Any]] = ask
+    if materials:
+        content = [{"type": "input_text", "text": ask + "\n" + MATERIALS_NOTE}, *materials]
+        prompt = [{"role": "user", "content": content}]
     return await run_agent(
         client,
         "scout",
-        f"Brief me for an interview with: {subject}",
+        prompt,
         instructions=INSTRUCTIONS,
         tools=[market_quote],
         web_search=True,
@@ -90,6 +112,8 @@ class Brief:
     text: str
     research: AgentResult
     edited_by: str | None  # ATTRIBUTION when Muse Spark Open edited it, else None
+    pressure: list[PressurePoint] = field(default_factory=list)
+    editor_note: str | None = None  # why the editor did not run, when it was skipped
 
 
 async def edit_brief(editor: ResponsesClient, draft: str) -> str | None:
@@ -106,9 +130,40 @@ async def edit_brief(editor: ResponsesClient, draft: str) -> str | None:
     return resp.text
 
 
+async def _points(
+    client: ResponsesClient, draft: str, materials: list[dict[str, Any]]
+) -> list[PressurePoint]:
+    try:
+        return await pressure_points(client, draft, materials)
+    except Exception as e:
+        log.warning("Devil's Advocate pressure points failed: %s", e)
+        return []
+
+
 async def prepare_brief(
-    client: ResponsesClient, subject: str, editor: ResponsesClient | None = None
+    client: ResponsesClient,
+    subject: str,
+    editor: ResponsesClient | None = None,
+    materials: list[dict[str, Any]] = (),
+    private: bool = False,
 ) -> Brief:
-    research = await write_brief(client, subject)
-    edited = await edit_brief(editor, research.text) if editor else None
-    return Brief(edited or research.text, research, ATTRIBUTION if edited else None)
+    """Research, then the editor and the Devil's Advocate side by side.
+
+    `private` is true when the guest's own files are among the materials: then the editor
+    (on Fireworks) is skipped, and the draft is used as written.
+    """
+    research = await write_brief(client, subject, materials)
+    use_editor = editor is not None and not private
+    edited, points = await asyncio.gather(
+        edit_brief(editor, research.text) if use_editor else _none(),
+        _points(client, research.text, materials),
+    )
+    text = edited or research.text
+    if points:
+        text += "\n\n" + format_points(points)
+    note = None if use_editor or editor is None else "skipped: the guest's files stay with Meta"
+    return Brief(text, research, ATTRIBUTION if edited else None, points, note)
+
+
+async def _none() -> None:
+    return None

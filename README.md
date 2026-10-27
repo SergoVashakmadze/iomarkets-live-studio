@@ -23,6 +23,7 @@ cp .env.example .env   # add META_API_KEY (and FIREWORKS_API_KEY for the open-we
 uv run studio brief "Eliud Kipchoge, marathon runner"   # any guest, any topic
 uv run studio listen --keyword Vodafone   # live transcription from the microphone
 uv run studio serve                       # the studio page at http://127.0.0.1:8000
+# On the page: attach links and a deck for the brief, or press Cold start to improvise.
 uv run studio cutout answer.webm out.mp4  # cut the guest into the studio with SAM 3.1
 uv run pytest          # no key needed: tests replay recorded responses
 ```

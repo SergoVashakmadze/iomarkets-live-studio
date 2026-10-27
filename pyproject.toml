@@ -16,6 +16,7 @@ dependencies = [
     "meta-sam-parser>=0.1.0",
     "numpy>=2.1",
     "edge-tts>=7.3.1",
+    "python-multipart>=0.0.20",
 ]
 
 [project.scripts]

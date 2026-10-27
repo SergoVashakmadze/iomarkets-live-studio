@@ -65,6 +65,8 @@ pydantic==2.14.1
     #   iomarkets-live-studio
 pydantic-core==2.50.1
     # via pydantic
+python-multipart==0.0.32
+    # via iomarkets-live-studio
 starlette==1.10.0
     # via fastapi
 tabulate==0.10.0

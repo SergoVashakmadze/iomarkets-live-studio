@@ -11,6 +11,26 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: guest materials, the Devil's Advocate, cold start
+
+- `src/studio/materials.py` + page: paste links (LinkedIn, website, company page) and drop
+  files (a pitch deck as PDF, images, notes). Links are fetched only from public addresses,
+  re-checked at every redirect, with size and time caps; pages that refuse robots become search
+  leads. Muse Spark reads PDFs and images directly. Guest files are never sent to Fireworks:
+  with files attached, the open-weights editor is skipped.
+- The **Devil's Advocate** (Muse Spark + web search): before air it turns the materials and
+  research into PRESSURE POINTS (claim, why it is doubtful, a question that tests it); live, it
+  checks what the guest says and passes the anchor contradictions and challenges (at most three
+  waiting at once).
+- **Cold start**: go live with no brief. The anchor opens by asking the guest to introduce
+  themselves; Live Scout researches what they say after each turn (one search at a time) and
+  feeds the anchor and the Devil's Advocate.
+- Measured live: a brief from a test deck plus two links in 75 s, with five pressure points
+  that set the deck's claims against published figures; a cold start identified the topic
+  from the guest's first answer, and both spoken figures were checked supported.
+- Fixed on the way: Fact-Check's token budget (a chart check was cut off mid-JSON) and raw
+  search-reference marks in model text.
+
 ### Oct 27: any topic, not just business
 
 - `src/studio/agents/policy.py`: one set of guardrails shared by Scout, the anchor and
