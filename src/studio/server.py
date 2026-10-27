@@ -42,7 +42,7 @@ from studio.meta.responses import ResponsesClient
 from studio.segment import MAX_CLIP_BYTES, ROOMS, SegmentRoom
 
 MAX_BRIEF_CHARS = 20_000
-MAX_FRAME_BYTES = 3_000_000  # one JPEG camera frame
+MAX_FRAME_BYTES = 1_400_000  # one JPEG frame; base64 must fit a 2 MiB WebSocket message (Modal)
 MAX_INTERVIEW_S = 15 * 60
 
 

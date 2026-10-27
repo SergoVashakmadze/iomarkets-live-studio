@@ -11,6 +11,12 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 27: deployment for judges (Modal)
+
+- `deploy/modal_app.py`, `deploy/requirements.txt` (exported from `uv.lock`, checked in CI),
+  `docs/DEPLOY.md`: one container with ffmpeg, scaled to zero, secrets from a Modal secret,
+  the spend ledger on a Volume. Chart frames capped at 1.4 MB for Modal's 2 MiB WebSocket limit.
+
 ### Oct 27: spend ledger and daily cap
 
 - `src/studio/ledger.py`: every Meta call is metered from the usage the API reports (tokens,
