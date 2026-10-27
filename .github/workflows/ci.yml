@@ -18,6 +18,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --locked
+      - name: deploy/requirements.txt matches uv.lock
+        run: |
+          uv export --no-dev --no-hashes --no-emit-project --format requirements-txt -q > /tmp/req.txt
+          diff -u deploy/requirements.txt /tmp/req.txt
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       # Tests replay recorded responses; no META_API_KEY is needed or set.
