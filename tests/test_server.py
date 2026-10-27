@@ -164,3 +164,14 @@ def test_bad_frames_are_ignored(app_and_replay):
     assert _jpeg("%%%not base64") is None
     assert _jpeg(None) is None
     assert _jpeg("A" * 5_000_000) is None  # too large
+
+
+def test_previous_token_accepted_during_rotation(monkeypatch):
+    from studio.server import _token_ok
+
+    monkeypatch.setenv("STUDIO_TOKEN", "new")
+    monkeypatch.setenv("STUDIO_TOKEN_PREV", "old")
+    assert _token_ok("new") and _token_ok("old")
+    assert not _token_ok("other") and not _token_ok(None) and not _token_ok("")
+    monkeypatch.delenv("STUDIO_TOKEN_PREV")
+    assert not _token_ok("old")  # _PREV removed: the old token stops working

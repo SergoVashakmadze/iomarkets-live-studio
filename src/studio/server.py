@@ -9,7 +9,8 @@ first, then binary frames of 24 kHz s16le mono PCM from the guest's microphone, 
 end. The server answers with the LiveSession messages (see `live.py`).
 
 If `STUDIO_TOKEN` is set, every request must carry it as `?token=`; set it whenever the page
-is reachable from anywhere but this machine.
+is reachable from anywhere but this machine. `STUDIO_TOKEN_PREV` is also accepted, so the
+token can rotate without cutting anyone off (docs/SECRETS.md).
 """
 
 from __future__ import annotations
@@ -52,10 +53,16 @@ class Start(BaseModel):
 
 
 def _token_ok(given: str | None) -> bool:
-    expected = os.environ.get("STUDIO_TOKEN")
-    if not expected:
+    """`STUDIO_TOKEN`, or `STUDIO_TOKEN_PREV` while a rotation overlaps (docs/SECRETS.md)."""
+    current = os.environ.get("STUDIO_TOKEN")
+    if not current:
         return True
-    return given is not None and hmac.compare_digest(given.encode(), expected.encode())
+    if given is None:
+        return False
+    accepted = [current, os.environ.get("STUDIO_TOKEN_PREV") or ""]
+    # Compare against every candidate, so timing does not reveal which one matched.
+    matches = [hmac.compare_digest(given.encode(), t.encode()) for t in accepted if t]
+    return any(matches)
 
 
 def create_app(
