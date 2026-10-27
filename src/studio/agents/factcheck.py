@@ -22,9 +22,12 @@ from studio.agents.loop import run_agent
 from studio.meta.responses import ResponsesClient, strict_object
 from studio.tools.market import market_quote
 
-# A digit, or a number word a speech recogniser might leave spelled out.
+# Something checkable: a digit, a number word a speech recogniser might spell out, or a claim
+# of rank or record ("the first", "the largest").
 HAS_FIGURE = re.compile(
-    r"\d|\b(percent|per cent|million|billion|trillion|half|double|triple|quarter)\b", re.I
+    r"\d|\b(percent|per cent|million|billion|trillion|half|double|triple|quarter"
+    r"|first|largest|biggest|smallest|fastest|oldest|youngest|most|least|record|only)\b",
+    re.I,
 )
 
 
@@ -104,10 +107,11 @@ legible chart, set legible to false and figures to [].
 """
 
 CHECK_INSTRUCTIONS = """\
-You are Fact-Check for a live IoMarkets.tv business interview. Find the specific, checkable
-figures in what the guest said or showed (revenue, growth, prices, deal sizes, dates,
-customer numbers) and check each one: first against the brief below, then with web search,
-and with market_quote for a share price. Skip opinions, forecasts and vague statements.
+You are Fact-Check for a live IoMarkets.tv interview, on any topic. Find the specific,
+checkable claims in what the guest said or showed (figures, dates, records, rankings, "the
+first" or "the largest", named results) and check each one: first against the brief below,
+then with web search, and with market_quote for a share price. Skip opinions, forecasts and
+vague statements.
 
 For each figure: "supported" if reputable sources match it (allow rounding), "contradicted" if
 they give a clearly different figure for the same thing and period, else "unverifiable".

@@ -7,24 +7,27 @@ Everything on screen must be built during the hackathon (`NEW_WORK.md`).
 
 - **A real adult who agrees in writing** to their face and voice appearing in a public video
   (consent form below). Not under 18: the Muse Spark Open licence excludes minors.
-- **Someone who can talk with authority about a listed company's published results**: a
-  founder, an analyst, an accountant, an investor-relations or finance person, a business
-  journalist. Fact-Check needs public figures to check, so the topic is a listed company's
-  latest results, not the guest's private business.
-- **Not political, not war, not medical** (the hackathon's exclusions), and nothing that sounds
-  like advice to buy or sell. The anchor is told to avoid both; the guest should too.
-- Not speaking about their own employer's unpublished numbers.
+- **Any topic they know well and that has public, checkable facts**: their sport, research,
+  company, book, field or craft. Fact-Check needs figures, dates and records it can find on the
+  web, so pick a guest whose work has been reported. Business news is IoMarkets.tv's home turf,
+  but a scientist, an athlete, an engineer or an author works just as well.
+- **Not political, not war, no medical, legal or financial advice** (the hackathon's exclusions
+  and the studio's own guardrails; the anchor steers away from them).
+- Nothing confidential: published facts only.
 
-A good shape: *"An analyst on Vodafone's FY26 results"*, or any FTSE/S&P company that has just
-reported. Pick one with a recent results release so the brief and the checks have material.
+Good shapes: *"a researcher on their latest published result"*, *"a club coach on the season's
+numbers"*, *"a founder on their company's public milestones"*, *"an analyst on a listed
+company's results"*. In the guest field, write name, role and topic:
+`Dr Jane Doe, marine biologist, on coral bleaching in 2026`.
 
 ## The chart (shows Fact-Check)
 
-Print one chart, A4 landscape, matte paper, large type (values printed on the bars), with the
-company's real figures **and one figure deliberately wrong**. The fact-check panel flags it with
-the correct value and a source; that is the moment the video should catch. Say so on screen:
-"the guest misquotes one figure on purpose to show the fact-check." Never present a staged
-error as a real one.
+Print one chart on the guest's topic (A4 landscape, matte paper, large type, values printed on
+the bars or points) with real, public figures **and one figure deliberately wrong**: attendance,
+results, measurements, records, revenue, whatever fits. The fact-check panel flags the wrong
+one with the correct value and a source; that is the moment the video should catch. Say so on
+screen: "the guest misquotes one figure on purpose to show the fact-check." Never present a
+staged error as a real one.
 
 ## Setup
 
@@ -46,7 +49,7 @@ error as a real one.
 | 0:00 | guest | Go live. The anchor opens; the guest answers. |
 | ~1:00 | guest | Interrupt the anchor once, mid-sentence (shows barge-in). |
 | ~2:30 | guest | Hold up the chart; operator presses **Show chart**. Keep it still for 2 seconds. |
-| ~3:30 | guest | Cite one real figure out loud (the fact-check marks it supported). |
+| ~3:30 | guest | State one real fact or figure out loud (the fact-check marks it supported). |
 | ~4:00 | anchor | Raises the wrong chart figure politely; the guest responds. |
 | 6:00-8:00 | operator | **End interview**. Wait for "cut-outs done", then **Build segment**. |
 | after | operator | Download the segment; stop the screen recording. |
@@ -63,7 +66,7 @@ The daily spend cap ($10 by default) covers several rehearsals; one full run cos
 > 1. Record my voice and video during a demonstration interview with an AI anchor.
 > 2. Process the recording with Meta's AI models (speech recognition, video segmentation and
 >    language models) under Meta's Standard terms, which are not the Contributor programme that
->    trains on content. Public research about my company, but not my voice, face or words, may
+>    trains on content. Public research about me and my work, but not my voice, face or words, may
 >    also be processed by Fireworks AI.
 > 3. Cut me out of my background and place me in a virtual studio.
 > 4. Publish the resulting video, my name and my role, as part of a hackathon entry (Devpost,
@@ -75,7 +78,7 @@ The daily spend cap ($10 by default) covers several rehearsals; one full run cos
 > ______________________. After publication, the video can be taken down on request but copies
 > made by others cannot be recalled.
 >
-> I am 18 or over. Nothing I say is investment advice.
+> I am 18 or over. Nothing I say is medical, legal or financial advice.
 >
 > Signed: ______________________ Date: __________
 >

@@ -100,9 +100,9 @@
   <div class="models" id="models" aria-label="Meta models at work"></div>
 
   <section>
-    <label for="subject">Guest and company</label>
+    <label for="subject">Guest, role, and topic (any topic)</label>
     <div class="row">
-      <input id="subject" placeholder="Margherita Della Valle, CEO of Vodafone" autocomplete="off">
+      <input id="subject" placeholder="Eliud Kipchoge, marathon runner, on training for a sub-two-hour race" autocomplete="off">
       <button id="prepare">Prepare brief</button>
     </div>
     <label for="brief" style="margin-top:12px">Brief (Scout, editable)</label>
@@ -147,7 +147,7 @@
   </section>
 
   <footer>The anchor is an AI system and its voice is synthetic (Microsoft Edge text-to-speech). Guest speech is transcribed
-    by Meta's Muse Voice Transcribe; the anchor, chart reading and fact-checks run on Muse Spark. Nothing here is investment
+    by Meta's Muse Voice Transcribe; the anchor, chart reading and fact-checks run on Muse Spark. Nothing here is medical, legal or investment
     advice. Built with Muse Spark Open.</footer>
 </main>
 
@@ -466,7 +466,10 @@ $("go").onclick = async () => {
   $("answers").innerHTML = "";
   $("segmentLink").textContent = "";
   $("build").disabled = true;
-  const keywords = $("subject").value.split(/[,;]/).map((s) => s.replace(/\b(CEO|CFO|of|the)\b/gi, "").trim()).filter(Boolean);
+  // The name and the topic's key words bias speech recognition; role words add nothing.
+  const keywords = $("subject").value.split(/[,;]/)
+    .map((s) => s.replace(/\b(on|of|the|at|and|for|a|an|CEO|CFO|CTO|founder|director|professor)\b/gi, " ").replace(/\s+/g, " ").trim())
+    .filter(Boolean).slice(0, 8);
   const proto = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(`${proto}://${location.host}${withToken("/ws/live")}`);
   ws.binaryType = "arraybuffer";

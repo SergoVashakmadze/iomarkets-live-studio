@@ -9,7 +9,7 @@ from studio.meta.open_weights import ATTRIBUTION, MUSE_SPARK_OPEN
 from studio.meta.responses import ResponsesClient
 
 RECORDING = load_recording("scout_amd_2026-10-27.json")
-EDITED = "GUEST: Lisa Su.\nCOMPANY: AMD.\nRECENT: x\nNUMBERS: y\nQUESTIONS: q\nCAUTION: c"
+EDITED = "GUEST: Lisa Su.\nCONTEXT: AMD.\nRECENT: x\nFACTS: y\nQUESTIONS: q\nCAUTION: c"
 
 
 def _answer(text: str) -> httpx.Response:

@@ -1,9 +1,9 @@
-"""Scout: writes the pre-interview brief on a guest and their company, in two stages.
+"""Scout: writes the pre-interview brief on a guest and their topic, in two stages.
 
 1. Research, on Muse Spark 1.3 (Meta's Model API): web search and `market_quote`, giving a
    dated, sourced draft.
 2. Editing, on Muse Spark Open (Meta's open weights, served by Fireworks): tighten the draft
-   into the anchor's brief, vary the questions, strip anything that reads as investment advice,
+   into the anchor's brief, vary the questions, strip anything outside the guardrails (`policy`),
    and keep every caution. The editor adds no facts, and runs only on public research: it
    never sees the guest's voice, face or words, so no guest data goes to a second host.
 
@@ -17,33 +17,38 @@ import logging
 from dataclasses import dataclass
 
 from studio.agents.loop import AgentResult, run_agent
+from studio.agents.policy import GUARDRAILS
 from studio.meta.open_weights import ATTRIBUTION
 from studio.meta.responses import ResponsesClient
 from studio.tools.market import market_quote
 
 log = logging.getLogger(__name__)
 
-SECTIONS = ("GUEST:", "COMPANY:", "RECENT:", "NUMBERS:", "QUESTIONS:", "CAUTION:")
+SECTIONS = ("GUEST:", "CONTEXT:", "RECENT:", "FACTS:", "QUESTIONS:", "CAUTION:")
 
-INSTRUCTIONS = """\
-You are Scout, the researcher for IoMarkets.tv, a business-news channel. Write the brief an
-anchor reads before a live interview.
+INSTRUCTIONS = (
+    """\
+You are Scout, the researcher for IoMarkets.tv, a channel of live interviews on any topic:
+business, science, sport, culture, technology, a guest's own work. Write the brief an anchor
+reads before a live interview with the guest named below, on their topic (if one is given) or
+on what they are known for.
 
-Search the web for recent, reputable reporting. If the company is listed, call market_quote
-for its ticker and use that price rather than one from a search result.
+Search the web for recent, reputable sources. If the guest leads or speaks for a listed
+company, call market_quote for its ticker rather than taking a price from a search result.
 
 Write plain text with these sections, each a few short lines:
 GUEST: who they are and their role.
-COMPANY: what it does, size, listed or private.
+CONTEXT: their organisation, field or body of work: what it is and why it matters now.
 RECENT: the two to four most newsworthy developments of the last six months, each dated.
-NUMBERS: figures the guest is likely to cite, each with its source and date.
+FACTS: figures, dates and claims the guest is likely to cite, each with its source and date.
 QUESTIONS: four open questions, each a different style (explain, challenge, forward-looking,
 personal). Never the same opening twice.
 CAUTION: anything unconfirmed, disputed or out of date.
 
-This is journalism, not investment advice: no buy, sell or price-target language. Leave out
-politics. If you cannot confirm something, say so instead of guessing.
+These rules are for you; follow them, but do not restate them in the brief:
 """
+    + GUARDRAILS
+)
 
 
 async def write_brief(client: ResponsesClient, subject: str) -> AgentResult:
@@ -59,23 +64,24 @@ async def write_brief(client: ResponsesClient, subject: str) -> AgentResult:
 
 EDITOR_INSTRUCTIONS = """\
 You are the Scout editor at IoMarkets.tv. Below is a researcher's draft brief for a live
-business interview. Edit it into the brief the anchor reads in the minute before going on air.
+interview. Edit it into the brief the anchor reads in the minute before going on air.
 
-Keep the six sections and their headings exactly: GUEST:, COMPANY:, RECENT:, NUMBERS:,
+Keep the six sections and their headings exactly: GUEST:, CONTEXT:, RECENT:, FACTS:,
 QUESTIONS:, CAUTION:. Plain text, no markdown.
 
-- The anchor reads this in the minute before air: under 350 words in all. GUEST and COMPANY
-  two lines each; RECENT at most three items, one dated line each; NUMBERS at most six, each
-  "figure - what it is - source, date"; CAUTION at most four short items.
+- The anchor reads this in the minute before air: under 350 words in all. GUEST and CONTEXT
+  two lines each; RECENT at most three items, one dated line each; FACTS at most six, each
+  "fact or figure - what it is - source, date"; CAUTION at most four short items.
 - Choose what the guest is most likely to talk about and drop the rest; never shorten a figure,
   date or source you keep.
 - Add no fact, figure or source that is not in the draft. If something is unclear, move it to
   CAUTION rather than resolving it.
 - QUESTIONS: exactly four, one each of explain, challenge, forward-looking and personal, each
   opening differently, each one sentence the anchor can say aloud.
-- Remove anything that reads as investment advice (buy, sell, price targets, "undervalued")
-  and anything political.
-- Keep every CAUTION item.
+- Remove anything political or about war, and anything that reads as medical, legal or
+  financial advice (diagnoses, treatments, buy or sell, price targets).
+- Keep every CAUTION item about the facts; drop any that only restate editorial rules.
+- The word limit is firm: cut the weakest RECENT and FACTS items first.
 """
 
 

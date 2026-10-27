@@ -19,7 +19,7 @@ CARDS = {
     "01-title": (
         [
             ("IoMarkets Live Studio", 12, WHITE),
-            ("A live business interview with an AI anchor", 26, MUTED),
+            ("A live interview on any topic, with an AI anchor", 26, MUTED),
             ("that listens, fact-checks and produces the segment as it happens", 26, MUTED),
             ("", 40, WHITE),
             ("Built on Meta's models  |  Meta Global AI Developer Hackathon 2026", 34, ACCENT),
@@ -64,7 +64,7 @@ CARDS = {
             ("github.com/SergoVashakmadze/iomarkets-live-studio", 30, ACCENT),
             ("", 40, WHITE),
             ("Built with Muse Spark Open", 34, MUTED),
-            ("Journalism, not investment advice.", 36, MUTED),
+            ("Journalism on any topic. Not medical, legal or financial advice.", 36, MUTED),
         ],
         5,
     ),
