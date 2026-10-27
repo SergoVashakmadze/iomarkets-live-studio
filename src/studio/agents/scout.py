@@ -64,7 +64,11 @@ business interview. Edit it into the brief the anchor reads in the minute before
 Keep the six sections and their headings exactly: GUEST:, COMPANY:, RECENT:, NUMBERS:,
 QUESTIONS:, CAUTION:. Plain text, no markdown.
 
-- Cut repetition and filler; keep every date, figure and source the draft gives.
+- The anchor reads this in the minute before air: under 350 words in all. GUEST and COMPANY
+  two lines each; RECENT at most three items, one dated line each; NUMBERS at most six, each
+  "figure - what it is - source, date"; CAUTION at most four short items.
+- Choose what the guest is most likely to talk about and drop the rest; never shorten a figure,
+  date or source you keep.
 - Add no fact, figure or source that is not in the draft. If something is unclear, move it to
   CAUTION rather than resolving it.
 - QUESTIONS: exactly four, one each of explain, challenge, forward-looking and personal, each
