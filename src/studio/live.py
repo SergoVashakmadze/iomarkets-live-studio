@@ -330,12 +330,15 @@ class LiveSession:
             parts = _short_start(parts)
         jobs = [asyncio.create_task(self.voice(p)) for p in parts]
         announced = False
+        loop = asyncio.get_running_loop()
+        t0 = loop.time()
         try:
             if not hold:
                 await self.send({"type": "anchor_line", "id": line_id, "text": line})
                 announced = True
             for i, job in enumerate(jobs):
                 mp3 = await job
+                t_voice = loop.time() - t0
                 msg = {
                     "type": "anchor_audio",
                     "id": line_id,
@@ -344,12 +347,20 @@ class LiveSession:
                     "mp3": base64.b64encode(mp3).decode(),
                 }
                 if self.lipsync:
+                    t_sync = loop.time()
                     try:
                         msg["video"] = await self.lipsync(mp3, line_id, i)
                     except asyncio.CancelledError:
                         raise
                     except Exception:
                         msg["video"] = None  # this sentence goes out as audio only
+                    # One line per sentence in the logs (Modal's too), to see where time goes.
+                    print(
+                        f"[speak] line {line_id} part {i}: voiced at {t_voice:.1f}s, "
+                        f"lip-sync {loop.time() - t_sync:.1f}s, out at {loop.time() - t0:.1f}s, "
+                        f"clip {'yes' if msg['video'] else 'no'}",
+                        flush=True,
+                    )
                 if not announced:  # the greeting has finished: on air
                     await self._wait_until(hold)
                     await self.send({"type": "anchor_line", "id": line_id, "text": line})
