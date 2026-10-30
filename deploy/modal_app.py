@@ -172,7 +172,7 @@ def cool_down() -> None:
 def fetch_models():
     """MuseTalk's public weights onto the Volume, from the sources its download_weights.sh uses
     (face-parse-bisent's 79999_iter.pth is on Google Drive: deploy/lipsync_setup.sh uploads it)."""
-    import subprocess
+    import urllib.request
 
     from huggingface_hub import hf_hub_download
 
@@ -188,9 +188,8 @@ def fetch_models():
         ("yzd-v/DWPose", "dw-ll_ucoco_384.pth", "dwpose"),
     ]:
         hf_hub_download(repo, name, local_dir=f"{m}/{sub}" if sub else m)
-    subprocess.run(
-        ["curl", "-sSfL", "https://download.pytorch.org/models/resnet18-5c106cde.pth",
-         "--create-dirs", "-o", f"{m}/face-parse-bisent/resnet18-5c106cde.pth"],
-        check=True,
-    )  # fmt: skip
+    resnet = Path(f"{m}/face-parse-bisent/resnet18-5c106cde.pth")
+    if not resnet.exists():  # the image has no curl; urllib verifies TLS as curl would
+        url = "https://download.pytorch.org/models/resnet18-5c106cde.pth"
+        urllib.request.urlretrieve(url, resnet)
     lipsync_volume.commit()

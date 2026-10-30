@@ -88,7 +88,8 @@ async def lipsync_up() -> bool:
         import modal
 
         try:
-            return bool(await modal.Dict.from_name(STATE).get.aio("up", False))
+            state = modal.Dict.from_name(STATE, create_if_missing=True)
+            return bool(await state.get.aio("up", False))
         except Exception:
             return False
     if not lipsync_url():
