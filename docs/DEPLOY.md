@@ -7,7 +7,7 @@ The app is one FastAPI process with ffmpeg; Meta's models are all hosted, so no 
 
 | | Rate | Per judge session (10 min interview) |
 |---|---|---|
-| Modal compute: 4 cores + 4 GiB, while serving and for 20 min after | $0.0472/core-h, $0.008/GiB-h (Modal Starter: $30/month free) | ~$0.13, so about 230 sessions a month inside the free allowance |
+| Modal compute: 4 cores + 4 GiB, while serving and for 20 min after | $0.0472/core-h, $0.008/GiB-h (this workspace's Starter plan includes $1/month) | ~$0.13, so about 7 sessions a month inside the $1 allowance |
 | Meta Model API (our credit) | published Standard rates | ~$1.30: SAM ~$0.80, fact-checks ~$0.30, brief ~$0.16, ASR $0.03 |
 
 Meta is the real cost. The app meters it (`studio/ledger.py`) and refuses new work once a
@@ -65,9 +65,11 @@ bash deploy/lipsync_setup.sh ../iomarkets.tv-newsroom ~/musetalk-local/MuseTalk
 What it costs: the L4 is about $0.80 an hour while it runs, plus a little CPU and memory. An
 interview keeps it up for its length plus five minutes: about $0.20 for a 10-minute interview.
 `warm.sh on 3` is about $2.40. `cool_down` is a few CPU-seconds four times an hour (cents a
-month). Modal's Starter plan includes $30 of usage a month, which covers testing and judging at
-these rates. **Set a workspace budget in Modal's settings as the backstop** (the operator, in the
-dashboard): it caps everything, whatever happens in code.
+month). This workspace's Starter plan includes **$1.00** of compute a month (Modal's billing
+page, 2026-10-30; not $30 as an earlier version of this guide said), with a usage limit of $1
+until a payment method is added: without a card nothing can be charged. After adding one, **set
+the usage limit** (Settings, Usage & billing, Usage limit) as the backstop: it caps everything,
+whatever happens in code.
 
 ```sh
 bash deploy/warm.sh on 3   # before a testing session; off by itself after three hours
