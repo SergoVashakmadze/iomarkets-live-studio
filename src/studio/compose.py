@@ -2,7 +2,7 @@
 
 Each answer is preceded by the AI anchor asking the question in the IoMarkets TV studio, with
 the question in a strap. The anchor is lip-synced by a local MuseTalk server when one is running
-(`STUDIO_MUSETALK_URL`, default http://127.0.0.1:8765); otherwise her talking loop plays.
+(`STUDIO_MUSETALK_URL`, default http://127.0.0.1:8765); otherwise she is shown still.
 Each answer carries a lower third with the guest's name and role for its first seconds.
 Everything is joined with ffmpeg's concat filter, which scales, resamples and re-times every
 part, so cards and answers from any camera join cleanly.
@@ -27,7 +27,6 @@ AI_NOTE = "AI-generated anchor: synthetic image and voice"
 ANCHOR_NAME = "Alexandra Morgan  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
 STUDIO = ASSETS / "studio.jpg"  # pre-existing, built by scripts/anchor_assets.py
-ANCHOR_LOOP = ASSETS / "anchor.webm"
 ANCHOR_STUDIO = ASSETS / "anchor-studio.png"  # what MuseTalk lip-syncs for the segment (16:9)
 ANCHOR_SHOT = ASSETS / "anchor-shot.png"  # and live, in the page's anchor box (4:3)
 LIPSYNC_TIMEOUT_S = 300
@@ -111,15 +110,9 @@ async def question_card(
     if mp3 and await lipsync(mp3, synced):
         inputs = ["-i", str(synced)]
         picture = f"[0:v]{fit},setsar=1,fps={FPS}[p]"
-    elif ANCHOR_LOOP.exists():
-        # libvpx-vp9 keeps the loop's transparency; ffmpeg's own VP9 decoder drops it.
-        inputs = [*_studio_input(), "-stream_loop", "-1", "-c:v", "libvpx-vp9",
-                  "-i", str(ANCHOR_LOOP)]  # fmt: skip
-        anchor_h = int(height * 0.94) // 2 * 2
-        picture = (
-            f"[0:v]{fit},setsar=1[bg];[1:v]fps={FPS},scale=-2:{anchor_h}[a];"
-            "[bg][a]overlay=x=(W-w)/2:y=H-h:format=auto[p]"
-        )
+    elif ANCHOR_STUDIO.exists():  # no lip-sync: the anchor still, not a mouth out of time
+        inputs = ["-loop", "1", "-framerate", str(FPS), "-i", str(ANCHOR_STUDIO)]
+        picture = f"[0:v]{fit},setsar=1[p]"
     elif STUDIO.exists() or BACKDROP.exists():
         inputs = _studio_input()
         picture = f"[0:v]{fit},setsar=1[p]"

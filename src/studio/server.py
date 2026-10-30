@@ -73,7 +73,6 @@ ASSETS = {
     "backdrop.jpg": "image/jpeg",
     "studio.jpg": "image/jpeg",
     "anchor.png": "image/png",
-    "anchor.webm": "video/webm",
 }
 
 

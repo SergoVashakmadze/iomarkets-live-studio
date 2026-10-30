@@ -20,16 +20,16 @@ the record. Every entry links to the commits that built it.
   machine before it is sent, and the page plays the clip and the audio together
   (`LiveSession(lipsync=...)`, `compose.lipsync`). A long first sentence is split at its first
   comma so the first clip renders quickly; a barge-in or a new line cancels the line being
-  rendered. Without a MuseTalk server (the Modal deployment) the page plays the anchor's
-  talking loop while her voice plays and holds her still otherwise. Measured 2026-10-30 on an
+  rendered. Without a MuseTalk server (the Modal deployment) the anchor is shown still while her
+  voice plays: no mouth moving out of time with the words. Measured 2026-10-30 on an
   RTX 5060 Ti: 1.2x real time once warm (4.3 s of speech in 5.0 s), so the anchor starts about
   5 s after her line is written.
-- The anchor's 4:3 live shot and her still and loop are framed to the pixel alike, so the
-  picture does not jump when a clip starts or ends.
+- The anchor's 4:3 live shot and her still are framed to the pixel alike, so the picture does
+  not jump when a clip starts or ends.
 - The programme (canvas plus the guest's microphone and the anchor's voice) records while the
   interview is live and downloads as WebM at the end: 1280x720, 25 fps.
 - The packaged segment: each question is the anchor asking it in the studio, lip-synced by
-  MuseTalk (or her loop without it), with the question in a strap. Guest cut-outs land on the
+  MuseTalk (or shown still without it), with the question in a strap. Guest cut-outs land on the
   same studio background.
 - The anchor's voice is now en-GB-LibbyNeural (female, to match the anchor): 0.6 s to first
   audio, as fast as the previous male voice; en-GB-SoniaNeural measured 3.3 s, too slow.
@@ -249,7 +249,7 @@ Used by the studio, made before the event, and kept out of this repo (built loca
 `scripts/anchor_assets.py` from the IoMarkets.tv newsroom; git ignores them):
 
 - **The anchor, "Alexandra Morgan"**: Teresa, an avatar from HeyGen's library (sourced
-  2026-04-23), as a talking loop and a still. Not open source: HeyGen's terms apply.
+  2026-04-23): a still taken from her loop, composed into the studio. Not open source: HeyGen's terms apply.
 - **The IoMarkets TV studio background** (the red studio set).
 - **The MuseTalk server** (`iomarkets.tv-newsroom/services/musetalk_server/server.py`, 2026-10-21)
   that lip-syncs the anchor on this machine's GPU. MuseTalk itself is open source (MIT,

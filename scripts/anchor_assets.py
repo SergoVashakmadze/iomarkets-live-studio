@@ -9,12 +9,12 @@ falls back to the drawn backdrop and shows no anchor picture.
 
 Outputs:
 - studio.jpg          the studio background, 1920x1080
-- anchor.webm         the anchor's talking loop with transparency (VP9 alpha), cropped, 720 high
-- anchor.png          its first frame with transparency: the anchor while silent
+- anchor.png          the anchor's loop, first frame, with transparency, cropped, 720 high: her
+                      still when no lip-synced clip is playing
 - anchor-studio.png   that frame on the studio background, 1280x720: what MuseTalk lip-syncs
                       for the packaged segment
 - anchor-shot.png     a 4:3 medium shot cut from the same composite, 960x720: what MuseTalk
-                      lip-syncs live; the page frames its still and loop exactly like it (SHOT)
+                      lip-syncs live; the page frames her still exactly like it (SHOT)
 """
 
 import argparse
@@ -62,12 +62,9 @@ def main() -> None:
     ff("-i", str(studio), "-vf", "scale=1920:1080", "-q:v", "3", str(OUT / "studio.jpg"))
     x, y, w, h = person_box(mask)
     crop = f"crop={w}:{h}:{x}:{y},scale=-2:{H}"
-    keyed = f"[0:v]{crop}[c];[1:v]{crop},format=gray[m];[c][m]alphamerge,format=yuva420p"
-    ff("-i", str(loop), "-i", str(mask), "-filter_complex", keyed, "-an",
-       "-c:v", "libvpx-vp9", "-crf", "34", "-b:v", "0", "-row-mt", "1", "-auto-alt-ref", "0",
-       str(OUT / "anchor.webm"))  # fmt: skip
+    keyed = f"[0:v]{crop}[c];[1:v]{crop},format=gray[m];[c][m]alphamerge"
     ff("-i", str(loop), "-i", str(mask), "-filter_complex",
-       keyed.replace("yuva420p", "rgba"), "-frames:v", "1", str(OUT / "anchor.png"))  # fmt: skip
+       keyed + ",format=rgba", "-frames:v", "1", str(OUT / "anchor.png"))  # fmt: skip
     # The full frame for MuseTalk: the anchor where the loop has her, over the studio's desk,
     # 24 px lower so the loop's bottom edge (y 1068) falls off the frame.
     ff("-i", str(studio), "-i", str(loop), "-i", str(mask), "-filter_complex",
@@ -79,7 +76,7 @@ def main() -> None:
        "[2:v]format=gray[m];[1:v][m]alphamerge[a];[0:v]scale=1920:1080[bg];"
        f"[bg][a]overlay=0:24,crop={w}:{h}:{x}:{y},scale=960:720", "-frames:v", "1",
        str(OUT / "anchor-shot.png"))  # fmt: skip
-    for name in ("studio.jpg", "anchor.webm", "anchor.png", "anchor-studio.png", "anchor-shot.png"):
+    for name in ("studio.jpg", "anchor.png", "anchor-studio.png", "anchor-shot.png"):
         print(f"{name}: {(OUT / name).stat().st_size // 1024} KB")
 
 

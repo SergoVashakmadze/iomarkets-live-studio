@@ -16,7 +16,6 @@ video/*.srt
 
 # Pre-existing IoMarkets.tv media, built locally by scripts/anchor_assets.py; not in this repo
 src/studio/assets/studio.jpg
-src/studio/assets/anchor.webm
 src/studio/assets/anchor.png
 src/studio/assets/anchor-studio.png
 src/studio/assets/anchor-shot.png
