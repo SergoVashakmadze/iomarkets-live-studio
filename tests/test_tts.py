@@ -39,7 +39,7 @@ async def test_synthesize_collects_audio(monkeypatch):
     monkeypatch.setattr(tts.edge_tts, "Communicate", FakeCommunicate)
     monkeypatch.delenv("STUDIO_VOICE", raising=False)
     assert await synthesize("Hello.") == b"mp3:Hello."
-    assert FakeCommunicate.calls[-1] == ("Hello.", "en-GB-RyanNeural")
+    assert FakeCommunicate.calls[-1] == ("Hello.", "en-GB-LibbyNeural")
 
 
 async def test_synthesize_with_no_audio_fails(monkeypatch):

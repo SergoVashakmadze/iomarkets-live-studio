@@ -37,6 +37,36 @@ async def test_silent_card_and_caption_on_a_clip_without_audio(tmp_path):
 
 
 @needs_ffmpeg
+async def test_question_card_lip_synced_or_not(tmp_path, monkeypatch):
+    mp3 = tmp_path / "q.mp3"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                    "sine=f=220:d=2", str(mp3)], check=True)  # fmt: skip
+    # No MuseTalk server: the card still renders, from the loop, the studio or a plain colour.
+    monkeypatch.setenv("STUDIO_MUSETALK_URL", "http://127.0.0.1:9")
+    card = tmp_path / "card.mp4"
+    await compose.question_card("Is the margin sustainable?", mp3, card, 640, 360, tmp_path)
+    w, h, d, audio = await compose.media_info(card)
+    assert (w, h, audio) == (640, 360, True) and 2.4 < d < 2.8
+
+    # With one: its lip-synced video is the picture, and the question's own audio is kept.
+    async def fake_lipsync(mp3_path, out):
+        _clip(out, size="1280x720", audio=False, seconds=3)
+        return True
+
+    monkeypatch.setattr(compose, "lipsync", fake_lipsync)
+    await compose.question_card("And next year?", mp3, card, 640, 360, tmp_path)
+    w, h, d, audio = await compose.media_info(card)
+    assert (w, h, audio) == (640, 360, True) and 2.4 < d < 2.8
+
+
+async def test_lipsync_is_skipped_without_a_server(tmp_path, monkeypatch):
+    monkeypatch.setenv("STUDIO_MUSETALK_URL", "")
+    mp3 = tmp_path / "q.mp3"
+    mp3.write_bytes(b"x")
+    assert await compose.lipsync(mp3, tmp_path / "out.mp4") is False
+
+
+@needs_ffmpeg
 async def test_join_mixes_sizes_and_audio_layouts(tmp_path):
     a = _clip(tmp_path / "a.mp4", size="320x240")
     b = _clip(tmp_path / "b.mp4", size="640x360")

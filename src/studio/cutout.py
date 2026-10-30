@@ -44,6 +44,8 @@ FPS = 25
 MAX_HEIGHT = 720
 COST_PER_FRAME = 0.20 / 1000  # Standard mode, 50-frame minimum per request
 STUDIO_BACKGROUND = "0x0d1b2a"
+# The studio set (scripts/studio_art.py): the guest is cut out onto this unless told otherwise.
+BACKDROP = Path(__file__).parent / "assets" / "backdrop.jpg"
 MAX_HOLD = 3  # frames a missing mask is held for
 
 
@@ -309,6 +311,7 @@ async def composite(
     """Lay the guest over the background; returns how many frames had the guest in them."""
     oid = seg.guest_id()
     w, h = info.width, info.height
+    background = background or (BACKDROP if BACKDROP.exists() else None)
     bg = (
         ["-loop", "1", "-i", str(background)]
         if background

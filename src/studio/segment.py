@@ -32,7 +32,9 @@ KEEP_AFTER_END_S = 30 * 60
 MAX_CLIP_BYTES = 60_000_000  # about two minutes of 720p WebM
 MAX_CONCURRENT = 2
 MAX_ANSWERS = 12  # SAM is most of an interview's cost; about $0.10 per 20 s answer
-MEDIA_NAME = re.compile(r"^(turn-[0-9]{1,4}|segment)\.mp4$")
+MEDIA_NAME = re.compile(
+    r"^(turn-[0-9]{1,4}|segment|say-[0-9]{1,5}-[0-9]{1,3})\.mp4$"
+)  # say-: live lip-sync
 
 ROOMS: dict[str, SegmentRoom] = {}
 

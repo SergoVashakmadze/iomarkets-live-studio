@@ -32,9 +32,6 @@
   .topbar .in { max-width: 1320px; margin: 0 auto; padding: 6px 16px; display: flex;
                 align-items: center; gap: 16px; flex-wrap: wrap; }
   .logo { height: 64px; width: auto; border-radius: 3px; display: block; }
-  .monitor .mark { position: absolute; top: 12px; right: 12px; height: 22%; min-height: 56px;
-                   width: auto; opacity: .9; border-radius: 2px; display: none; }
-  .monitor.on .mark { display: block; }
   .brand { font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: .95rem;
            color: #fff; white-space: nowrap; }
   .brand span { color: var(--amber); }
@@ -127,23 +124,10 @@
   .stage { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 14px; }
   @media (min-width: 900px) { .stage { grid-template-columns: 5fr 3fr; } }
   .monitor { position: relative; border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
-             background: #000; }
-  .monitor video { display: block; }
+             background: #000; margin-top: 14px; }
+  #program { display: block; width: 100%; aspect-ratio: 16 / 9; }
+  .feed { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
   video { width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: cover; }
-  .monitor .idle { position: absolute; inset: 0; display: grid; place-items: center; color: #5d6775;
-                   font: .8rem var(--mono); letter-spacing: .12em; text-transform: uppercase; }
-  .monitor.on .idle { display: none; }
-  .bug { position: absolute; top: 12px; left: 12px; display: none; background: var(--live); color: #fff;
-         font: 800 .72rem/1 var(--mono); letter-spacing: .14em; padding: 5px 8px; border-radius: 2px; }
-  .monitor.on .bug { display: block; }
-  .lower { position: absolute; left: 0; right: 0; bottom: 6%; display: none; }
-  .monitor.on .lower:not(:empty) { display: block; }
-  .lower .name { display: inline-block; background: #fff; color: #000; font-weight: 800;
-                 text-transform: uppercase; letter-spacing: .04em; padding: 6px 14px 6px 4%;
-                 font-size: clamp(.8rem, 1.8vw, 1.15rem); }
-  .lower .role { display: block; width: fit-content; max-width: 90%; background: #0b0f14;
-                 color: var(--amber); border-left: 4px solid var(--amber); padding: 4px 14px 4px calc(4% - 4px);
-                 font-size: clamp(.68rem, 1.3vw, .85rem); }
   .tape-label { font: 700 .62rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
                 color: var(--muted); margin: 14px 0 8px; display: flex; justify-content: space-between; }
   #log { display: flex; flex-direction: column; gap: 8px; min-height: 120px; max-height: 360px;
@@ -184,7 +168,7 @@
   #answers figure { margin: 0; }
   #answers figcaption { font: .72rem var(--mono); color: var(--muted); margin-top: 4px; }
   #answers video { border-radius: 4px; }
-  #segmentLink a { color: var(--amber); font-weight: 600; }
+  #segmentLink a, #progLink a { color: var(--amber); font-weight: 600; }
   footer { margin-top: 20px; font-size: .74rem; color: var(--muted); line-height: 1.5; }
 </style>
 </head>
@@ -252,15 +236,15 @@
         <button id="end" class="stop" disabled>End interview</button>
       </div>
       <p id="hint" aria-live="polite"></p>
+      <div class="monitor" id="monitor">
+        <canvas id="program" width="1280" height="720" aria-label="Programme: the AI anchor and the guest side by side"></canvas>
+        <video id="cam" class="feed" muted playsinline autoplay></video>
+        <img id="mark" hidden alt="">
+      </div>
+      <p class="note">The programme is recorded while you are live, with both voices: download it
+        under Segment when the interview ends.</p>
       <div class="stage">
         <div>
-          <div class="monitor" id="monitor">
-            <video id="cam" muted playsinline autoplay></video>
-            <div class="idle">Program · camera starts when you go live</div>
-            <div class="bug">LIVE</div>
-            <img class="mark" id="mark" alt="">
-            <div class="lower" id="lower"></div>
-          </div>
           <div class="tape-label"><span>Transcript</span><span>Anchor (AI) left · guest right</span></div>
           <div id="log" aria-live="polite"></div>
         </div>
@@ -283,6 +267,7 @@
         <button id="build" class="primary" disabled>Build segment</button>
         <button id="srt" class="secondary" disabled>Transcript (.srt)</button>
         <span id="segmentLink" class="note"></span>
+        <span id="progLink" class="note"></span>
       </div>
     </div>
   </section>
@@ -379,13 +364,185 @@ async function showSpend() {
 showSpend();
 setInterval(showSpend, 30000);
 
+let caption = { name: "", role: "" };
 function showCaption() {
   const [name, ...rest] = $("subject").value.split(",").map((s) => s.trim());
-  $("lower").innerHTML = "";
-  if (!name) return;
-  $("lower").append(Object.assign(document.createElement("div"), { className: "name", textContent: name }));
-  const role = rest.filter(Boolean).join(", ");
-  if (role) $("lower").append(Object.assign(document.createElement("div"), { className: "role", textContent: role }));
+  caption = { name: name || "", role: rest.filter(Boolean).join(", ") };
+}
+showCaption();
+
+// Programme: what a viewer sees, drawn on a canvas. The IoMarkets TV studio, the AI anchor and
+// the guest's camera side by side, name straps under each, a ticker of fact-checks. The anchor
+// (pre-existing media, scripts/anchor_assets.py) plays her talking loop while her voice plays
+// and holds still when she is silent; the packaged segment is lip-synced by MuseTalk instead.
+const art = {};
+for (const n of ["studio.jpg", "backdrop.jpg", "anchor.png"]) {
+  art[n] = Object.assign(new Image(), { src: withToken(`/assets/${n}`) });
+}
+const ready = (img) => img && img.complete && img.naturalWidth > 0;
+const studio = () => ready(art["studio.jpg"]) ? art["studio.jpg"] : ready(art["backdrop.jpg"]) ? art["backdrop.jpg"] : null;
+const anchorLoop = Object.assign(document.createElement("video"),
+  { src: withToken("/assets/anchor.webm"), muted: true, loop: true, playsInline: true, preload: "auto" });
+const anchorTalking = () => !!(voiceLine?.source || speechSynthesis.speaking);
+// The anchor's 4:3 shot (scripts/anchor_assets.py, SHOT): the studio crop in studio.jpg (x, y,
+// sw, sh), and where the anchor's cut-out sits in the 960x720 shot (ax, ay, aw, ah): the loop
+// box (700, 260+24, 520, 808) in 1920x1080, less the crop's corner, times 960/1080.
+const SHOT = { w: 960, x: 420, y: 230, sw: 1080, sh: 810, ax: 248.9, ay: 48, aw: 462.2, ah: 718.2 };
+
+// The anchor's audio goes to the speakers and to the programme recording.
+function anchorBus() {
+  if (!player.bus) {
+    player.bus = player.createGain();
+    player.mix = player.createMediaStreamDestination();
+    player.bus.connect(player.destination);
+    player.bus.connect(player.mix);
+  }
+  return player.bus;
+}
+
+const ticker = { items: [], x: 1280 };
+function tickerText() {
+  const base = [caption.role ? `${caption.name}: ${caption.role}` : caption.name,
+    "Live interview with an AI anchor", "Facts checked live on Meta Muse Spark"].filter(Boolean);
+  return [...ticker.items.slice(-4), ...base].join("     ◆     ");
+}
+
+const BOX = { y: 112, w: 584, h: 438, left: 40, right: 656 };
+function cover(c, src, sw, sh, x, y, w, h) {
+  const s = Math.max(w / sw, h / sh), cw = w / s, ch = h / s;
+  c.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, x, y, w, h);
+}
+function strap(c, x, title, sub) {
+  const y = BOX.y + BOX.h + 12;
+  c.fillStyle = "rgba(4,10,20,.88)";
+  c.fillRect(x, y, BOX.w, 70);
+  c.fillStyle = "#ffa028";
+  c.fillRect(x, y, 6, 70);
+  c.fillStyle = "#fff";
+  c.font = "800 26px Inter, system-ui, sans-serif";
+  c.fillText(title.toUpperCase(), x + 22, y + 32, BOX.w - 40);
+  c.fillStyle = "#ffb547";
+  c.font = "500 17px Inter, system-ui, sans-serif";
+  c.fillText(sub, x + 22, y + 57, BOX.w - 40);
+}
+function frame(c, x) {
+  c.strokeStyle = "rgba(255,255,255,.35)";
+  c.lineWidth = 2;
+  c.strokeRect(x, BOX.y, BOX.w, BOX.h);
+  c.fillStyle = "#ffa028";
+  c.fillRect(x, BOX.y - 4, BOX.w, 4);
+}
+
+function drawProgram() {
+  const c = $("program").getContext("2d"), on = $("monitor").classList.contains("on"), set = studio();
+  if (set) c.drawImage(set, 0, 0, 1280, 720);
+  else { c.fillStyle = "#04101f"; c.fillRect(0, 0, 1280, 720); }
+  c.fillStyle = "rgba(2,6,12,.55)";
+  c.fillRect(0, 0, 1280, 720);
+  c.textBaseline = "alphabetic";
+
+  // Logo and the LIVE bug.
+  if (ready($("mark"))) c.drawImage($("mark"), 40, 18, 72 * $("mark").naturalWidth / $("mark").naturalHeight, 72);
+  c.fillStyle = "#fff";
+  c.font = "800 22px Inter, system-ui, sans-serif";
+  c.fillText("IOMARKETS.TV", 124, 50);
+  c.fillStyle = "#9fb3c8";
+  c.font = "600 15px Inter, system-ui, sans-serif";
+  c.fillText("LIVE STUDIO", 124, 74);
+  if (on) {
+    c.fillStyle = "#e5352b";
+    c.fillRect(1140, 30, 100, 36);
+    c.fillStyle = "#fff";
+    c.font = "800 20px ui-monospace, Menlo, monospace";
+    c.fillText("● LIVE", 1153, 55);
+  }
+
+  // The anchor, in her own 4:3 shot of the studio: the lip-synced clip while one plays, else
+  // the studio and her loop (talking) or still (silent), framed exactly like the clip.
+  const L = BOX.left, k = BOX.w / SHOT.w;
+  c.save();
+  c.beginPath(); c.rect(L, BOX.y, BOX.w, BOX.h); c.clip();
+  const talking = anchorTalking();
+  if (anchorClip && anchorClip.readyState >= 2) c.drawImage(anchorClip, L, BOX.y, BOX.w, BOX.h);
+  else {
+    if (set === art["studio.jpg"]) c.drawImage(set, SHOT.x, SHOT.y, SHOT.sw, SHOT.sh, L, BOX.y, BOX.w, BOX.h);
+    else if (set) cover(c, set, set.naturalWidth, set.naturalHeight, L, BOX.y, BOX.w, BOX.h);
+    const loop = talking && !lipsyncLive;                      // with lip-sync on, no fake mouth
+    if (loop && anchorLoop.paused) anchorLoop.play().catch(() => {});
+    if (!loop && !anchorLoop.paused) { anchorLoop.pause(); anchorLoop.currentTime = 0; }
+    const pic = loop && anchorLoop.readyState >= 2 ? anchorLoop : ready(art["anchor.png"]) ? art["anchor.png"] : null;
+    if (pic) c.drawImage(pic, L + SHOT.ax * k, BOX.y + SHOT.ay * k, SHOT.aw * k, SHOT.ah * k);
+  }
+  c.fillStyle = "rgba(0,0,0,.6)";
+  c.fillRect(L + BOX.w - 132, BOX.y + 12, 120, 24);
+  c.fillStyle = "#fff";
+  c.font = "700 13px ui-monospace, Menlo, monospace";
+  c.fillText("AI-GENERATED", L + BOX.w - 124, BOX.y + 29);
+  c.restore();
+  frame(c, L);
+  strap(c, L, "Alexandra Morgan", "AI anchor · IoMarkets.tv · synthetic image and voice");
+
+  // The guest's camera.
+  const R = BOX.right, cam = $("cam");
+  c.save();
+  c.beginPath(); c.rect(R, BOX.y, BOX.w, BOX.h); c.clip();
+  if (cam.videoWidth) cover(c, cam, cam.videoWidth, cam.videoHeight, R, BOX.y, BOX.w, BOX.h);
+  else {
+    c.fillStyle = "rgba(4,10,20,.8)";
+    c.fillRect(R, BOX.y, BOX.w, BOX.h);
+    c.fillStyle = "#8a94a3";
+    c.font = "600 18px Inter, system-ui, sans-serif";
+    c.textAlign = "center";
+    c.fillText("Guest camera starts when you go live", R + BOX.w / 2, BOX.y + BOX.h / 2);
+    c.textAlign = "left";
+  }
+  c.restore();
+  frame(c, R);
+  strap(c, R, caption.name || "Guest", caption.role || "Live from their own studio");
+
+  // Ticker.
+  c.fillStyle = "rgba(0,0,0,.9)";
+  c.fillRect(0, 670, 1280, 50);
+  c.font = "600 20px Inter, system-ui, sans-serif";
+  const text = tickerText(), tw = c.measureText(text).width;
+  ticker.x = ticker.x < -tw ? 1280 : ticker.x - 2.2;
+  c.fillStyle = "#e9edf2";
+  c.fillText(text, ticker.x, 702);
+  c.fillStyle = "#ffa028";
+  c.fillRect(0, 670, 190, 50);
+  c.fillStyle = "#1a1000";
+  c.font = "800 20px Inter, system-ui, sans-serif";
+  c.fillText("IOMARKETS.TV", 18, 702);
+}
+setInterval(drawProgram, 40);   // 25 fps; an interval, not rAF, so recording goes on if the tab loses focus
+
+// Programme recording: the canvas plus the guest's microphone and the anchor's voice.
+let progRec = null, micToMix = null;
+function startProgramme() {
+  anchorBus();
+  if (stream?.getAudioTracks().length) {
+    micToMix = player.createMediaStreamSource(new MediaStream(stream.getAudioTracks()));
+    micToMix.connect(player.mix);                        // to the recording only, never the speakers
+  }
+  const tracks = [...$("program").captureStream(25).getVideoTracks(), ...player.mix.stream.getAudioTracks()];
+  const type = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+    .find((t) => MediaRecorder.isTypeSupported(t));
+  const chunks = [];
+  progRec = new MediaRecorder(new MediaStream(tracks), { ...(type ? { mimeType: type } : {}), videoBitsPerSecond: 5_000_000 });
+  progRec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  progRec.onstop = () => {
+    const url = URL.createObjectURL(new Blob(chunks, { type: "video/webm" }));
+    $("progLink").innerHTML = "";
+    $("progLink").append(Object.assign(document.createElement("a"),
+      { href: url, textContent: "Download programme (.webm)", download: "programme.webm" }));
+  };
+  progRec.start(1000);
+}
+function stopProgramme() {
+  if (progRec && progRec.state !== "inactive") progRec.stop();
+  progRec = null;
+  micToMix?.disconnect();
+  micToMix = null;
 }
 
 // What still stands between the operator and Go live, said before they press it.
@@ -599,6 +756,8 @@ function stopMic() {
 
 let player = null;                       // AudioContext for anchor audio
 let voiceLine = null;                    // {id, text, parts: Map, next, source, timer, fallback}
+let anchorClip = null;                   // the lip-synced clip on screen (MuseTalk), if any
+let lipsyncLive = false;                 // whether the server sends a clip with each sentence
 let speakingFlag = false;
 
 function setSpeaking(on) {
@@ -609,6 +768,7 @@ function setSpeaking(on) {
 }
 
 function stopVoice() {
+  if (anchorClip) { anchorClip.pause(); anchorClip = null; }
   if (voiceLine) {
     clearTimeout(voiceLine.timer);
     try { voiceLine.source?.stop(); } catch {}
@@ -622,6 +782,9 @@ function browserVoice(text) {
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-GB";
+  // The anchor on screen is a woman: prefer a female British voice if the browser has one.
+  const voices = speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en-GB"));
+  u.voice = voices.find((v) => /female|libby|sonia|hazel|susan|serena|kate/i.test(v.name)) ?? voices[0] ?? null;
   u.onstart = () => setSpeaking(true);
   u.onend = u.onerror = () => setSpeaking(false);
   speechSynthesis.speak(u);
@@ -630,7 +793,8 @@ function browserVoice(text) {
 function speak(id, text) {
   stopVoice();
   const line = { id, text, parts: new Map(), next: 0, source: null, fallback: false };
-  line.timer = setTimeout(() => fallBack(line), 3000);
+  // Lip-synced sentences take a few seconds to render: wait for them rather than switch voice.
+  line.timer = setTimeout(() => fallBack(line), lipsyncLive ? 30000 : 3000);
   voiceLine = line;
 }
 
@@ -645,8 +809,17 @@ async function onAudio(m) {
   if (!line || line.id !== m.id || line.fallback) return;   // stopped, superseded or fell back
   const bytes = Uint8Array.from(atob(m.mp3), (c) => c.charCodeAt(0));
   player ??= new AudioContext();
-  line.parts.set(m.part, { buffer: await player.decodeAudioData(bytes.buffer), last: m.last });
+  const [buffer, video] = await Promise.all([player.decodeAudioData(bytes.buffer), m.video ? loadClip(m.video) : null]);
+  if (voiceLine !== line) return;
+  line.parts.set(m.part, { buffer, video, last: m.last });
   if (!line.source) playNext(line);
+}
+
+// A sentence's lip-synced clip (MuseTalk, silent picture): ready to play, or null.
+async function loadClip(name) {
+  const v = Object.assign(document.createElement("video"), { src: media(name), muted: true, playsInline: true, preload: "auto" });
+  await new Promise((done) => { v.oncanplaythrough = v.onerror = done; setTimeout(done, 4000); });
+  return v.readyState >= 2 ? v : null;
 }
 
 function playNext(line) {
@@ -656,8 +829,9 @@ function playNext(line) {
   clearTimeout(line.timer);
   const src = player.createBufferSource();
   src.buffer = part.buffer;
-  src.connect(player.destination);
+  src.connect(anchorBus());
   src.onended = () => {
+    if (part.video && anchorClip === part.video) { anchorClip.pause(); anchorClip = null; }
     if (voiceLine !== line) return;
     line.next += 1;
     line.source = null;
@@ -665,6 +839,11 @@ function playNext(line) {
   };
   line.source = src;
   setSpeaking(true);
+  if (part.video) {                                         // picture and voice start together
+    anchorClip = part.video;
+    anchorClip.currentTime = 0;
+    anchorClip.play().catch(() => {});
+  }
   src.start();
 }
 
@@ -691,6 +870,8 @@ async function startLive(cold) {
   $("srt").disabled = true;
   $("answers").innerHTML = "";
   $("segmentLink").textContent = "";
+  $("progLink").textContent = "";
+  ticker.items = [];
   $("build").disabled = true;
   // The name and the topic's key words bias speech recognition; role words add nothing.
   const keywords = $("subject").value.split(/[,;]/)
@@ -703,13 +884,14 @@ async function startLive(cold) {
   showHint();
   ws.onopen = () => ws.send(JSON.stringify({ type: "start", brief, cold, keywords }));
   ws.onmessage = (e) => onMessage(JSON.parse(e.data));
-  ws.onclose = () => { stopRecorder(); stopMic(); stopVoice(); setStatus("Off air");
+  ws.onclose = () => { stopProgramme(); stopRecorder(); stopMic(); stopVoice(); setStatus("Off air");
                        $("go").disabled = $("cold").disabled = false; $("end").disabled = true; $("chart").disabled = true;
                        showHint(); showSpend(); };
 }
 
 $("end").onclick = () => {
   send({ type: "stop" });
+  stopProgramme();
   stopRecorder();
   stopMic();
   stopVoice();
@@ -748,15 +930,18 @@ function addCheck(c) {
     el.append(a);
   }
   box.prepend(el);
+  ticker.items.push(`${c.verdict.toUpperCase()}: ${c.claim}` + (c.verdict === "contradicted" && c.correct_value ? ` (sources: ${c.correct_value})` : ""));
 }
 
 async function onMessage(m) {
   switch (m.type) {
     case "ready":
       room = m.room;
+      lipsyncLive = !!m.lipsync;
       try {
         await startMic((buf) => ws?.readyState === WebSocket.OPEN && ws.send(buf));
         startRecorder();
+        startProgramme();
       } catch (e) {
         addLine("Studio", `Microphone unavailable: ${e.message}`, "anchor error");
         ws.close();

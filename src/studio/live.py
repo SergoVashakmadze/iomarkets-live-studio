@@ -11,7 +11,9 @@ The ASR decides when the guest starts and stops; this decides what the anchor do
   covers all of them.
 - Each anchor line is sent as text at once, then as audio sentence by sentence (`voice`), so
   playback starts on the first sentence. The page uses the browser's own voice if audio is
-  late or fails.
+  late or fails. With `lipsync` set, each sentence is lip-synced (MuseTalk) before it is sent,
+  and its clip travels with its audio; a sentence that fails to render goes out as audio only.
+  A barge-in or a new line cancels the line still being rendered.
 - In a cold start (`researcher` set), Live Scout researches what the guest has said after
   each turn, one search at a time; its findings reach the anchor with the guest's next words
   and the Devil's Advocate checks against them.
@@ -39,6 +41,8 @@ from studio.tts import sentences
 
 Send = Callable[[dict[str, Any]], Awaitable[None]]
 Voice = Callable[[str], Awaitable[bytes]]
+# (mp3, line id, sentence) -> the name of the lip-synced clip in the room's media, or None
+Lipsync = Callable[[bytes, int, int], Awaitable[str | None]]
 Researcher = Callable[[str, str], Awaitable[LiveResearch]]
 MAX_NOTES = 3
 TRANSCRIPT_LINES = 16  # what Live Scout reads: the latest exchanges
@@ -49,6 +53,21 @@ class Desk(Protocol):
     async def read_chart(self, jpeg: bytes) -> ChartReading: ...
 
 
+def _short_start(parts: list[str], words: int = 9) -> list[str]:
+    """Split a long first sentence at its first comma, so its lip-sync renders quickly.
+
+    The anchor is silent until the first clip is ready, and MuseTalk takes about 1.2x the
+    clip's length (measured 2026-10-30), so the first clip is what the guest waits for.
+    """
+    first = parts[0]
+    if len(first.split()) <= words:
+        return parts
+    head, sep, tail = first.partition(", ")
+    if not sep or len(head.split()) < 3 or not tail:
+        return parts
+    return [head + ",", tail, *parts[1:]]
+
+
 class LiveSession:
     def __init__(
         self,
@@ -57,11 +76,14 @@ class LiveSession:
         desk: Desk | None = None,
         voice: Voice | None = None,
         researcher: Researcher | None = None,
+        lipsync: Lipsync | None = None,
     ):
         self.anchor = anchor
         self.desk = desk
         self.voice = voice
         self.researcher = researcher
+        self.lipsync = lipsync
+        self._speaking: asyncio.Task | None = None
         self.transcript: list[str] = []
         self.research_text = ""
         self._researching = False
@@ -98,6 +120,7 @@ class LiveSession:
                 if barge_in:
                     self.interrupted = True
                     self.anchor_speaking = False
+                    self._stop_speaking()
                     await self.send({"type": "stop_anchor"})
                 self._cancel_reply()
                 await self.send({"type": "guest_started", "turn": turn_id, "barge_in": barge_in})
@@ -130,6 +153,7 @@ class LiveSession:
 
     async def close(self) -> None:
         self._cancel_reply()
+        self._stop_speaking()
         for task in list(self._background):
             task.cancel()
 
@@ -245,25 +269,40 @@ class LiveSession:
         self.transcript.append(f"Anchor: {line}")
         await self.send({"type": "anchor_line", "id": self._line_id, "text": line})
         if self.voice:
-            self._spawn(self._speak(self._line_id, line))
+            self._stop_speaking()
+            self._speaking = asyncio.create_task(self._speak(self._line_id, line))
+
+    def _stop_speaking(self) -> None:
+        """Drop the line being voiced: its audio, and above all its lip-sync renders."""
+        if self._speaking and not self._speaking.done():
+            self._speaking.cancel()
+        self._speaking = None
 
     async def _speak(self, line_id: int, line: str) -> None:
         """Audio for one line, in order, one message per sentence."""
         assert self.voice is not None
         parts = sentences(line) or [line]
+        if self.lipsync:
+            parts = _short_start(parts)
         jobs = [asyncio.create_task(self.voice(p)) for p in parts]
         try:
             for i, job in enumerate(jobs):
                 mp3 = await job
-                await self.send(
-                    {
-                        "type": "anchor_audio",
-                        "id": line_id,
-                        "part": i,
-                        "last": i == len(jobs) - 1,
-                        "mp3": base64.b64encode(mp3).decode(),
-                    }
-                )
+                msg = {
+                    "type": "anchor_audio",
+                    "id": line_id,
+                    "part": i,
+                    "last": i == len(jobs) - 1,
+                    "mp3": base64.b64encode(mp3).decode(),
+                }
+                if self.lipsync:
+                    try:
+                        msg["video"] = await self.lipsync(mp3, line_id, i)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        msg["video"] = None  # this sentence goes out as audio only
+                await self.send(msg)
         except asyncio.CancelledError:
             raise
         except Exception:

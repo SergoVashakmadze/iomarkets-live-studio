@@ -4,7 +4,7 @@ import asyncio
 
 from studio.agents.factcheck import ChartReading, Check, Figure
 from studio.asr import GuestPartial, GuestPaused, GuestStarted, GuestTurn
-from studio.live import LiveSession
+from studio.live import LiveSession, _short_start
 
 
 class FakeAnchor:
@@ -211,3 +211,70 @@ async def test_drain_lets_the_last_check_finish():
     await s.drain(timeout=1)
     await s.close()
     assert any(m["type"] == "fact_check" for m in sent)
+
+
+async def test_each_sentence_carries_its_lip_synced_clip():
+    sent: list[dict] = []
+
+    async def send(msg):
+        sent.append(msg)
+
+    async def voice(text):
+        return text.encode()
+
+    async def lipsync(mp3, line_id, part):
+        if part == 1:
+            raise RuntimeError("render failed")
+        return f"say-{line_id}-{part}.mp4"
+
+    class TwoSentences(FakeAnchor):
+        async def opening(self) -> str:
+            return "Welcome. What are you working on?"
+
+    s = LiveSession(TwoSentences(), send, voice=voice, lipsync=lipsync)
+    await s.open()
+    for _ in range(50):
+        await asyncio.sleep(0)
+    audio = [m for m in sent if m["type"] == "anchor_audio"]
+    assert len(audio) == 2
+    assert audio[0]["video"] == "say-1-0.mp4"
+    assert audio[1]["video"] is None  # a failed render still sends the sentence's audio
+
+
+async def test_barge_in_cancels_the_lip_sync_render():
+    sent: list[dict] = []
+    started, cancelled = asyncio.Event(), asyncio.Event()
+
+    async def send(msg):
+        sent.append(msg)
+
+    async def voice(text):
+        return b"mp3"
+
+    async def lipsync(mp3, line_id, part):
+        started.set()
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    s = LiveSession(FakeAnchor(), send, voice=voice, lipsync=lipsync)
+    await s.open()
+    await asyncio.wait_for(started.wait(), 1)
+    await s.on_event(GuestStarted(1, barge_in=True))
+    await asyncio.wait_for(cancelled.wait(), 1)
+    assert not [m for m in sent if m["type"] == "anchor_audio"]
+
+
+def test_a_long_first_sentence_is_split_for_a_quick_first_clip():
+    long = "Welcome to IoMarkets.tv, lovely to have you join us live today."
+    assert _short_start([long, "Next?"]) == [
+        "Welcome to IoMarkets.tv,",
+        "lovely to have you join us live today.",
+        "Next?",
+    ]
+    assert _short_start(["Short one, really.", "Next?"]) == ["Short one, really.", "Next?"]
+    assert _short_start(["No comma in this rather long opening sentence at all."]) == [
+        "No comma in this rather long opening sentence at all."
+    ]
