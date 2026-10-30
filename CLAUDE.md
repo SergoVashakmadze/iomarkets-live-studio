@@ -1,6 +1,6 @@
 # iomarkets-live-studio: working notes
 
-Entry to the Meta Global AI Developer Hackathon (Oct 27 – Nov 4, 2026). The build plan lives in
+Entry to the Meta Global AI Developer Hackathon (building opened Oct 26, 12:24 PM ET, at the end of the kickoff; ends Nov 4, 2026). The build plan lives in
 the private repo `iomarkets.tv-newsroom`, `docs/HACKATHON_PLAN_2026-10-26_meta.md` §9. Every line of
 code here must be written in the event window and recorded in `NEW_WORK.md`.
 

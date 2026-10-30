@@ -23,8 +23,20 @@ CARDS = {
             ("that listens, fact-checks and produces the segment as it happens", 26, MUTED),
             ("", 40, WHITE),
             ("Built on Meta's models  |  Meta Global AI Developer Hackathon 2026", 34, ACCENT),
+            ("", 30, WHITE),
+            # The video must open with this disclosure (docs/ORGANISER_RULES.md).
+            (
+                "Pre-existing: Meta's models, a Microsoft TTS voice, open-source libraries,",
+                34,
+                WHITE,
+            ),
+            (
+                "MuseTalk, the anchor (a HeyGen avatar), the studio set. New: the studio software.",
+                34,
+                WHITE,
+            ),
         ],
-        6,
+        7,
     ),
     "02-problem": (
         [
@@ -50,7 +62,11 @@ CARDS = {
     "04-new-work": (
         [
             ("Built during the hackathon", 16, WHITE),
-            ("Everything shown was written Oct 27 - Nov 4, 2026, in a new public repo.", 32, MUTED),
+            (
+                "All the code shown was written from the Oct 26 kickoff, in a new public repo.",
+                32,
+                MUTED,
+            ),
             ("IoMarkets.tv had an earlier studio on other providers;", 32, MUTED),
             ("this is a ground-up rebuild on Meta's stack. See NEW_WORK.md.", 32, MUTED),
             ("", 40, WHITE),
