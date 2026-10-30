@@ -7,9 +7,11 @@ container holding its socket, and one is plenty for judging. Secrets come from t
 secret `iomarkets-studio`; the spend ledger lives on a Volume so the daily cap survives
 restarts (Modal writes Volume changes back when the container stops).
 
-The anchor's lip-sync (lipsync/server.py) runs beside it on an L4 GPU, scaled to zero when idle.
-The studio's page load wakes it; until it answers, interviews show the anchor still. Keep it warm
-for a testing session or the judging window with `deploy/warm.sh on` (and `off` after). Its
+The anchor's lip-sync (lipsync/server.py) runs beside it on an L4 GPU, as a class with no public
+URL, scaled to zero after five idle minutes, one container at most. Opening the studio page with
+the token wakes it; until it is up, interviews show the anchor still. `deploy/warm.sh on HOURS`
+keeps it running for a testing session or judging, and switches itself off when the hours are
+up (`cool_down`). Its
 models and the anchor's media live on the private Volume `iomarkets-lipsync`, filled once by
 `deploy/lipsync_setup.sh`; none of them is in this repo.
 """
@@ -90,30 +92,80 @@ def web():
 
     from studio.server import create_app
 
-    os.environ.setdefault("STUDIO_LIPSYNC_URL", lipsync.get_web_url())
+    os.environ.setdefault("STUDIO_LIPSYNC", "modal")  # compose.lipsync calls Lipsync.speak
     return create_app()
 
 
-@app.function(
+# Shared state that costs nothing to read and never starts a GPU: whether the lip-sync container
+# is up ("up"), and until when warm.sh asked to keep it warm ("warm_until", epoch seconds).
+lipsync_state = modal.Dict.from_name("iomarkets-lipsync-state", create_if_missing=True)
+
+
+@app.cls(
     image=lipsync_image,
     gpu="L4",
-    secrets=[modal.Secret.from_name("iomarkets-studio")],  # STUDIO_TOKEN guards /speak
     volumes={"/vol": lipsync_volume},
-    max_containers=1,  # one anchor, one loop position
-    scaledown_window=10 * 60,
-    timeout=24 * 60 * 60,
+    max_containers=1,  # one anchor, one loop position, and never two GPUs billing at once
+    scaledown_window=5 * 60,  # idle five minutes, then off
+    timeout=10 * 60,  # per render; a stuck one cannot run up a bill
+    startup_timeout=15 * 60,  # the first start prepares the anchor (~2 min)
 )
-@modal.concurrent(max_inputs=4)  # /health while a render runs; renders queue in the server
-@modal.web_server(8766, startup_timeout=15 * 60)  # first start prepares the anchor (~2 min)
-def lipsync():
-    import subprocess
+class Lipsync:
+    """lipsync/server.py on an L4, reachable only from this app: it has no public URL, so
+    nothing outside the studio can start (and bill) the GPU."""
 
-    subprocess.Popen(
-        ["python", "/root/lipsync/server.py", "--host", "0.0.0.0", "--port", "8766",
-         "--loop", "/vol/media/teresa_loop.mp4", "--mask", "/vol/media/teresa_loop_mask.mp4",
-         "--studio", "/vol/media/studio_background_iomarkets_tv.png", "--cache", "/vol/cache"],
-        cwd="/musetalk",
-    )  # fmt: skip
+    @modal.enter()
+    def load(self) -> None:
+        import os
+        import sys
+
+        os.chdir("/musetalk")  # MuseTalk loads its models from ./models
+        sys.path.insert(0, "/root/lipsync")
+        import server
+
+        self.studio = server.Studio(
+            server.Models(),
+            Path("/vol/media/teresa_loop.mp4"),
+            Path("/vol/media/teresa_loop_mask.mp4"),
+            Path("/vol/media/studio_background_iomarkets_tv.png"),
+            Path("/vol/cache"),
+        )
+        lipsync_volume.commit()  # keep the prepared anchor for the next cold start
+        lipsync_state["up"] = True
+
+    @modal.exit()
+    def down(self) -> None:
+        lipsync_state["up"] = False
+
+    @modal.method()
+    def speak(self, audio: bytes, shot: str, start: int | None) -> tuple[bytes, int]:
+        """The anchor saying `audio` in `shot`: MP4 bytes and where her loop ended."""
+        import subprocess
+        import tempfile
+
+        if start is not None:
+            self.studio.cursor = start
+        with tempfile.TemporaryDirectory() as tmp:
+            wav, mp4 = Path(tmp) / "a.wav", Path(tmp) / "out.mp4"
+            to_wav = ["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", "pipe:0"]
+            subprocess.run([*to_wav, "-ac", "1", "-ar", "16000", str(wav)], input=audio, check=True)
+            result = self.studio.speak(shot, wav, mp4)
+            return mp4.read_bytes(), result["cursor"]
+
+    @modal.method()
+    def ping(self) -> None:
+        """Wake the GPU ahead of an interview (the studio page does, for token holders only)."""
+
+
+@app.function(schedule=modal.Period(minutes=15), timeout=60)
+def cool_down() -> None:
+    """Turn 'keep warm' off when its time is up, so a forgotten `warm.sh on` cannot run on.
+    A tiny CPU job, four times an hour."""
+    import time
+
+    if lipsync_state.get("warm_until", 0) and time.time() > lipsync_state["warm_until"]:
+        Lipsync().update_autoscaler(min_containers=0)
+        lipsync_state["warm_until"] = 0
 
 
 @app.function(image=lipsync_image, volumes={"/vol": lipsync_volume}, timeout=60 * 60)

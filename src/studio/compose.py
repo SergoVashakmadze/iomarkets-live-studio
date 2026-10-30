@@ -14,6 +14,7 @@ string, so a guest's name or a question cannot break or inject into the filter g
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import textwrap
@@ -64,8 +65,32 @@ def lipsync_url() -> str:
     return os.environ.get("STUDIO_LIPSYNC_URL", "http://127.0.0.1:8766").rstrip("/")
 
 
+# On Modal (STUDIO_LIPSYNC=modal) the lip-sync is the private class Lipsync in deploy/modal_app.py,
+# called directly: it has no URL, so nothing else can start the GPU.
+APP, LIPSYNC_CLS, STATE = "iomarkets-live-studio", "Lipsync", "iomarkets-lipsync-state"
+
+
+def _on_modal() -> bool:
+    return os.environ.get("STUDIO_LIPSYNC") == "modal"
+
+
+async def lipsync_wake() -> None:
+    """Start the GPU ahead of an interview (Modal only; a no-op call, then it idles 5 min)."""
+    if _on_modal():
+        import modal
+
+        await modal.Cls.from_name(APP, LIPSYNC_CLS)().ping.spawn.aio()
+
+
 async def lipsync_up() -> bool:
-    """Whether the lip-sync server (lipsync/server.py) answers."""
+    """Whether lip-sync is ready now. On Modal this reads a flag and never starts the GPU."""
+    if _on_modal():
+        import modal
+
+        try:
+            return bool(await modal.Dict.from_name(STATE).get.aio("up", False))
+        except Exception:
+            return False
     if not lipsync_url():
         return False
     try:
@@ -80,6 +105,18 @@ async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = 
     `out`. Returns where her loop ended (the next clip's `start`), or None if there is no
     lip-sync server or it fails. `start` sets where her loop begins (0: her still); by default
     it carries on from the server's last clip."""
+    if _on_modal():
+        import modal
+
+        try:
+            speaker = modal.Cls.from_name(APP, LIPSYNC_CLS)()
+            data, cursor = await asyncio.wait_for(
+                speaker.speak.remote.aio(mp3.read_bytes(), shot, start), LIPSYNC_TIMEOUT_S
+            )
+        except Exception:
+            return None
+        out.write_bytes(data)
+        return cursor
     url = lipsync_url()
     if not url:
         return None

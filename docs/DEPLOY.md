@@ -38,10 +38,10 @@ instead (`docs/SECRETS.md`).
 
 ## The anchor's lip-sync on a Modal GPU
 
-`lipsync/server.py` runs as the function `lipsync` on an **L4 GPU** in the same app, with
-MuseTalk's own pinned stack (Python 3.10, torch 2.0.1/CUDA 11.8, mmcv 2.0.1) at commit
-`0a89dec`. The studio finds it by itself (`STUDIO_LIPSYNC_URL`) and sends its token with every
-render. Modal needs a payment method on the workspace before it runs GPU functions.
+`lipsync/server.py` runs as the class `Lipsync` on an **L4 GPU** in the same app, with MuseTalk's
+own pinned stack (Python 3.10, torch 2.0.1/CUDA 11.8, mmcv 2.0.1) at commit `0a89dec`. The
+studio calls it directly (`STUDIO_LIPSYNC=modal`). Modal needs a payment method on the
+workspace before it runs GPU functions.
 
 Once, to fill the private Volume `iomarkets-lipsync` (the anchor's media and the face-parsing
 weights are uploaded; MuseTalk's other weights are fetched from Hugging Face on Modal):
@@ -50,17 +50,31 @@ weights are uploaded; MuseTalk's other weights are fetched from Hugging Face on 
 bash deploy/lipsync_setup.sh ../iomarkets.tv-newsroom ~/musetalk-local/MuseTalk
 ```
 
-It **scales to zero** when idle (10 minutes). Opening the studio page wakes it; the first start
-prepares the anchor (~2 min, then cached on the Volume), later starts load models (~30 s).
-Interviews started before it answers show the anchor still, without lip-sync. For a testing
-session or the judging window, keep it running, and switch it back after:
+### No surprise bills
+
+| Guard | What it stops |
+|---|---|
+| No public URL: the GPU is a class only this app can call | strangers, crawlers or a leaked link starting the GPU |
+| The page wakes it only with the token (`index`, test `test_only_the_token_holder_wakes_the_lip_sync_gpu`) | a page load by anyone else costing GPU time |
+| `max_containers=1` | two GPUs billing at once |
+| `scaledown_window` 5 minutes | an idle GPU running on |
+| `timeout` 10 minutes per render | a stuck render running on |
+| `warm.sh on HOURS` (default 3, at most 72) ends by itself: `cool_down` checks every 15 minutes | a forgotten "keep warm" |
+| The studio's Meta spend cap (`STUDIO_DAILY_BUDGET_USD`, $10 a day) | runaway Meta API spend |
+
+What it costs: the L4 is about $0.80 an hour while it runs, plus a little CPU and memory. An
+interview keeps it up for its length plus five minutes: about $0.20 for a 10-minute interview.
+`warm.sh on 3` is about $2.40. `cool_down` is a few CPU-seconds four times an hour (cents a
+month). Modal's Starter plan includes $30 of usage a month, which covers testing and judging at
+these rates. **Set a workspace budget in Modal's settings as the backstop** (the operator, in the
+dashboard): it caps everything, whatever happens in code.
 
 ```sh
-bash deploy/warm.sh on    # ~$0.80/hour on an L4, ~$19/day
+bash deploy/warm.sh on 3   # before a testing session; off by itself after three hours
 bash deploy/warm.sh off
 ```
 
-A redeploy resets it to off.
+Without the GPU (not yet up, or none), interviews still work: the anchor is shown still.
 
 ## Limits that shaped the setup
 
