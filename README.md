@@ -60,6 +60,19 @@ without downtime.
 The anchor's voice is Microsoft Edge text-to-speech (Meta has no speech-synthesis model); it
 only ever receives the anchor's own lines.
 
+The anchor's picture is a pre-existing HeyGen avatar (not in this repo), lip-synced by
+`lipsync/server.py` on MuseTalk (MIT) when it is running. See `NEW_WORK.md`, "Pre-existing".
+
+To give the studio its anchor and studio set on this machine (needs the IoMarkets.tv newsroom
+checkout next to this one):
+
+```sh
+uv run python scripts/anchor_assets.py
+# lip-sync, live and in the segment, on the local GPU (first start prepares the anchor, ~2 min):
+cd ~/musetalk-local/MuseTalk && ~/musetalk-local/venv/bin/python \
+  "../../Documents/d-drive/New Projects/iomarkets-live-studio/lipsync/server.py"
+```
+
 ## Licence
 
 MIT. See [`LICENSE`](LICENSE).

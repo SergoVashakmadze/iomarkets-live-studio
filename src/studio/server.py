@@ -38,10 +38,10 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field, model_validator
 
-from studio import ledger
+from studio import compose, ledger
 from studio.agents import live_scout
 from studio.agents.anchor import COLD_BRIEF, Anchor
 from studio.agents.factcheck import FactDesk
@@ -67,6 +67,13 @@ from studio.tts import synthesize
 MAX_BRIEF_CHARS = 20_000
 MAX_FRAME_BYTES = 1_400_000  # one JPEG frame; base64 must fit a 2 MiB WebSocket message (Modal)
 MAX_INTERVIEW_S = 15 * 60
+# The studio's pictures; studio.jpg and the anchor's are pre-existing and built locally
+# (scripts/anchor_assets.py), so they may be missing: the page falls back to backdrop.jpg.
+ASSETS = {
+    "backdrop.jpg": "image/jpeg",
+    "studio.jpg": "image/jpeg",
+    "anchor.png": "image/png",
+}
 
 
 class SegmentRequest(BaseModel):
@@ -130,6 +137,18 @@ def create_app(
     @app.get("/", response_class=HTMLResponse)
     async def index() -> str:
         return page
+
+    @app.get("/assets/{name}")
+    async def asset(name: str, token: str | None = Query(None)) -> Response:
+        """The studio backdrop and the anchor's frames, by exact name only."""
+        if not _token_ok(token):
+            raise HTTPException(403, "bad token")
+        path = files("studio.assets").joinpath(name)
+        if name not in ASSETS or not path.is_file():
+            raise HTTPException(404, "no such asset")
+        return Response(
+            path.read_bytes(), media_type=ASSETS[name], headers={"cache-control": "max-age=3600"}
+        )
 
     @app.post("/api/brief")
     async def brief(
@@ -272,13 +291,36 @@ async def _run_live(
         researcher = partial(live_scout.research, client) if start.cold else None
         voice = None if os.environ.get("STUDIO_VOICE") == "browser" else synthesize
         anchor = Anchor(client, start.brief, cold=start.cold)
-        session = LiveSession(anchor, ws.send_json, desk, voice, researcher)
+        # Live lip-sync when the lip-sync server is up (the workstation; not Modal).
+        synced = voice is not None and await compose.lipsync_up()
+
+        async def lipsync(mp3: bytes, line_id: int, part: int) -> str | None:
+            name = f"say-{line_id}-{part}"
+            src = room.dir / f"{name}.mp3"
+            src.write_bytes(mp3)
+            try:
+                first = line_id == 1 and part == 0  # her loop starts where the page's still is
+                ok = await compose.lipsync(src, room.dir / f"{name}.mp4", "live", restart=first)
+            finally:
+                src.unlink(missing_ok=True)
+            return f"{name}.mp4" if ok else None
+
+        session = LiveSession(
+            anchor, ws.send_json, desk, voice, researcher, lipsync if synced else None
+        )
         listener = listener_factory(
             keywords=start.keywords, anchor_speaking=lambda: session.anchor_speaking
         )
         room = SegmentRoom(client, session.send, questions=session.question_for_turn, voice=voice)
         async with listener:
-            await session.send({"type": "ready", "session": listener.session_id, "room": room.key})
+            await session.send(
+                {
+                    "type": "ready",
+                    "session": listener.session_id,
+                    "room": room.key,
+                    "lipsync": synced,
+                }
+            )
             await session.open()
 
             async def from_page() -> None:

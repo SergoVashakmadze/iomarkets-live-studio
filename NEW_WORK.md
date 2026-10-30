@@ -17,6 +17,49 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Oct 30: the anchor on screen, lip-synced, in a two-box studio programme
+
+- The page's programme monitor is now a canvas, laid out like a TV interview: the anchor and the
+  guest's camera side by side in the studio, name straps, an AI-GENERATED label on the anchor,
+  a LIVE bug, the logo and a ticker carrying the fact-check verdicts.
+- `lipsync/server.py`, the anchor's lip-sync server (run in a MuseTalk v1.5 install; MuseTalk
+  is MIT): like MuseTalk's own realtime_inference, it prepares her from a video, her moving
+  loop played forwards then backwards, keyed into the studio frame by frame, so her head and
+  body move as she talks. A cursor carries the loop on from one sentence to the next, and two
+  shots are prepared at native resolution: live (4:3) and wide (16:9, the segment). Measured
+  2026-10-30 on an RTX 5060 Ti: live 1.2x real time, wide 1.7x; about 10,000 pixels of a
+  320x240 frame move (head to shoulders), against 59 for MuseTalk on a still frame.
+- Live lip-sync: each sentence of the anchor's voice goes through that server before it is
+  sent, and the page plays the clip and the audio together, holding the last frame between
+  sentences (`LiveSession(lipsync=...)`, `compose.lipsync`). A long first sentence is split at its first
+  comma so the first clip renders quickly; a barge-in or a new line cancels the line being
+  rendered. Without a MuseTalk server (the Modal deployment) the anchor is shown still while her
+  voice plays: no mouth moving out of time with the words. Measured 2026-10-30 on an
+  RTX 5060 Ti: the anchor started 4.7 s after her opening line was written.
+- The anchor's 4:3 live shot and her still are framed to the pixel alike, so the picture does
+  not jump when a clip starts or ends.
+- The programme (canvas plus the guest's microphone and the anchor's voice) records while the
+  interview is live and downloads as WebM at the end: 1280x720, 25 fps.
+- The packaged segment: each question is the anchor asking it in the studio, lip-synced by
+  MuseTalk (or shown still without it), with the question in a strap. Guest cut-outs land on the
+  same studio background.
+- The anchor's voice is now en-GB-LibbyNeural (female, to match the anchor): 0.6 s to first
+  audio, as fast as the previous male voice; en-GB-SoniaNeural measured 3.3 s, too slow.
+- `scripts/anchor_assets.py` builds the anchor's live assets from the pre-existing IoMarkets.tv
+  media (below), outside git; `scripts/studio_art.py` draws a fallback backdrop for machines
+  without them. `/assets/{name}` serves both by exact name only.
+
+### Oct 30: broadcast control-room page
+
+- The studio page restyled as a broadcast control room: a dark theme, an ON AIR tally, time on
+  air, a wall clock, and Meta spend today against the daily cap in the top bar.
+- Three numbered stages (Prepare, On air, Segment) in the order the operator works.
+- The program monitor shows a LIVE bug and a lower third (name, then role and topic) taken from
+  the guest field. The fact-check rail shows a colour-coded verdict on every check.
+- A hint line says what is still missing before Go live (consent, a brief) instead of the button
+  failing silently. No change to the server or the live pipeline. The IoMarkets logo (pre-existing,
+  see below) sits in the top bar and on the program monitor.
+
 ### Oct 27: video materials
 
 - Paste a YouTube or Vimeo link: the studio reads the title and channel through the platform's
@@ -201,9 +244,10 @@ Commits: see the `feat/day1-responses-agent-loop` PR.
 
 ## Pre-existing: what this repo builds on
 
-Nothing from IoMarkets.tv's earlier studio is used: not its code, not its backend, not its
-lip-sync or voice stack. (An earlier version of this section said the repo called that backend
-over HTTP. It never did; `src/` calls only the services below.)
+No code from IoMarkets.tv's earlier studio is used, and `src/` calls none of its backends. (An
+earlier version of this section said the repo called that backend over HTTP. It never did.)
+What the studio does take from IoMarkets.tv is media: the anchor's avatar and the studio set,
+listed below, kept out of this repo.
 
 Hosted services, called over HTTPS:
 
@@ -218,5 +262,21 @@ Hosted services, called over HTTPS:
 Open-source libraries (`pyproject.toml`): httpx (BSD-3), pydantic (MIT), certifi (MPL-2.0),
 websockets (BSD-3), FastAPI (MIT), uvicorn (BSD-3), numpy (BSD-3 and others), python-multipart
 (Apache-2.0), edge-tts (LGPL-3.0), and Meta's `meta-sam-parser` (SAM License).
+
+**MuseTalk v1.5** (open source, MIT, TMElyralab) and its models, installed on the workstation
+(`~/musetalk-local`): `lipsync/server.py` runs on it, outside the studio's own environment.
+
+Contained here but made before the event:
+
+- The IoMarkets logo (Rainmaker Partners Ltd, 2026), embedded in the studio page as a 176 px WebP
+  for the top bar, the favicon and the on-air corner bug.
+
+Used by the studio, made before the event, and kept out of this repo (built locally by
+`scripts/anchor_assets.py` from the IoMarkets.tv newsroom; git ignores them):
+
+- **The anchor, "Alexandra Morgan"**: Teresa, an avatar from HeyGen's library (sourced
+  2026-04-23): her 6.6 s talking loop and its mask, from which the lip-sync server and her
+  still are made. Not open source: HeyGen's terms apply.
+- **The IoMarkets TV studio background** (the red studio set).
 
 No pre-existing datasets are used. Test fixtures are recordings of this repo's own live calls.

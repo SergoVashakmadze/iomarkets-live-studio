@@ -105,6 +105,16 @@ def test_page_is_served(app_and_replay):
     assert "Built with Muse Spark Open" in r.text  # required by the Muse Model License
 
 
+def test_studio_assets_by_exact_name_only(app_and_replay):
+    app, _ = app_and_replay
+    client = TestClient(app)
+    r = client.get("/assets/backdrop.jpg")
+    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+    assert client.get("/assets/backdrop.jpg").content[:2] == b"\xff\xd8"
+    assert client.get("/assets/__init__.py").status_code == 404
+    assert client.get("/assets/..%2Fserver.py").status_code == 404
+
+
 def test_live_interview_round_trip(app_and_replay):
     app, replay = app_and_replay
     with TestClient(app).websocket_connect("/ws/live") as ws:
