@@ -53,4 +53,4 @@ def isolated_ledger(tmp_path, monkeypatch):
     monkeypatch.delenv("STUDIO_DAILY_BUDGET_USD", raising=False)
     monkeypatch.setattr(ledger, "current", None)
     monkeypatch.setenv("STUDIO_VOICE", "browser")  # no Edge TTS calls from tests
-    monkeypatch.setenv("STUDIO_MUSETALK_URL", "")  # nor lip-sync, even if a server is running
+    monkeypatch.setenv("STUDIO_LIPSYNC_URL", "")  # nor lip-sync, even if a server is running

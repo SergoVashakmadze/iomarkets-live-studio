@@ -454,12 +454,14 @@ function drawProgram() {
     c.fillText("● LIVE", 1153, 55);
   }
 
-  // The anchor, in her own 4:3 shot of the studio: the lip-synced clip while one plays, else
-  // her still, framed exactly like the clip.
+  // The anchor, in her own 4:3 shot of the studio: the lip-synced clip while one plays (or the
+  // last one, held), else her still, framed exactly like the clips.
   const L = BOX.left, k = BOX.w / SHOT.w;
   c.save();
   c.beginPath(); c.rect(L, BOX.y, BOX.w, BOX.h); c.clip();
-  if (anchorClip && anchorClip.readyState >= 2) c.drawImage(anchorClip, L, BOX.y, BOX.w, BOX.h);
+  // Between sentences she holds the last clip's last frame: the next one carries on from it.
+  const shown = anchorClip ?? anchorHold;
+  if (shown && shown.readyState >= 2) c.drawImage(shown, L, BOX.y, BOX.w, BOX.h);
   else {
     if (set === art["studio.jpg"]) c.drawImage(set, SHOT.x, SHOT.y, SHOT.sw, SHOT.sh, L, BOX.y, BOX.w, BOX.h);
     else if (set) cover(c, set, set.naturalWidth, set.naturalHeight, L, BOX.y, BOX.w, BOX.h);
@@ -750,6 +752,7 @@ function stopMic() {
 let player = null;                       // AudioContext for anchor audio
 let voiceLine = null;                    // {id, text, parts: Map, next, source, timer, fallback}
 let anchorClip = null;                   // the lip-synced clip on screen (MuseTalk), if any
+let anchorHold = null;                   // the last clip, held on its last frame while she is silent
 let lipsyncLive = false;                 // whether the server sends a clip with each sentence
 let speakingFlag = false;
 
@@ -761,7 +764,7 @@ function setSpeaking(on) {
 }
 
 function stopVoice() {
-  if (anchorClip) { anchorClip.pause(); anchorClip = null; }
+  if (anchorClip) { anchorClip.pause(); anchorHold = anchorClip; anchorClip = null; }
   if (voiceLine) {
     clearTimeout(voiceLine.timer);
     try { voiceLine.source?.stop(); } catch {}
@@ -824,7 +827,7 @@ function playNext(line) {
   src.buffer = part.buffer;
   src.connect(anchorBus());
   src.onended = () => {
-    if (part.video && anchorClip === part.video) { anchorClip.pause(); anchorClip = null; }
+    if (part.video && anchorClip === part.video) { anchorHold = anchorClip; anchorClip = null; }
     if (voiceLine !== line) return;
     line.next += 1;
     line.source = null;
@@ -865,6 +868,7 @@ async function startLive(cold) {
   $("segmentLink").textContent = "";
   $("progLink").textContent = "";
   ticker.items = [];
+  anchorHold = null;                     // a new interview starts from her still
   $("build").disabled = true;
   // The name and the topic's key words bias speech recognition; role words add nothing.
   const keywords = $("subject").value.split(/[,;]/)

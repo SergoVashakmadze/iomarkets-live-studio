@@ -1,8 +1,9 @@
 """Packaging the segment: question cards, lower thirds, one MP4.
 
 Each answer is preceded by the AI anchor asking the question in the IoMarkets TV studio, with
-the question in a strap. The anchor is lip-synced by a local MuseTalk server when one is running
-(`STUDIO_MUSETALK_URL`, default http://127.0.0.1:8765); otherwise she is shown still.
+the question in a strap. The anchor is lip-synced by the studio's MuseTalk server
+(`lipsync/server.py`, `STUDIO_LIPSYNC_URL`, default http://127.0.0.1:8766), which moves her
+whole loop as she talks; without it she is shown still.
 Each answer carries a lower third with the guest's name and role for its first seconds.
 Everything is joined with ffmpeg's concat filter, which scales, resamples and re-times every
 part, so cards and answers from any camera join cleanly.
@@ -27,8 +28,7 @@ AI_NOTE = "AI-generated anchor: synthetic image and voice"
 ANCHOR_NAME = "Alexandra Morgan  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
 STUDIO = ASSETS / "studio.jpg"  # pre-existing, built by scripts/anchor_assets.py
-ANCHOR_STUDIO = ASSETS / "anchor-studio.png"  # what MuseTalk lip-syncs for the segment (16:9)
-ANCHOR_SHOT = ASSETS / "anchor-shot.png"  # and live, in the page's anchor box (4:3)
+ANCHOR_STUDIO = ASSETS / "anchor-studio.png"  # her still in the wide shot, without lip-sync
 LIPSYNC_TIMEOUT_S = 300
 CAPTION_SECONDS = 6
 SILENT_CARD_SECONDS = 3.5
@@ -60,34 +60,33 @@ def _text(path: Path, text: str) -> str:
     return str(path)
 
 
-def musetalk_url() -> str:
-    return os.environ.get("STUDIO_MUSETALK_URL", "http://127.0.0.1:8765").rstrip("/")
+def lipsync_url() -> str:
+    return os.environ.get("STUDIO_LIPSYNC_URL", "http://127.0.0.1:8766").rstrip("/")
 
 
-async def musetalk_up() -> bool:
-    """Whether a MuseTalk server answers, and the anchor's pictures are on this machine."""
-    if not musetalk_url() or not (ANCHOR_SHOT.exists() and ANCHOR_STUDIO.exists()):
+async def lipsync_up() -> bool:
+    """Whether the lip-sync server (lipsync/server.py) answers."""
+    if not lipsync_url():
         return False
     try:
         async with httpx.AsyncClient(timeout=1.5) as client:
-            return (await client.get(f"{musetalk_url()}/health")).status_code == 200
+            return (await client.get(f"{lipsync_url()}/health")).status_code == 200
     except httpx.HTTPError:
         return False
 
 
-async def lipsync(mp3: Path, out: Path, avatar: Path = ANCHOR_STUDIO) -> bool:
-    """The anchor saying `mp3`, from a local MuseTalk server; False if there is none or it fails."""
-    url = musetalk_url()
-    if not url or not avatar.exists():
+async def lipsync(mp3: Path, out: Path, shot: str = "wide", restart: bool = False) -> bool:
+    """The anchor saying `mp3` in `shot` (live: 4:3, wide: 16:9), picture and sound; False if
+    there is no lip-sync server or it fails. `restart` starts her loop from its first frame."""
+    url = lipsync_url()
+    if not url:
         return False
-    files = {
-        "avatar": ("anchor.png", avatar.read_bytes(), "image/png"),
-        "audio": (mp3.name, mp3.read_bytes(), "audio/mpeg"),
-    }
+    files = {"audio": (mp3.name, mp3.read_bytes(), "audio/mpeg")}
     try:
         timeout = httpx.Timeout(LIPSYNC_TIMEOUT_S, connect=2)
         async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.post(f"{url}/lipsync", files=files)
+            data = {"shot": shot, "restart": "1" if restart else "0"}
+            r = await client.post(f"{url}/speak", files=files, data=data)
             r.raise_for_status()
     except httpx.HTTPError:
         return False

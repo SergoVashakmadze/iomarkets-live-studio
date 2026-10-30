@@ -16,14 +16,20 @@ the record. Every entry links to the commits that built it.
 - The page's programme monitor is now a canvas, laid out like a TV interview: the anchor and the
   guest's camera side by side in the studio, name straps, an AI-GENERATED label on the anchor,
   a LIVE bug, the logo and a ticker carrying the fact-check verdicts.
-- Live lip-sync: each sentence of the anchor's voice goes through a MuseTalk server on this
-  machine before it is sent, and the page plays the clip and the audio together
-  (`LiveSession(lipsync=...)`, `compose.lipsync`). A long first sentence is split at its first
+- `lipsync/server.py`, the anchor's lip-sync server (run in a MuseTalk v1.5 install; MuseTalk
+  is MIT): like MuseTalk's own realtime_inference, it prepares her from a video, her moving
+  loop played forwards then backwards, keyed into the studio frame by frame, so her head and
+  body move as she talks. A cursor carries the loop on from one sentence to the next, and two
+  shots are prepared at native resolution: live (4:3) and wide (16:9, the segment). Measured
+  2026-10-30 on an RTX 5060 Ti: live 1.2x real time, wide 1.7x; about 10,000 pixels of a
+  320x240 frame move (head to shoulders), against 59 for MuseTalk on a still frame.
+- Live lip-sync: each sentence of the anchor's voice goes through that server before it is
+  sent, and the page plays the clip and the audio together, holding the last frame between
+  sentences (`LiveSession(lipsync=...)`, `compose.lipsync`). A long first sentence is split at its first
   comma so the first clip renders quickly; a barge-in or a new line cancels the line being
   rendered. Without a MuseTalk server (the Modal deployment) the anchor is shown still while her
   voice plays: no mouth moving out of time with the words. Measured 2026-10-30 on an
-  RTX 5060 Ti: 1.2x real time once warm (4.3 s of speech in 5.0 s), so the anchor starts about
-  5 s after her line is written.
+  RTX 5060 Ti: the anchor started 4.7 s after her opening line was written.
 - The anchor's 4:3 live shot and her still are framed to the pixel alike, so the picture does
   not jump when a clip starts or ends.
 - The programme (canvas plus the guest's microphone and the anchor's voice) records while the
@@ -249,8 +255,8 @@ Used by the studio, made before the event, and kept out of this repo (built loca
 `scripts/anchor_assets.py` from the IoMarkets.tv newsroom; git ignores them):
 
 - **The anchor, "Alexandra Morgan"**: Teresa, an avatar from HeyGen's library (sourced
-  2026-04-23): a still taken from her loop, composed into the studio. Not open source: HeyGen's terms apply.
+  2026-04-23): her 6.6 s talking loop and its mask, from which the lip-sync server and her
+  still are made. Not open source: HeyGen's terms apply.
 - **The IoMarkets TV studio background** (the red studio set).
-- **The MuseTalk server** (`iomarkets.tv-newsroom/services/musetalk_server/server.py`, 2026-10-21)
-  that lip-syncs the anchor on this machine's GPU. MuseTalk itself is open source (MIT,
-  TMElyralab); this repo only calls the server's `/lipsync` and `/health` over HTTP.
+- **MuseTalk v1.5** (open source, MIT, TMElyralab) and its models, installed on the workstation
+  (`~/musetalk-local`); `lipsync/server.py` above runs on it.

@@ -11,10 +11,8 @@ Outputs:
 - studio.jpg          the studio background, 1920x1080
 - anchor.png          the anchor's loop, first frame, with transparency, cropped, 720 high: her
                       still when no lip-synced clip is playing
-- anchor-studio.png   that frame on the studio background, 1280x720: what MuseTalk lip-syncs
-                      for the packaged segment
-- anchor-shot.png     a 4:3 medium shot cut from the same composite, 960x720: what MuseTalk
-                      lip-syncs live; the page frames her still exactly like it (SHOT)
+- anchor-studio.png   that frame on the studio background, 1280x720: her still in the
+                      segment when there is no lip-sync server (lipsync/server.py)
 """
 
 import argparse
@@ -27,8 +25,8 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "src" / "studio" / "assets"
 DEFAULT_NEWSROOM = ROOT.parent / "iomarkets.tv-newsroom"
 H = 720  # the anchor's height in the live assets
-# The live medium shot, in the 1920x1080 composite: x, y, w, h. The page (index.html, SHOT)
-# draws the studio and the anchor with the same numbers, so the lip-synced clip and the still
+# The live medium shot, in the 1920x1080 composite: x, y, w, h. The page (index.html, SHOT) and
+# lipsync/server.py (SHOTS["live"]) use the same numbers, so the lip-synced clips and her still
 # line up to the pixel.
 SHOT = (420, 230, 1080, 810)
 
@@ -71,12 +69,7 @@ def main() -> None:
        "[2:v]format=gray[m];[1:v][m]alphamerge[a];[0:v]scale=1920:1080[bg];"
        "[bg][a]overlay=0:24,scale=1280:720", "-frames:v", "1",
        str(OUT / "anchor-studio.png"))  # fmt: skip
-    x, y, w, h = SHOT
-    ff("-i", str(studio), "-i", str(loop), "-i", str(mask), "-filter_complex",
-       "[2:v]format=gray[m];[1:v][m]alphamerge[a];[0:v]scale=1920:1080[bg];"
-       f"[bg][a]overlay=0:24,crop={w}:{h}:{x}:{y},scale=960:720", "-frames:v", "1",
-       str(OUT / "anchor-shot.png"))  # fmt: skip
-    for name in ("studio.jpg", "anchor.png", "anchor-studio.png", "anchor-shot.png"):
+    for name in ("studio.jpg", "anchor.png", "anchor-studio.png"):
         print(f"{name}: {(OUT / name).stat().st_size // 1024} KB")
 
 

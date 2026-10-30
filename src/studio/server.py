@@ -291,15 +291,16 @@ async def _run_live(
         researcher = partial(live_scout.research, client) if start.cold else None
         voice = None if os.environ.get("STUDIO_VOICE") == "browser" else synthesize
         anchor = Anchor(client, start.brief, cold=start.cold)
-        # Live lip-sync when a MuseTalk server is up (the workstation; not Modal).
-        synced = voice is not None and await compose.musetalk_up()
+        # Live lip-sync when the lip-sync server is up (the workstation; not Modal).
+        synced = voice is not None and await compose.lipsync_up()
 
         async def lipsync(mp3: bytes, line_id: int, part: int) -> str | None:
             name = f"say-{line_id}-{part}"
             src = room.dir / f"{name}.mp3"
             src.write_bytes(mp3)
             try:
-                ok = await compose.lipsync(src, room.dir / f"{name}.mp4", compose.ANCHOR_SHOT)
+                first = line_id == 1 and part == 0  # her loop starts where the page's still is
+                ok = await compose.lipsync(src, room.dir / f"{name}.mp4", "live", restart=first)
             finally:
                 src.unlink(missing_ok=True)
             return f"{name}.mp4" if ok else None
