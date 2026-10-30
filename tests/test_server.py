@@ -140,10 +140,9 @@ def test_live_interview_round_trip(app_and_replay):
     assert "previous_response_id" not in second  # chaining costs ~10 s a turn; see anchor.py
     opening, welcome, guest = second["input"]
     assert welcome == {"role": "assistant", "content": "Welcome, Margherita."}
-    assert guest == {
-        "role": "user",
-        "content": "Guest (They interrupted you.): We grew five percent.",
-    }
+    assert guest["role"] == "user"
+    assert guest["content"].startswith("Guest (They interrupted you.): We grew five percent.\n")
+    assert "[Suggested angle" in guest["content"]  # see anchor.ANGLES
     assert "GUEST: Margherita" in second["instructions"]
 
 

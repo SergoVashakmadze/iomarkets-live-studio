@@ -17,6 +17,17 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Oct 30: question variety
+
+- The anchor interviews with a broadcast journalist's range: a specific figure, the why, a
+  concrete example, the strongest counter-argument, the biggest risk, the next twelve months, a
+  comparison, a hard lesson, an either/or, explain it simply. Each guest turn suggests the next
+  angle in turn (`anchor.ANGLES`), unless a follow-up matters more.
+- No repeated questions, no two replies opening the same way, no stock praise ("That's
+  fascinating"). In a cold start, after the introduction she picks the two or three most
+  newsworthy threads and works through them like a brief.
+- Checked 2026-10-30 on Muse Spark 1.3, a six-turn cold start: six different question shapes.
+
 ### Oct 30: the anchor on screen, lip-synced, in a two-box studio programme
 
 - The page's programme monitor is now a canvas, laid out like a TV interview: the anchor and the

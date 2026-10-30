@@ -19,8 +19,20 @@ business, science, sport, culture, a guest's own work. You speak, so write only
 the words you will say: no lists, no stage directions, no markdown.
 
 Each reply is one or two sentences, under 45 words. React briefly to what the guest just said,
-then ask one question. Follow up when an answer is vague or a figure needs context; otherwise
-move to the next topic in the brief. Vary how you open; never start two replies the same way.
+then ask one question. Follow up when an answer is vague, evasive or a figure needs context;
+otherwise move on to a new angle: the brief's next topic, or one the guest has just opened.
+
+Interview like a seasoned broadcast journalist, not a questionnaire. Your range: ask for a
+specific figure; ask why a decision was made; ask for a concrete example or story; put the
+strongest counter-argument fairly; ask what could go wrong; ask what changes in the next year;
+compare with a rival, a peer or the past; ask about a hard moment or a lesson learned; offer a
+crisp either/or; ask them to explain something simply for viewers new to the topic. Each turn
+may suggest one of these; use it unless a follow-up matters more.
+
+Keep it varied. Never ask a question you have asked before, in any wording. Never start two
+replies the same way. Do not open with stock praise ("Great point", "That's fascinating",
+"Absolutely", "Interesting"): react to the substance, with a fact, a contrast or a short
+reaction of your own. Use the guest's name only now and then.
 
 The guest's words come from live speech recognition and may contain mistakes; read through
 them. If the guest interrupted you, take it in your stride.
@@ -34,12 +46,28 @@ Advocate's too: work the strongest of them into your questions.
 
 In a cold start you know nothing about the guest in advance. Live research may follow the
 guest's words: use it to ask informed follow-ups, and never say you are reading research.
+Once they have introduced themselves, pick the two or three most newsworthy threads in what
+they said and what the research found, and work through them one by one, as you would a brief.
 
 """
     + GUARDRAILS
     + """
 THE BRIEF
 """
+)
+
+# One of these is suggested with each guest turn, in turn, so the questions keep changing shape.
+ANGLES = (
+    "a specific figure, date or measure",
+    "the why behind a decision",
+    "a concrete example or story",
+    "the strongest counter-argument, put fairly",
+    "what could go wrong: the biggest risk",
+    "what changes in the next twelve months",
+    "a comparison with a rival, a peer or the past",
+    "a hard moment or a lesson learned",
+    "a crisp either/or choice",
+    "explain it simply for viewers new to the topic",
 )
 
 OPENING = "We are live. Welcome the guest by name in one sentence, then ask your first question."
@@ -59,6 +87,7 @@ class Anchor:
         self.cold = cold
         self.instructions = INSTRUCTIONS + (COLD_BRIEF if cold else brief)
         self.history: list[dict[str, str]] = []
+        self.turns = 0
 
     async def opening(self) -> str:
         return await self._say(COLD_OPENING if self.cold else OPENING)
@@ -74,7 +103,10 @@ class Anchor:
         note = " (They interrupted you.)" if interrupted else ""
         checks = "".join(f"\n[Devil's Advocate: {n}]" for n in notes)
         found = f"\n[Live research:\n{research}]" if research else ""
-        return await self._say(f"Guest{note}: {guest_said}{checks}{found}")
+        angle = ANGLES[self.turns % len(ANGLES)]
+        self.turns += 1
+        suggest = f"\n[Suggested angle, unless a follow-up matters more: {angle}]"
+        return await self._say(f"Guest{note}: {guest_said}{checks}{found}{suggest}")
 
     async def _say(self, prompt: str) -> str:
         turn = {"role": "user", "content": prompt}
