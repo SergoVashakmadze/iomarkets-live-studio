@@ -4,7 +4,7 @@ import asyncio
 
 from studio.agents.factcheck import ChartReading, Check, Figure
 from studio.asr import GuestPartial, GuestPaused, GuestStarted, GuestTurn
-from studio.live import LiveSession, _short_start
+from studio.live import Greeting, LiveSession, _short_start
 
 
 class FakeAnchor:
@@ -15,6 +15,9 @@ class FakeAnchor:
         self.asked: list[tuple[str, bool]] = []
         self.started: list[str] = []
         self.notes_seen: list[list[str]] = []
+
+    def said(self, line: str) -> None:
+        self.started.append(f"said: {line}")
 
     async def opening(self) -> str:
         self.started.append("opening")
@@ -278,3 +281,47 @@ def test_a_long_first_sentence_is_split_for_a_quick_first_clip():
     assert _short_start(["No comma in this rather long opening sentence at all."]) == [
         "No comma in this rather long opening sentence at all."
     ]
+
+
+async def test_the_greeting_plays_first_and_the_opening_waits_for_it():
+    sent: list[dict] = []
+    loop = asyncio.get_running_loop()
+
+    async def send(msg):
+        sent.append({**msg, "at": loop.time()})
+
+    async def voice(text):
+        return b"mp3"
+
+    async def lipsync(mp3, line_id, part):
+        return f"say-{line_id}-{part}.mp4"
+
+    anchor = FakeAnchor()
+    hello = Greeting("Welcome to IoMarkets TV.", b"hello", "say-0-0.mp4", seconds=0.2)
+    s = LiveSession(anchor, send, voice=voice, lipsync=lipsync, greeting=hello)
+    t0 = loop.time()
+    await s.open()
+    first = [m for m in sent if m["type"] in ("anchor_line", "anchor_audio")][:2]
+    assert first[0]["text"] == "Welcome to IoMarkets TV." and first[0]["at"] - t0 < 0.05
+    assert first[1]["video"] == "say-0-0.mp4"  # its clip goes out at once, ready-made
+    assert anchor.started[0] == "said: Welcome to IoMarkets TV."  # the anchor knows she said it
+    await asyncio.sleep(0.8)
+    lines = [m for m in sent if m["type"] == "anchor_line"]
+    assert [m["text"] for m in lines] == ["Welcome to IoMarkets TV.", "Welcome."]
+    assert lines[1]["at"] - t0 >= 0.6  # held until the greeting (0.2 s + 0.4 s) was over
+
+
+async def test_a_greeting_without_lip_sync_carries_no_clip():
+    sent: list[dict] = []
+
+    async def send(msg):
+        sent.append(msg)
+
+    async def voice(text):
+        return b"mp3"
+
+    hello = Greeting("Welcome.", b"hello", None, seconds=0.0)
+    s = LiveSession(FakeAnchor(), send, voice=voice, greeting=hello)
+    await s.open()
+    audio = next(m for m in sent if m["type"] == "anchor_audio")
+    assert "video" not in audio

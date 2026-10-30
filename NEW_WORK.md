@@ -17,6 +17,16 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Oct 30: the anchor speaks first, at once
+
+- A fixed greeting ("Welcome to IoMarkets TV. I'm Alexandra Morgan, and we're live.") is voiced
+  and lip-synced once and kept on disk (`greeting.py`); the page's load prepares it. Going live
+  plays it at once, while her opening question is written and rendered behind it and held until
+  the greeting ends (`LiveSession(greeting=...)`). Before, the guest sat in 6-8 s of silence
+  after going live and often spoke first.
+- The lip-sync server takes a start position and reports where each clip ended, so her opening
+  question carries on from the greeting's last frame.
+
 ### Oct 30: question variety
 
 - The anchor interviews with a broadcast journalist's range: a specific figure, the why, a

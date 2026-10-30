@@ -75,23 +75,25 @@ async def lipsync_up() -> bool:
         return False
 
 
-async def lipsync(mp3: Path, out: Path, shot: str = "wide", restart: bool = False) -> bool:
-    """The anchor saying `mp3` in `shot` (live: 4:3, wide: 16:9), picture and sound; False if
-    there is no lip-sync server or it fails. `restart` starts her loop from its first frame."""
+async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = None) -> int | None:
+    """The anchor saying `mp3` in `shot` (live: 4:3, wide: 16:9), picture and sound, written to
+    `out`. Returns where her loop ended (the next clip's `start`), or None if there is no
+    lip-sync server or it fails. `start` sets where her loop begins (0: her still); by default
+    it carries on from the server's last clip."""
     url = lipsync_url()
     if not url:
-        return False
+        return None
     files = {"audio": (mp3.name, mp3.read_bytes(), "audio/mpeg")}
     try:
         timeout = httpx.Timeout(LIPSYNC_TIMEOUT_S, connect=2)
         async with httpx.AsyncClient(timeout=timeout) as client:
-            data = {"shot": shot, "restart": "1" if restart else "0"}
+            data = {"shot": shot} | ({} if start is None else {"start": str(start)})
             r = await client.post(f"{url}/speak", files=files, data=data)
             r.raise_for_status()
     except httpx.HTTPError:
-        return False
+        return None
     out.write_bytes(r.content)
-    return True
+    return int(r.headers.get("x-cursor", 0))
 
 
 def _studio_input() -> list[str]:
@@ -106,7 +108,7 @@ async def question_card(
     duration = (await media_info(mp3))[2] + 0.6 if mp3 else SILENT_CARD_SECONDS
     fit = f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
     synced = workdir / f"{out.stem}.lipsync.mp4"
-    if mp3 and await lipsync(mp3, synced):
+    if mp3 and await lipsync(mp3, synced) is not None:
         inputs = ["-i", str(synced)]
         picture = f"[0:v]{fit},setsar=1,fps={FPS}[p]"
     elif ANCHOR_STUDIO.exists():  # no lip-sync: the anchor still, not a mouth out of time

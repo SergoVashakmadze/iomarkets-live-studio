@@ -22,6 +22,7 @@ import contextlib
 import hmac
 import json
 import os
+import shutil
 from collections.abc import Callable
 from functools import partial
 from importlib.resources import files
@@ -41,14 +42,14 @@ from fastapi import (
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field, model_validator
 
-from studio import compose, ledger
+from studio import compose, greeting, ledger
 from studio.agents import live_scout
 from studio.agents.anchor import COLD_BRIEF, Anchor
 from studio.agents.factcheck import FactDesk
 from studio.agents.scout import prepare_brief
 from studio.asr import AsrError, GuestListener
 from studio.ledger import BudgetExceeded, Ledger
-from studio.live import LiveSession
+from studio.live import Greeting, LiveSession
 from studio.materials import (
     MAX_FILES,
     MAX_LINKS,
@@ -133,9 +134,15 @@ def create_app(
         }
 
     page = files("studio.web").joinpath("index.html").read_text()
+    warming: set[asyncio.Task] = set()
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> str:
+        # Make the greeting ready while the operator sets up, so going live starts at once.
+        if os.environ.get("STUDIO_VOICE") != "browser" and not warming:
+            task = asyncio.create_task(_warm_greeting())
+            warming.add(task)
+            task.add_done_callback(warming.discard)
         return page
 
     @app.get("/assets/{name}")
@@ -280,6 +287,11 @@ def create_app(
     return app
 
 
+async def _warm_greeting() -> None:
+    with contextlib.suppress(Exception):
+        await greeting.prepare(synthesize, await compose.lipsync_up())
+
+
 async def _run_live(
     ws: WebSocket,
     start: Start,
@@ -294,24 +306,38 @@ async def _run_live(
         # Live lip-sync when the lip-sync server is up (the workstation; not Modal).
         synced = voice is not None and await compose.lipsync_up()
 
+        # The greeting plays the moment the interview starts (greeting.py); made once, then kept.
+        hello = None
+        if voice is not None:
+            with contextlib.suppress(Exception):
+                hello = await asyncio.wait_for(greeting.prepare(voice, synced), 30)
+        # Her loop starts where the greeting's clip ended, or from her still.
+        starts = [hello.cursor if hello and hello.clip else 0]
+
         async def lipsync(mp3: bytes, line_id: int, part: int) -> str | None:
             name = f"say-{line_id}-{part}"
             src = room.dir / f"{name}.mp3"
             src.write_bytes(mp3)
             try:
-                first = line_id == 1 and part == 0  # her loop starts where the page's still is
-                ok = await compose.lipsync(src, room.dir / f"{name}.mp4", "live", restart=first)
+                start = starts.pop() if starts else None  # later clips carry on by themselves
+                end = await compose.lipsync(src, room.dir / f"{name}.mp4", "live", start=start)
             finally:
                 src.unlink(missing_ok=True)
-            return f"{name}.mp4" if ok else None
+            return f"{name}.mp4" if end is not None else None
 
+        greet = None
+        if hello:
+            greet = Greeting(greeting.GREETING, hello.mp3.read_bytes(), None, hello.seconds)
         session = LiveSession(
-            anchor, ws.send_json, desk, voice, researcher, lipsync if synced else None
+            anchor, ws.send_json, desk, voice, researcher, lipsync if synced else None, greet
         )
         listener = listener_factory(
             keywords=start.keywords, anchor_speaking=lambda: session.anchor_speaking
         )
         room = SegmentRoom(client, session.send, questions=session.question_for_turn, voice=voice)
+        if greet and hello and hello.clip and synced:
+            shutil.copy(hello.clip, room.dir / "say-0-0.mp4")
+            greet.video = "say-0-0.mp4"
         async with listener:
             await session.send(
                 {

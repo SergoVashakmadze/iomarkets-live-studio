@@ -71,6 +71,15 @@ ANGLES = (
 )
 
 OPENING = "We are live. Welcome the guest by name in one sentence, then ask your first question."
+# After the greeting (live.Greeting) has been spoken: no second hello.
+GREETED_OPENING = (
+    "You have just greeted the viewers. Now introduce the guest by name in a few words, "
+    "then ask your first question."
+)
+GREETED_COLD_OPENING = (
+    "You have just greeted the viewers, and you know nothing about the guest yet. In one "
+    "sentence, turn to them and ask them to introduce themselves and what they are working on."
+)
 COLD_OPENING = (
     "We are live, cold: you know nothing about the guest yet. Welcome them warmly in one "
     "sentence and ask them to introduce themselves and what they are working on."
@@ -90,7 +99,16 @@ class Anchor:
         self.turns = 0
 
     async def opening(self) -> str:
+        if self.history:  # the greeting is already said
+            return await self._say(GREETED_COLD_OPENING if self.cold else GREETED_OPENING)
         return await self._say(COLD_OPENING if self.cold else OPENING)
+
+    def said(self, line: str) -> None:
+        """A line the anchor spoke that was not written here (the greeting): she knows it."""
+        self.history += [
+            {"role": "user", "content": "The interview starts now. Greet the viewers."},
+            {"role": "assistant", "content": line},
+        ]
 
     async def reply(
         self,

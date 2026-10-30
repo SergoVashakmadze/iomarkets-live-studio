@@ -17,8 +17,9 @@ Two shots, prepared at their own resolution so her face is never upscaled more t
     wide   the full studio, 16:9, for the packaged segment (1280x720 out)
 
 API (localhost, one render at a time):
-    POST /speak   multipart: audio (MP3/WAV), shot (live | wide), restart (1: from the loop's
-                  first frame, where the page's still is) -> MP4, picture and sound
+    POST /speak   multipart: audio (MP3/WAV), shot (live | wide), start (optional: the loop
+                  position to start from; 0 is her still) -> MP4, picture and sound, with
+                  the position where it ended in the X-Cursor header
     GET  /health  -> {"status": "ok", "shots": [...], "cursor": n}
 """
 
@@ -253,8 +254,8 @@ def serve(studio: Studio, port: int) -> None:
                 for p in msg.iter_parts()
             }
             shot = (parts.get("shot") or b"live").decode()
-            if parts.get("restart") == b"1":  # a new interview: start where her still is
-                studio.cursor = 0
+            if parts.get("start"):  # carry on from a clip played earlier (or 0: her still)
+                studio.cursor = int(parts["start"])
             if not parts.get("audio") or shot not in studio.anchors:
                 return self._json(400, {"error": "need audio, and shot live or wide"})
             try:
@@ -270,6 +271,7 @@ def serve(studio: Studio, port: int) -> None:
             print(f"[lipsync] {shot}: {result}", file=sys.stderr)
             self.send_response(200)
             self.send_header("Content-Type", "video/mp4")
+            self.send_header("X-Cursor", str(result["cursor"]))  # where the next clip can start
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
