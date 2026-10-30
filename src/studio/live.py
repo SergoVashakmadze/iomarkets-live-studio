@@ -99,6 +99,7 @@ class LiveSession:
         self.researcher = researcher
         self.lipsync = lipsync
         self.greeting = greeting
+        self.last_heard = asyncio.get_event_loop().time()  # the guest's last sound: idle end
         self._hold_until = 0.0  # the opening waits for the greeting to finish
         self._speaking: asyncio.Task | None = None
         self.transcript: list[str] = []
@@ -147,6 +148,8 @@ class LiveSession:
         self._start_reply(opening=True)
 
     async def on_event(self, event: Event) -> None:
+        if isinstance(event, (GuestStarted, GuestPartial, GuestTurn)):
+            self.last_heard = asyncio.get_running_loop().time()
         match event:
             case GuestStarted(turn_id, barge_in):
                 if self.last_line and turn_id not in self.question_for_turn:

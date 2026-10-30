@@ -60,7 +60,9 @@ bash deploy/lipsync_setup.sh ../iomarkets.tv-newsroom ~/musetalk-local/MuseTalk
 | `scaledown_window` 5 minutes | an idle GPU running on |
 | `timeout` 10 minutes per render | a stuck render running on |
 | `warm.sh on HOURS` (default 3, at most 72) ends by itself: `cool_down` checks every 15 minutes | a forgotten "keep warm" |
-| The studio's Meta spend cap (`STUDIO_DAILY_BUDGET_USD`, $10 a day) | runaway Meta API spend |
+| GPU spend is metered (render time at $2.10/hour, plus 5 idle minutes per interview) and capped at $5 a day (`STUDIO_GPU_DAILY_BUDGET_USD`); past it the anchor is shown still and page loads stop waking the GPU | a busy day of testing running up the GPU |
+| The daily total (`STUDIO_DAILY_BUDGET_USD`, $10: Meta and GPU together) refuses new briefs and interviews once spent | runaway spend of any kind |
+| An interview ends by itself after 3 minutes with no one speaking (`IDLE_END_S`), and after 15 minutes in any case | a forgotten tab keeping the microphone, transcription and GPU busy |
 
 Measured 2026-10-30, 4.3 s of speech once warm: L4 8.7 s (2.0x real time), **L40S 4.8 s
 (1.1x)**, as fast as the workstation, so the L40S it is. A cold start with everything cached took

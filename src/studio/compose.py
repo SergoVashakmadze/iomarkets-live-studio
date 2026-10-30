@@ -22,6 +22,7 @@ from pathlib import Path
 
 import httpx
 
+from studio import ledger
 from studio.cutout import BACKDROP, FPS, STUDIO_BACKGROUND, _run
 
 LABEL = "IoMarkets.tv  |  AI anchor"
@@ -76,17 +77,20 @@ def _on_modal() -> bool:
 
 async def lipsync_wake() -> None:
     """Start the GPU ahead of an interview (Modal only; a no-op call, then it idles 5 min)."""
-    if _on_modal():
+    if _on_modal() and ledger.gpu_allowed():
         import modal
 
         await modal.Cls.from_name(APP, LIPSYNC_CLS)().ping.spawn.aio()
 
 
 async def lipsync_up() -> bool:
-    """Whether lip-sync is ready now. On Modal this reads a flag and never starts the GPU."""
+    """Whether lip-sync is ready now. On Modal this reads a flag and never starts the GPU, and
+    once today's GPU cap is spent the answer is no: the anchor is shown still."""
     if _on_modal():
         import modal
 
+        if not ledger.gpu_allowed():
+            return False
         try:
             state = modal.Dict.from_name(STATE, create_if_missing=True)
             return bool(await state.get.aio("up", False))
@@ -109,6 +113,9 @@ async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = 
     if _on_modal():
         import modal
 
+        if not ledger.gpu_allowed():
+            return None
+        t = asyncio.get_running_loop().time()
         try:
             speaker = modal.Cls.from_name(APP, LIPSYNC_CLS)()
             data, cursor = await asyncio.wait_for(
@@ -116,6 +123,8 @@ async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = 
             )
         except Exception:
             return None
+        finally:
+            ledger.charge("gpu", ledger.gpu_seconds(asyncio.get_running_loop().time() - t))
         out.write_bytes(data)
         return cursor
     url = lipsync_url()
