@@ -325,3 +325,10 @@ async def test_a_greeting_without_lip_sync_carries_no_clip():
     await s.open()
     audio = next(m for m in sent if m["type"] == "anchor_audio")
     assert "video" not in audio
+
+
+async def test_the_guests_voice_resets_the_idle_clock():
+    s, _ = _session(FakeAnchor())
+    s.last_heard = 0.0
+    await s.on_event(GuestPartial(1, "Well"))
+    assert s.last_heard > 0.0

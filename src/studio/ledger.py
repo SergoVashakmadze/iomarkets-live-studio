@@ -7,7 +7,11 @@ published at dev.meta.ai/docs/pricing-rate-limits (read 2026-10-27), and added t
 Once today's total (UTC) reaches `STUDIO_DAILY_BUDGET_USD` (default $10), new briefs and
 interviews are refused; one already running finishes.
 
-Only Meta is metered: Muse Spark Open on Fireworks is billed by Fireworks, and is cents.
+The anchor's lip-sync on Modal's GPU is metered too ("gpu": render time at the L40S rate, plus
+the five idle minutes after each interview), under the same daily total and its own smaller cap
+(`STUDIO_GPU_DAILY_BUDGET_USD`, default $5): past it, the anchor is shown still until midnight UTC,
+and page loads stop waking the GPU. The workstation's own GPU costs nothing and is not metered.
+Muse Spark Open on Fireworks is billed by Fireworks, and is cents.
 The ledger is a small JSON file (`STUDIO_LEDGER`, default under the user cache directory) so
 it survives restarts. The Meta console's spend limit stays the backstop.
 """
@@ -31,6 +35,10 @@ SAM_PER_FRAME = 0.20 / 1000
 SAM_MIN_FRAMES = 50
 
 DEFAULT_BUDGET_USD = 10.0
+# Modal L40S $1.95/hour (modal.com/pricing, read 2026-10-30) plus the container's CPU and memory.
+GPU_PER_HOUR = 2.10
+GPU_IDLE_S = 5 * 60  # the GPU's scaledown window after the last render (deploy/modal_app.py)
+DEFAULT_GPU_BUDGET_USD = 5.0
 
 
 class BudgetExceeded(RuntimeError):
@@ -60,9 +68,15 @@ def asr_cost(seconds: float) -> float:
 
 
 class Ledger:
-    def __init__(self, path: str | Path, budget_usd: float = DEFAULT_BUDGET_USD):
+    def __init__(
+        self,
+        path: str | Path,
+        budget_usd: float = DEFAULT_BUDGET_USD,
+        gpu_budget_usd: float = DEFAULT_GPU_BUDGET_USD,
+    ):
         self.path = Path(path)
         self.budget_usd = budget_usd
+        self.gpu_budget_usd = gpu_budget_usd
         self._lock = threading.Lock()
 
     @classmethod
@@ -70,7 +84,8 @@ class Ledger:
         default = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
         path = os.environ.get("STUDIO_LEDGER") or default / "iomarkets-studio" / "ledger.json"
         budget = float(os.environ.get("STUDIO_DAILY_BUDGET_USD") or DEFAULT_BUDGET_USD)
-        return cls(path, budget)
+        gpu = float(os.environ.get("STUDIO_GPU_DAILY_BUDGET_USD") or DEFAULT_GPU_BUDGET_USD)
+        return cls(path, budget, gpu)
 
     def _read(self) -> dict[str, dict[str, float]]:
         try:
@@ -97,6 +112,11 @@ class Ledger:
     def spent_today(self) -> float:
         return round(sum(self.today().values()), 4)
 
+    def gpu_allowed(self) -> bool:
+        """Whether today's GPU cap, and the whole day's budget, leave room for lip-sync."""
+        today = self.today()
+        return today.get("gpu", 0.0) < self.gpu_budget_usd and sum(today.values()) < self.budget_usd
+
     def check(self) -> None:
         """Raise if today's budget is used up. Call before starting anything new."""
         spent = self.spent_today()
@@ -118,3 +138,11 @@ current: Ledger | None = None
 def charge(kind: str, usd: float) -> None:
     if current is not None:
         current.charge(kind, usd)
+
+
+def gpu_seconds(seconds: float) -> float:
+    return seconds * GPU_PER_HOUR / 3600
+
+
+def gpu_allowed() -> bool:
+    return current is None or current.gpu_allowed()

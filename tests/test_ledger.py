@@ -77,3 +77,21 @@ def test_server_refuses_new_work_over_budget(tmp_path):
         with pytest.raises(WebSocketDisconnect) as e:
             ws.receive_json()
     assert e.value.code == 1008
+
+
+def test_the_gpu_has_its_own_smaller_cap(tmp_path):
+    from studio.ledger import Ledger, gpu_seconds
+
+    book = Ledger(tmp_path / "l.json", budget_usd=10.0, gpu_budget_usd=1.0)
+    assert book.gpu_allowed()
+    book.charge("gpu", gpu_seconds(30 * 60))  # half an hour of L40S: ~$1.05
+    assert not book.gpu_allowed()  # past the GPU cap: the anchor is shown still
+    book.check()  # interviews themselves go on: the day's total is still under $10
+
+
+def test_the_whole_day_budget_also_stops_the_gpu(tmp_path):
+    from studio.ledger import Ledger
+
+    book = Ledger(tmp_path / "l.json", budget_usd=2.0, gpu_budget_usd=5.0)
+    book.charge("spark", 2.5)
+    assert not book.gpu_allowed()

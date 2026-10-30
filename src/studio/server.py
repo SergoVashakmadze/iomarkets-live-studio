@@ -68,6 +68,8 @@ from studio.tts import synthesize
 MAX_BRIEF_CHARS = 20_000
 MAX_FRAME_BYTES = 1_400_000  # one JPEG frame; base64 must fit a 2 MiB WebSocket message (Modal)
 MAX_INTERVIEW_S = 15 * 60
+# A forgotten tab must not keep the microphone, speech recognition and the GPU running.
+IDLE_END_S = 3 * 60
 # The studio's pictures; studio.jpg and the anchor's are pre-existing and built locally
 # (scripts/anchor_assets.py), so they may be missing: the page falls back to backdrop.jpg.
 ASSETS = {
@@ -374,9 +376,20 @@ async def _run_live(
             reader = asyncio.create_task(from_page())
 
             async def time_limit() -> None:
-                await asyncio.sleep(MAX_INTERVIEW_S)
-                await session.send({"type": "error", "message": "15-minute limit: ending."})
-                listener.finish()
+                loop = asyncio.get_running_loop()
+                started = loop.time()
+                while True:
+                    await asyncio.sleep(min(10, IDLE_END_S))
+                    now = loop.time()
+                    if now - started >= MAX_INTERVIEW_S:
+                        reason = "15-minute limit: ending."
+                    elif now - session.last_heard >= IDLE_END_S and not session.anchor_speaking:
+                        reason = f"No one has spoken for {IDLE_END_S // 60} minutes: ending."
+                    else:
+                        continue
+                    await session.send({"type": "error", "message": reason})
+                    listener.finish()
+                    return
 
             limiter = asyncio.create_task(time_limit())
             try:
@@ -391,6 +404,8 @@ async def _run_live(
                 await session.close()
                 await room.drain()
                 room.close()
+                if synced and compose._on_modal():  # the GPU idles five minutes, then stops
+                    ledger.charge("gpu", ledger.gpu_seconds(ledger.GPU_IDLE_S))
                 with contextlib.suppress(Exception):
                     await session.send({"type": "cutouts_done"})
 
