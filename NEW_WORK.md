@@ -19,7 +19,8 @@ the record. Every entry links to the commits that built it.
 - The program monitor shows a LIVE bug and a lower third (name, then role and topic) taken from
   the guest field. The fact-check rail shows a colour-coded verdict on every check.
 - A hint line says what is still missing before Go live (consent, a brief) instead of the button
-  failing silently. No change to the server or the live pipeline.
+  failing silently. No change to the server or the live pipeline. The IoMarkets logo (pre-existing,
+  see below) sits in the top bar and on the program monitor.
 
 ### Oct 27: video materials
 
@@ -212,3 +213,8 @@ present them as hackathon work.
 - The interview show backend (Scout, Anchor, Fact-Check, grader, approval gate) and its API.
 - The anchor lip-sync render (MuseTalk).
 - Text-to-speech (Edge TTS, Kokoro-82M fallback).
+
+Contained here but made before the event:
+
+- The IoMarkets logo (Rainmaker Partners Ltd, 2026), embedded in the studio page as a 176 px WebP
+  for the top bar, the favicon and the on-air corner bug.
