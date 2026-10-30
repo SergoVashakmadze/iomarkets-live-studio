@@ -5,174 +5,285 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IoMarkets Live Studio</title>
 <style>
+  /* Broadcast control room: near-black panels, amber for the operator's next action, red only
+     for on air and errors, tabular figures everywhere a number changes. */
   :root {
-    --bg: #f6f6f4; --panel: #ffffff; --ink: #1b1d21; --muted: #626872; --line: #dcdee2;
-    --accent: #0b5cad; --live: #c62828; --guest: #1f6f43; --warn: #8a5a00;
+    --bg: #07090c; --panel: #0e1217; --panel-2: #141a21; --ink: #e9edf2; --muted: #8a94a3;
+    --line: #232b35; --amber: #ffa028; --amber-ink: #1a1000; --live: #e5352b; --guest: #3ccf7e;
+    --warn: #f2c14e; --accent: #5aa9ff; --tape: #000;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #121417; --panel: #1b1e23; --ink: #e8eaed; --muted: #9aa1ab; --line: #2c3037;
-      --accent: #6aa8ff; --live: #ff6b6b; --guest: #5fd08f; --warn: #e0b04f;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #121417; --panel: #1b1e23; --ink: #e8eaed; --muted: #9aa1ab; --line: #2c3037;
-    --accent: #6aa8ff; --live: #ff6b6b; --guest: #5fd08f; --warn: #e0b04f;
+  :root[data-theme="light"] {
+    --bg: #eef0f3; --panel: #ffffff; --panel-2: #f6f7f9; --ink: #11161c; --muted: #5b6573;
+    --line: #d5dae1; --amber: #c96a00; --amber-ink: #fff; --live: #c62828; --guest: #1f7a46;
+    --warn: #8a5a00; --accent: #0b5cad;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 15px/1.45 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-variant-numeric: tabular-nums;
   }
-  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  h1 { font-size: 1.25rem; margin: 0; letter-spacing: .01em; }
-  .status { font-size: .85rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
-  .dot.live { background: var(--live); }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-            padding: 16px; margin-top: 16px; }
-  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Top bar */
+  .topbar { position: sticky; top: 0; z-index: 10; background: var(--tape);
+            border-bottom: 2px solid var(--amber); }
+  .topbar .in { max-width: 1320px; margin: 0 auto; padding: 8px 16px; display: flex;
+                align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand { font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: .95rem;
+           color: #fff; white-space: nowrap; }
+  .brand span { color: var(--amber); }
+  .tally { display: inline-flex; align-items: center; gap: 8px; font: 700 .72rem/1 var(--mono);
+           letter-spacing: .12em; text-transform: uppercase; padding: 6px 10px; border-radius: 3px;
+           background: #1b2028; color: #9aa4b2; }
+  .tally .dot { width: 8px; height: 8px; border-radius: 50%; background: #4a5361; }
+  .tally.live { background: var(--live); color: #fff; }
+  .tally.live .dot { background: #fff; animation: pulse 1.2s infinite; }
+  .status { font-size: .85rem; color: #c9d1db; flex: 1 1 200px; min-width: 0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meters { display: flex; gap: 18px; font: .78rem/1.2 var(--mono); color: #9aa4b2; }
+  .meters b { display: block; color: #fff; font-size: .95rem; font-weight: 600; }
+  .meters .lbl { font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 48px; }
+
+  /* Meta models strip */
+  .models { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .model { border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; font-size: .72rem;
+           line-height: 1.3; color: var(--muted); background: var(--panel); transition: all .15s; }
+  .model b { display: block; font-size: .78rem; color: var(--ink); font-weight: 600; }
+  .model .uses { float: right; margin-left: 8px; font-family: var(--mono); }
+  .model.on { border-color: var(--amber); color: var(--ink);
+              box-shadow: inset 3px 0 0 var(--amber); }
+  .model.on b::before { content: "● "; color: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .model.on b::before, .tally.live .dot { animation: none; } }
+
+  /* Stages */
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+            margin-top: 14px; }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+         border-bottom: 1px solid var(--line); background: var(--panel-2); border-radius: 6px 6px 0 0; }
+  .bar .n { font: 700 .72rem/1 var(--mono); color: var(--amber-ink); background: var(--amber);
+            border-radius: 3px; padding: 4px 7px; }
+  .bar h2 { margin: 0; font-size: .8rem; letter-spacing: .14em; text-transform: uppercase;
+            font-weight: 700; color: var(--ink); }
+  .bar .sub { color: var(--muted); font-size: .8rem; margin-left: auto; text-align: right; }
+  .body { padding: 16px; }
+  .grid2 { display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+  label { display: block; font-size: .7rem; color: var(--muted); margin: 0 0 6px;
+          letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+  label + .hint { margin-top: -4px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   input, textarea {
     font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line);
-    border-radius: 6px; padding: 8px 10px; width: 100%;
+    border-radius: 4px; padding: 9px 11px; width: 100%;
   }
-  .row input { flex: 1 1 260px; width: auto; }
-  textarea { min-height: 160px; font-size: .9rem; resize: vertical; }
+  input:focus, textarea:focus, button:focus-visible, .drop:focus-visible {
+    outline: 2px solid var(--amber); outline-offset: 1px; }
+  #subject { font-size: 1.05rem; }
+  .row input { flex: 1 1 280px; width: auto; }
+  textarea { min-height: 96px; font-size: .88rem; resize: vertical; }
+  #brief { min-height: 236px; font-family: var(--mono); font-size: .8rem; line-height: 1.5; }
   button {
-    font: inherit; border: 1px solid var(--accent); background: var(--accent); color: #fff;
-    border-radius: 6px; padding: 8px 14px; cursor: pointer;
+    font: 600 .85rem/1 inherit; font-family: inherit; letter-spacing: .03em;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--ink);
+    border-radius: 4px; padding: 10px 16px; cursor: pointer;
   }
-  button.secondary { background: transparent; color: var(--accent); }
-  button.stop { border-color: var(--live); background: var(--live); }
-  button:disabled { opacity: .45; cursor: default; }
-  #log { display: flex; flex-direction: column; gap: 10px; min-height: 120px; }
-  .line { max-width: 85%; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); }
-  .line .who { font-size: .75rem; color: var(--muted); display: block; }
-  .anchor { align-self: flex-start; }
-  .guest { align-self: flex-end; border-color: var(--guest); }
-  .partial { opacity: .65; font-style: italic; }
-  .note { font-size: .8rem; color: var(--muted); margin: 8px 0 0; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+  button.onair { background: var(--live); border-color: var(--live); color: #fff;
+                 padding: 12px 22px; font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; }
+  button.secondary { background: transparent; }
+  button.stop { border-color: var(--live); color: var(--live); background: transparent; }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  .note { font-size: .78rem; color: var(--muted); margin: 8px 0 0; }
+  .hint { font-size: .78rem; color: var(--muted); margin: 6px 0 0; }
+  #hint { color: var(--warn); font-size: .82rem; margin: 10px 0 0; min-height: 1.2em; }
   .error { color: var(--live); }
-  .tag { font-size: .7rem; color: var(--warn); margin-left: 6px; }
-  footer { margin-top: 24px; font-size: .8rem; color: var(--muted); }
-  .stage { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 12px; }
-  @media (min-width: 760px) { .stage { grid-template-columns: 3fr 2fr; } }
-  video { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; object-fit: cover; }
-  h2 { font-size: .9rem; margin: 0 0 8px; color: var(--muted); font-weight: 600; }
-  #checks { display: flex; flex-direction: column; gap: 8px; font-size: .9rem; }
-  .check { border-left: 3px solid var(--line); padding: 4px 0 4px 10px; }
+  .drop { margin-top: 8px; border: 1px dashed var(--line); border-radius: 4px; padding: 14px;
+          text-align: center; color: var(--muted); font-size: .85rem; cursor: pointer; }
+  .drop.over { border-color: var(--amber); color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { border: 1px solid var(--line); border-radius: 3px; padding: 2px 4px 2px 8px;
+          font: .75rem var(--mono); }
+  .chip button { border: 0; background: none; color: var(--muted); padding: 0 4px; }
+  details { margin-top: 10px; font-size: .78rem; color: var(--muted); }
+  summary { cursor: pointer; }
+
+  /* On air */
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: .85rem; margin: 0;
+             text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 400;
+             padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; flex: 1 1 320px; }
+  .consent input { width: auto; margin-top: 3px; accent-color: var(--amber); }
+  .stage { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 14px; }
+  @media (min-width: 900px) { .stage { grid-template-columns: 5fr 3fr; } }
+  .monitor { position: relative; border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
+             background: #000; }
+  .monitor video { display: block; }
+  video { width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: cover; }
+  .monitor .idle { position: absolute; inset: 0; display: grid; place-items: center; color: #5d6775;
+                   font: .8rem var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+  .monitor.on .idle { display: none; }
+  .bug { position: absolute; top: 12px; left: 12px; display: none; background: var(--live); color: #fff;
+         font: 800 .72rem/1 var(--mono); letter-spacing: .14em; padding: 5px 8px; border-radius: 2px; }
+  .monitor.on .bug { display: block; }
+  .lower { position: absolute; left: 0; right: 0; bottom: 6%; display: none; }
+  .monitor.on .lower:not(:empty) { display: block; }
+  .lower .name { display: inline-block; background: #fff; color: #000; font-weight: 800;
+                 text-transform: uppercase; letter-spacing: .04em; padding: 6px 14px 6px 4%;
+                 font-size: clamp(.8rem, 1.8vw, 1.15rem); }
+  .lower .role { display: block; width: fit-content; max-width: 90%; background: #0b0f14;
+                 color: var(--amber); border-left: 4px solid var(--amber); padding: 4px 14px 4px calc(4% - 4px);
+                 font-size: clamp(.68rem, 1.3vw, .85rem); }
+  .tape-label { font: 700 .62rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+                color: var(--muted); margin: 14px 0 8px; display: flex; justify-content: space-between; }
+  #log { display: flex; flex-direction: column; gap: 8px; min-height: 120px; max-height: 360px;
+         overflow-y: auto; padding-right: 4px; }
+  #log:empty::before { content: "The conversation appears here as it happens."; color: var(--muted);
+                       font-size: .82rem; }
+  .line { max-width: 88%; padding: 8px 12px; border-radius: 4px; background: var(--panel-2);
+          border-left: 3px solid var(--accent); font-size: .92rem; }
+  .line .who { font: 700 .62rem/1.6 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+               color: var(--muted); display: block; }
+  .anchor { align-self: flex-start; }
+  .guest { align-self: flex-end; border-left-color: var(--guest); }
+  .line.error { border-left-color: var(--live); }
+  .partial { opacity: .65; font-style: italic; }
+  .rail { border: 1px solid var(--line); border-radius: 4px; background: var(--bg); padding: 12px;
+          max-height: 640px; overflow-y: auto; }
+  .rail h3 { margin: 0 0 10px; font: 700 .7rem/1 var(--mono); letter-spacing: .14em;
+             text-transform: uppercase; color: var(--amber); }
+  #checks { display: flex; flex-direction: column; gap: 10px; font-size: .88rem; }
+  .check { border-left: 3px solid var(--line); padding: 6px 0 6px 10px; background: var(--panel); }
   .check.supported { border-color: var(--guest); }
   .check.contradicted { border-color: var(--live); }
   .check.unverifiable { border-color: var(--warn); }
-  .verdict { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
-  .supported .verdict { color: var(--guest); }
-  .contradicted .verdict { color: var(--live); }
-  .unverifiable .verdict { color: var(--warn); }
-  .check a { color: var(--accent); word-break: break-all; }
-  .models { display: grid; gap: 8px; margin-top: 12px;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .model { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .75rem;
-           line-height: 1.3; color: var(--muted); background: var(--panel); transition: all .15s; }
-  .model b { display: block; font-size: .8rem; color: var(--ink); font-weight: 600; }
-  .model .uses { float: right; margin-left: 8px; font-variant-numeric: tabular-nums; }
-  .model.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
-              color: var(--ink); }
-  .model.on b::before { content: "● "; color: var(--live); animation: pulse 1s infinite; }
-  @keyframes pulse { 50% { opacity: .3; } }
-  @media (prefers-reduced-motion: reduce) { .model.on b::before { animation: none; } }
-  .consent { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; margin: 12px 0 0; }
-  .consent input { width: auto; margin-top: 4px; }
+  .verdict { display: inline-block; font: 800 .62rem/1 var(--mono); text-transform: uppercase;
+             letter-spacing: .1em; padding: 3px 6px; border-radius: 2px; margin-bottom: 4px; }
+  .supported .verdict { background: var(--guest); color: #000; }
+  .contradicted .verdict { background: var(--live); color: #fff; }
+  .unverifiable .verdict { background: var(--warn); color: #000; }
+  .check a { color: var(--accent); word-break: break-all; font-size: .78rem; }
+  .check .ask { font-size: .84rem; margin-top: 4px; color: var(--amber); }
+  #research { font-size: .82rem; margin-bottom: 12px; white-space: pre-line; padding: 8px 10px;
+              border: 1px solid var(--line); border-radius: 4px; }
+
+  /* Segment */
   #answers { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  #answers:empty::before { content: "Each answer is cut out of its background as the interview runs and lands here.";
+                           color: var(--muted); font-size: .82rem; }
   #answers figure { margin: 0; }
-  #answers figcaption { font-size: .8rem; color: var(--muted); margin-top: 4px; }
-  #answers video { aspect-ratio: 16 / 9; }
-  #segmentLink a { color: var(--accent); }
-  .drop { margin-top: 8px; border: 2px dashed var(--line); border-radius: 8px; padding: 14px;
-          text-align: center; color: var(--muted); font-size: .9rem; cursor: pointer; }
-  .drop.over { border-color: var(--accent); color: var(--ink); }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 6px 2px 10px; font-size: .8rem; }
-  .chip button { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer; }
-  #links { min-height: 64px; }
-  #research { font-size: .85rem; margin-bottom: 12px; white-space: pre-line; }
-  .check .ask { font-size: .85rem; margin-top: 2px; }
+  #answers figcaption { font: .72rem var(--mono); color: var(--muted); margin-top: 4px; }
+  #answers video { border-radius: 4px; }
+  #segmentLink a { color: var(--amber); font-weight: 600; }
+  footer { margin-top: 20px; font-size: .74rem; color: var(--muted); line-height: 1.5; }
 </style>
 </head>
 <body>
+<div class="topbar"><div class="in">
+  <div class="brand">IoMarkets<span>.tv</span> · Live Studio</div>
+  <div class="tally" id="tally"><span class="dot" id="dot"></span><span id="tallyText">Off air</span></div>
+  <div class="status" id="status" role="status">Standby</div>
+  <div class="meters">
+    <div><span class="lbl">On air</span><b id="clock">00:00</b></div>
+    <div><span class="lbl">Local</span><b id="wall">--:--</b></div>
+    <div title="Meta spend today (UTC) against the daily cap"><span class="lbl">Spend today</span><b id="spend">—</b></div>
+  </div>
+</div></div>
 <main>
-  <header>
-    <h1>IoMarkets Live Studio</h1>
-    <div class="status"><span class="dot" id="dot"></span><span id="status">Off air</span></div>
-  </header>
   <div class="models" id="models" aria-label="Meta models at work"></div>
 
   <section>
-    <label for="subject">Guest, role, and topic (any topic)</label>
-    <div class="row">
-      <input id="subject" placeholder="Eliud Kipchoge, marathon runner, on training for a sub-two-hour race" autocomplete="off">
-      <button id="prepare">Prepare brief</button>
-    </div>
-    <label for="links" style="margin-top:12px">Links about the guest (one per line: LinkedIn,
-      website, company page, YouTube or Vimeo talk, direct .mp4)</label>
-    <textarea id="links" placeholder="https://www.linkedin.com/in/…&#10;https://example.com"></textarea>
-    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add files">
-      Drop a pitch deck, document, images or a video here, or click to choose
-      (PDF, PNG, JPEG, WebP, TXT, MD, MP4 up to 200 MB; export slides as PDF)
-    </div>
-    <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,.mp4" hidden>
-    <div class="chips" id="chips"></div>
-    <p class="note">The guest's files stay with Meta's models: when any are attached, the
-      open-weights editor is skipped. Videos are analysed (picture and sound) and deleted after
-      the brief. YouTube and Vimeo links are read from the page and searched for, never
-      downloaded.</p>
-    <label for="brief" style="margin-top:12px">Brief (Scout and the Devil's Advocate, editable)</label>
-    <textarea id="brief" placeholder="Prepare a brief, or paste one."></textarea>
-    <p class="note" id="sources"></p>
-  </section>
-
-  <section>
-    <div class="row">
-      <button id="go">Go live</button>
-      <button id="cold" class="secondary" title="No brief: the anchor improvises; research runs live">Cold start</button>
-      <button id="chart" class="secondary" disabled>Show chart</button>
-      <button id="end" class="stop" disabled>End interview</button>
-    </div>
-    <p class="note">Use headphones: the anchor's voice must not reach the microphone, or it
-      counts as the guest talking. To check a chart, hold it up to the camera and press
-      Show chart.</p>
-    <label class="consent"><input type="checkbox" id="consent"> The guest has agreed to be
-      recorded, voice and video, for this segment, and to be cut out of their background.</label>
-    <div class="stage">
-      <div>
-        <video id="cam" muted playsinline autoplay></video>
-        <div id="log" aria-live="polite" style="margin-top:12px"></div>
+    <div class="bar"><span class="n">1</span><h2>Prepare</h2>
+      <span class="sub">Optional: Cold start skips this</span></div>
+    <div class="body">
+      <label for="subject">Guest · role · topic</label>
+      <div class="row">
+        <input id="subject" placeholder="Eliud Kipchoge, marathon runner, on training for a sub-two-hour race" autocomplete="off">
+        <button id="prepare" class="primary">Prepare brief</button>
       </div>
-      <div>
-        <h2>Devil's Advocate</h2>
-        <div id="research" aria-live="polite" hidden></div>
-        <div id="checks" aria-live="polite"><p class="note">What the guest says or shows is
-          checked here as the interview runs, and challenges go to the anchor.</p></div>
+      <p class="hint">Name first, then role, then topic, separated by commas. The name and role
+        become the on-screen caption.</p>
+      <div class="grid2" style="margin-top:14px">
+        <div>
+          <label for="links">Links about the guest</label>
+          <textarea id="links" placeholder="One per line: LinkedIn, website, company page, YouTube or Vimeo talk, .mp4"></textarea>
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add files">
+            Drop a deck, document, images or a video, or click to choose<br>
+            <small>PDF, PNG, JPEG, WebP, TXT, MD, MP4 · up to 5 files · 200 MB</small>
+          </div>
+          <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,.mp4" hidden>
+          <div class="chips" id="chips"></div>
+          <details><summary>Where the guest's material goes</summary>
+            <p class="note">Attached files stay with Meta's models: with any attached, the
+              open-weights editor is skipped. Videos are analysed (picture and sound) and deleted
+              after the brief. YouTube and Vimeo links are read from the page and searched for,
+              never downloaded.</p></details>
+        </div>
+        <div>
+          <label for="brief">Brief · Scout and the Devil's Advocate · editable</label>
+          <textarea id="brief" placeholder="Press Prepare brief (about a minute), or paste one here."></textarea>
+          <p class="note" id="sources"></p>
+        </div>
       </div>
     </div>
   </section>
 
   <section>
-    <h2>Segment</h2>
-    <p class="note">Each answer is cut out of its background by SAM 3.1 while the interview goes
-      on. Clips are deleted 30 minutes after the interview ends: download what you need.</p>
-    <div id="answers"></div>
-    <div class="row" style="margin-top:12px">
-      <button id="build" class="secondary" disabled>Build segment</button>
-      <button id="srt" class="secondary" disabled>Transcript (.srt)</button>
-      <span id="segmentLink" class="note"></span>
+    <div class="bar"><span class="n">2</span><h2>On air</h2>
+      <span class="sub">Guest on headphones · hold a chart up and press Show chart</span></div>
+    <div class="body">
+      <div class="controls">
+        <label class="consent"><input type="checkbox" id="consent"> The guest has agreed to be
+          recorded, voice and video, for this segment, and to be cut out of their background.</label>
+        <button id="go" class="onair">● Go live</button>
+        <button id="cold" class="secondary" title="No brief: the anchor improvises; research runs live">Cold start</button>
+        <button id="chart" class="secondary" disabled>Show chart</button>
+        <button id="end" class="stop" disabled>End interview</button>
+      </div>
+      <p id="hint" aria-live="polite"></p>
+      <div class="stage">
+        <div>
+          <div class="monitor" id="monitor">
+            <video id="cam" muted playsinline autoplay></video>
+            <div class="idle">Program · camera starts when you go live</div>
+            <div class="bug">LIVE</div>
+            <div class="lower" id="lower"></div>
+          </div>
+          <div class="tape-label"><span>Transcript</span><span>Anchor (AI) left · guest right</span></div>
+          <div id="log" aria-live="polite"></div>
+        </div>
+        <div class="rail">
+          <h3>Devil's Advocate · Fact-check</h3>
+          <div id="research" aria-live="polite" hidden></div>
+          <div id="checks" aria-live="polite"><p class="note">Figures the guest says or shows are
+            checked here as the interview runs. Challenges go to the anchor.</p></div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <footer>The anchor is an AI system and its voice is synthetic (Microsoft Edge text-to-speech). Guest speech is transcribed
-    by Meta's Muse Voice Transcribe; the anchor, chart reading and fact-checks run on Muse Spark. Nothing here is medical, legal or investment
-    advice. Built with Muse Spark Open.</footer>
+  <section>
+    <div class="bar"><span class="n">3</span><h2>Segment</h2>
+      <span class="sub">Clips are deleted 30 min after the interview: download what you need</span></div>
+    <div class="body">
+      <div id="answers"></div>
+      <div class="row" style="margin-top:14px">
+        <button id="build" class="primary" disabled>Build segment</button>
+        <button id="srt" class="secondary" disabled>Transcript (.srt)</button>
+        <span id="segmentLink" class="note"></span>
+      </div>
+    </div>
+  </section>
+
+  <footer>The anchor is an AI system and its voice is synthetic (Microsoft Edge text-to-speech).
+    Guest speech is transcribed by Meta's Muse Voice Transcribe; the anchor, chart reading and
+    fact-checks run on Muse Spark; SAM 3.1 cuts the guest out. Nothing here is medical, legal or
+    investment advice. Built with Muse Spark Open.</footer>
 </main>
 
 <script>
@@ -232,7 +343,53 @@ const withToken = (path) => token ? `${path}?token=${encodeURIComponent(token)}`
 function setStatus(text, live) {
   $("status").textContent = text;
   $("dot").classList.toggle("live", !!live);
+  $("tally").classList.toggle("live", !!live);
+  $("tallyText").textContent = live ? "On air" : "Off air";
 }
+
+// Control room: wall clock, time on air, spend against the daily cap, and the guest's caption.
+const pad2 = (n) => String(n).padStart(2, "0");
+setInterval(() => {
+  const now = new Date();
+  $("wall").textContent = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  if (liveAt !== null && $("monitor").classList.contains("on")) {
+    const s = Math.floor((performance.now() - liveAt) / 1000);
+    $("clock").textContent = `${pad2(Math.floor(s / 60))}:${pad2(s % 60)}`;
+  }
+}, 500);
+
+async function showSpend() {
+  try {
+    const r = await fetch(withToken("/api/budget"));
+    if (!r.ok) return;
+    const b = await r.json();
+    $("spend").textContent = `$${b.spent_today_usd.toFixed(2)} / $${b.budget_usd.toFixed(0)}`;
+  } catch {}
+}
+showSpend();
+setInterval(showSpend, 30000);
+
+function showCaption() {
+  const [name, ...rest] = $("subject").value.split(",").map((s) => s.trim());
+  $("lower").innerHTML = "";
+  if (!name) return;
+  $("lower").append(Object.assign(document.createElement("div"), { className: "name", textContent: name }));
+  const role = rest.filter(Boolean).join(", ");
+  if (role) $("lower").append(Object.assign(document.createElement("div"), { className: "role", textContent: role }));
+}
+
+// What still stands between the operator and Go live, said before they press it.
+function showHint() {
+  const hint = $("hint");
+  if (ws && ws.readyState <= WebSocket.OPEN) { hint.textContent = ""; return; }
+  const missing = [];
+  if (!$("consent").checked) missing.push("tick the guest's consent");
+  if (!$("brief").value.trim()) missing.push("prepare a brief (or use Cold start)");
+  hint.textContent = missing.length ? `Before going live: ${missing.join(", then ")}.` : "Ready. Guest on headphones, then Go live.";
+  hint.style.color = missing.length ? "" : "var(--guest)";
+}
+$("subject").addEventListener("input", showCaption);
+["consent", "brief"].forEach((id) => $(id).addEventListener("input", showHint));
 
 function addLine(who, text, cls) {
   const el = document.createElement("div");
@@ -286,6 +443,7 @@ $("prepare").onclick = async () => {
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? r.statusText);
     const data = await r.json();
     $("brief").value = data.text;
+    showHint();
     if (data.edited_by) { model("open", 1); setTimeout(() => model("open", -1), 1500); }
     const unread = data.materials.filter((m) => m.status !== "read");
     $("sources").textContent =
@@ -421,6 +579,7 @@ async function startMic(onChunk) {
 function stopMic() {
   stream?.getTracks().forEach((t) => t.stop());
   $("cam").srcObject = null;
+  $("monitor").classList.remove("on");
   audio?.close();
   stream = audio = null;
 }
@@ -512,8 +671,8 @@ async function startLive(cold) {
   player ??= new AudioContext();         // created on a click, so the browser lets it play
   player.resume();
   const brief = cold ? "" : $("brief").value.trim();
-  if (!cold && !brief) { setStatus("Prepare a brief first, or use Cold start"); return; }
-  if (!$("consent").checked) { setStatus("Confirm the guest's consent first"); return; }
+  if (!cold && !brief) { setStatus("Prepare a brief first, or use Cold start"); showHint(); $("brief").focus(); return; }
+  if (!$("consent").checked) { setStatus("Confirm the guest's consent first"); showHint(); $("consent").focus(); return; }
   $("go").disabled = $("cold").disabled = true;
   $("research").hidden = true;
   $("log").innerHTML = "";
@@ -531,10 +690,12 @@ async function startLive(cold) {
   ws = new WebSocket(`${proto}://${location.host}${withToken("/ws/live")}`);
   ws.binaryType = "arraybuffer";
   setStatus("Connecting…");
+  showHint();
   ws.onopen = () => ws.send(JSON.stringify({ type: "start", brief, cold, keywords }));
   ws.onmessage = (e) => onMessage(JSON.parse(e.data));
   ws.onclose = () => { stopRecorder(); stopMic(); stopVoice(); setStatus("Off air");
-                       $("go").disabled = $("cold").disabled = false; $("end").disabled = true; $("chart").disabled = true; };
+                       $("go").disabled = $("cold").disabled = false; $("end").disabled = true; $("chart").disabled = true;
+                       showHint(); showSpend(); };
 }
 
 $("end").onclick = () => {
@@ -595,6 +756,8 @@ async function onMessage(m) {
       $("chart").disabled = false;
       $("srt").disabled = false;
       liveAt = performance.now();
+      showCaption();
+      $("monitor").classList.add("on");
       setStatus("Live", true);
       break;
     case "anchor_thinking":
@@ -697,6 +860,8 @@ async function onMessage(m) {
       break;
   }
 }
+
+showHint();
 </script>
 </body>
 </html>

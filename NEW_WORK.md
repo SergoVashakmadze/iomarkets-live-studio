@@ -11,6 +11,16 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 27 – Nov 4, 2026)
 
+### Oct 30: broadcast control-room page
+
+- The studio page restyled as a broadcast control room: a dark theme, an ON AIR tally, time on
+  air, a wall clock, and Meta spend today against the daily cap in the top bar.
+- Three numbered stages (Prepare, On air, Segment) in the order the operator works.
+- The program monitor shows a LIVE bug and a lower third (name, then role and topic) taken from
+  the guest field. The fact-check rail shows a colour-coded verdict on every check.
+- A hint line says what is still missing before Go live (consent, a brief) instead of the button
+  failing silently. No change to the server or the live pipeline.
+
 ### Oct 27: video materials
 
 - Paste a YouTube or Vimeo link: the studio reads the title and channel through the platform's
