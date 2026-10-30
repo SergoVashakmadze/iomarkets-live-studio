@@ -14,6 +14,7 @@ string, so a guest's name or a question cannot break or inject into the filter g
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import textwrap
@@ -64,8 +65,33 @@ def lipsync_url() -> str:
     return os.environ.get("STUDIO_LIPSYNC_URL", "http://127.0.0.1:8766").rstrip("/")
 
 
+# On Modal (STUDIO_LIPSYNC=modal) the lip-sync is the private class Lipsync in deploy/modal_app.py,
+# called directly: it has no URL, so nothing else can start the GPU.
+APP, LIPSYNC_CLS, STATE = "iomarkets-live-studio", "Lipsync", "iomarkets-lipsync-state"
+
+
+def _on_modal() -> bool:
+    return os.environ.get("STUDIO_LIPSYNC") == "modal"
+
+
+async def lipsync_wake() -> None:
+    """Start the GPU ahead of an interview (Modal only; a no-op call, then it idles 5 min)."""
+    if _on_modal():
+        import modal
+
+        await modal.Cls.from_name(APP, LIPSYNC_CLS)().ping.spawn.aio()
+
+
 async def lipsync_up() -> bool:
-    """Whether the lip-sync server (lipsync/server.py) answers."""
+    """Whether lip-sync is ready now. On Modal this reads a flag and never starts the GPU."""
+    if _on_modal():
+        import modal
+
+        try:
+            state = modal.Dict.from_name(STATE, create_if_missing=True)
+            return bool(await state.get.aio("up", False))
+        except Exception:
+            return False
     if not lipsync_url():
         return False
     try:
@@ -75,23 +101,39 @@ async def lipsync_up() -> bool:
         return False
 
 
-async def lipsync(mp3: Path, out: Path, shot: str = "wide", restart: bool = False) -> bool:
-    """The anchor saying `mp3` in `shot` (live: 4:3, wide: 16:9), picture and sound; False if
-    there is no lip-sync server or it fails. `restart` starts her loop from its first frame."""
+async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = None) -> int | None:
+    """The anchor saying `mp3` in `shot` (live: 4:3, wide: 16:9), picture and sound, written to
+    `out`. Returns where her loop ended (the next clip's `start`), or None if there is no
+    lip-sync server or it fails. `start` sets where her loop begins (0: her still); by default
+    it carries on from the server's last clip."""
+    if _on_modal():
+        import modal
+
+        try:
+            speaker = modal.Cls.from_name(APP, LIPSYNC_CLS)()
+            data, cursor = await asyncio.wait_for(
+                speaker.speak.remote.aio(mp3.read_bytes(), shot, start), LIPSYNC_TIMEOUT_S
+            )
+        except Exception:
+            return None
+        out.write_bytes(data)
+        return cursor
     url = lipsync_url()
     if not url:
-        return False
+        return None
     files = {"audio": (mp3.name, mp3.read_bytes(), "audio/mpeg")}
+    # On Modal the lip-sync server is public and checks the studio's own token.
+    headers = {"X-Studio-Token": t} if (t := os.environ.get("STUDIO_TOKEN")) else {}
     try:
         timeout = httpx.Timeout(LIPSYNC_TIMEOUT_S, connect=2)
         async with httpx.AsyncClient(timeout=timeout) as client:
-            data = {"shot": shot, "restart": "1" if restart else "0"}
-            r = await client.post(f"{url}/speak", files=files, data=data)
+            data = {"shot": shot} | ({} if start is None else {"start": str(start)})
+            r = await client.post(f"{url}/speak", files=files, data=data, headers=headers)
             r.raise_for_status()
     except httpx.HTTPError:
-        return False
+        return None
     out.write_bytes(r.content)
-    return True
+    return int(r.headers.get("x-cursor", 0))
 
 
 def _studio_input() -> list[str]:
@@ -106,7 +148,7 @@ async def question_card(
     duration = (await media_info(mp3))[2] + 0.6 if mp3 else SILENT_CARD_SECONDS
     fit = f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height}"
     synced = workdir / f"{out.stem}.lipsync.mp4"
-    if mp3 and await lipsync(mp3, synced):
+    if mp3 and await lipsync(mp3, synced) is not None:
         inputs = ["-i", str(synced)]
         picture = f"[0:v]{fit},setsar=1,fps={FPS}[p]"
     elif ANCHOR_STUDIO.exists():  # no lip-sync: the anchor still, not a mouth out of time

@@ -125,8 +125,11 @@
   @media (min-width: 900px) { .stage { grid-template-columns: 5fr 3fr; } }
   .monitor { position: relative; border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
              background: #000; margin-top: 14px; }
-  #program { display: block; width: 100%; aspect-ratio: 16 / 9; }
-  .feed { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+  #program { display: block; width: 100%; aspect-ratio: 16 / 9; position: relative; z-index: 1; }
+  /* The camera, full size under the canvas that draws it: Chrome pauses muted video it judges
+     invisible (it did for a 2 px one on 2026-10-30), and the guest's box went blank. */
+  .feed { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+          pointer-events: none; }
   video { width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: cover; }
   .tape-label { font: 700 .62rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
                 color: var(--muted); margin: 14px 0 8px; display: flex; justify-content: space-between; }
@@ -370,6 +373,9 @@ function showCaption() {
   caption = { name: name || "", role: rest.filter(Boolean).join(", ") };
 }
 showCaption();
+
+// If Chrome pauses the camera anyway, start it again while the interview runs.
+$("cam").addEventListener("pause", () => { if (stream) $("cam").play().catch(() => {}); });
 
 // Programme: what a viewer sees, drawn on a canvas. The IoMarkets TV studio, the AI anchor and
 // the guest's camera side by side, name straps under each, a ticker of fact-checks. The anchor
@@ -730,6 +736,7 @@ async function startMic(onChunk) {
     video: { width: { ideal: 1280 }, height: { ideal: 720 } },
   });
   $("cam").srcObject = stream;
+  $("cam").play().catch(() => {});        // started explicitly, not left to autoplay
   audio = new AudioContext();
   const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
   await audio.audioWorklet.addModule(url);

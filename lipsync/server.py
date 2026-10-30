@@ -16,9 +16,11 @@ Two shots, prepared at their own resolution so her face is never upscaled more t
     live   the 4:3 medium shot in the page's anchor box (960x720 out)
     wide   the full studio, 16:9, for the packaged segment (1280x720 out)
 
-API (localhost, one render at a time):
-    POST /speak   multipart: audio (MP3/WAV), shot (live | wide), restart (1: from the loop's
-                  first frame, where the page's still is) -> MP4, picture and sound
+API (one render at a time; on Modal, deploy/modal_app.py, POST /speak needs the studio's token in
+the X-Studio-Token header when STUDIO_TOKEN is set, as the studio's own API does):
+    POST /speak   multipart: audio (MP3/WAV), shot (live | wide), start (optional: the loop
+                  position to start from; 0 is her still) -> MP4, picture and sound, with
+                  the position where it ended in the X-Cursor header
     GET  /health  -> {"status": "ok", "shots": [...], "cursor": n}
 """
 
@@ -28,6 +30,7 @@ import argparse
 import email
 import email.policy
 import hashlib
+import hmac
 import json
 import os
 import pickle
@@ -223,7 +226,15 @@ class Studio:
             }
 
 
-def serve(studio: Studio, port: int) -> None:
+def token_ok(given: str | None) -> bool:
+    """STUDIO_TOKEN, or STUDIO_TOKEN_PREV during a rotation (docs/SECRETS.md); open if unset."""
+    tokens = [t for t in (os.environ.get("STUDIO_TOKEN"), os.environ.get("STUDIO_TOKEN_PREV")) if t]
+    if not tokens:
+        return True
+    return given is not None and any(hmac.compare_digest(given, t) for t in tokens)
+
+
+def serve(studio: Studio, host: str, port: int) -> None:
     class Handler(BaseHTTPRequestHandler):
         def _json(self, code: int, body: dict) -> None:
             data = json.dumps(body).encode()
@@ -243,6 +254,8 @@ def serve(studio: Studio, port: int) -> None:
         def do_POST(self) -> None:
             if self.path != "/speak":
                 return self._json(404, {"error": "not found"})
+            if not token_ok(self.headers.get("X-Studio-Token")):
+                return self._json(403, {"error": "bad token"})
             body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
             msg = email.message_from_bytes(
                 f"Content-Type: {self.headers['Content-Type']}\r\n\r\n".encode() + body,
@@ -253,8 +266,8 @@ def serve(studio: Studio, port: int) -> None:
                 for p in msg.iter_parts()
             }
             shot = (parts.get("shot") or b"live").decode()
-            if parts.get("restart") == b"1":  # a new interview: start where her still is
-                studio.cursor = 0
+            if parts.get("start"):  # carry on from a clip played earlier (or 0: her still)
+                studio.cursor = int(parts["start"])
             if not parts.get("audio") or shot not in studio.anchors:
                 return self._json(400, {"error": "need audio, and shot live or wide"})
             try:
@@ -270,6 +283,7 @@ def serve(studio: Studio, port: int) -> None:
             print(f"[lipsync] {shot}: {result}", file=sys.stderr)
             self.send_response(200)
             self.send_header("Content-Type", "video/mp4")
+            self.send_header("X-Cursor", str(result["cursor"]))  # where the next clip can start
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
@@ -277,12 +291,13 @@ def serve(studio: Studio, port: int) -> None:
         def log_message(self, *args) -> None:
             pass
 
-    print(f"[lipsync] ready on 127.0.0.1:{port}", file=sys.stderr)
-    HTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    print(f"[lipsync] ready on {host}:{port}", file=sys.stderr)
+    HTTPServer((host, port), Handler).serve_forever()
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--host", default="127.0.0.1")  # 0.0.0.0 on Modal
     ap.add_argument("--port", type=int, default=8766)
     ap.add_argument("--loop", type=Path, default=NEWSROOM / "avatars" / "teresa_loop.mp4")
     ap.add_argument("--mask", type=Path, default=NEWSROOM / "avatars" / "teresa_loop_mask.mp4")
@@ -301,7 +316,7 @@ def main() -> None:
             studio.speak(shot, wav, Path(tmp) / f"{shot}.mp4")
     studio.cursor = 0
     print(f"[lipsync] models, anchor and warm-up in {time.time() - t:.0f}s", file=sys.stderr)
-    serve(studio, args.port)
+    serve(studio, args.host, args.port)
 
 
 if __name__ == "__main__":

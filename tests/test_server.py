@@ -140,10 +140,9 @@ def test_live_interview_round_trip(app_and_replay):
     assert "previous_response_id" not in second  # chaining costs ~10 s a turn; see anchor.py
     opening, welcome, guest = second["input"]
     assert welcome == {"role": "assistant", "content": "Welcome, Margherita."}
-    assert guest == {
-        "role": "user",
-        "content": "Guest (They interrupted you.): We grew five percent.",
-    }
+    assert guest["role"] == "user"
+    assert guest["content"].startswith("Guest (They interrupted you.): We grew five percent.\n")
+    assert "[Suggested angle" in guest["content"]  # see anchor.ANGLES
     assert "GUEST: Margherita" in second["instructions"]
 
 
@@ -187,3 +186,22 @@ def test_previous_token_accepted_during_rotation(monkeypatch):
     assert not _token_ok("other") and not _token_ok(None) and not _token_ok("")
     monkeypatch.delenv("STUDIO_TOKEN_PREV")
     assert not _token_ok("old")  # _PREV removed: the old token stops working
+
+
+def test_only_the_token_holder_wakes_the_lip_sync_gpu(app_and_replay, monkeypatch):
+    from studio import server
+
+    woken: list[int] = []
+
+    async def warm():
+        woken.append(1)
+
+    monkeypatch.setattr(server, "_warm_greeting", warm)
+    monkeypatch.setenv("STUDIO_VOICE", "edge")
+    monkeypatch.setenv("STUDIO_TOKEN", "s3cret")
+    app, _ = app_and_replay
+    client = TestClient(app)
+    assert client.get("/").status_code == 200  # a stranger or a crawler: the page, no GPU
+    assert woken == []
+    client.get("/?token=s3cret")
+    assert woken == [1]
