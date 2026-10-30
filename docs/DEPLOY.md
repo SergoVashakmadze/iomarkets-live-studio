@@ -38,7 +38,7 @@ instead (`docs/SECRETS.md`).
 
 ## The anchor's lip-sync on a Modal GPU
 
-`lipsync/server.py` runs as the class `Lipsync` on an **L4 GPU** in the same app, with MuseTalk's
+`lipsync/server.py` runs as the class `Lipsync` on an **L40S GPU** in the same app, with MuseTalk's
 own pinned stack (Python 3.10, torch 2.0.1/CUDA 11.8, mmcv 2.0.1) at commit `0a89dec`. The
 studio calls it directly (`STUDIO_LIPSYNC=modal`). Modal needs a payment method on the
 workspace before it runs GPU functions.
@@ -62,9 +62,13 @@ bash deploy/lipsync_setup.sh ../iomarkets.tv-newsroom ~/musetalk-local/MuseTalk
 | `warm.sh on HOURS` (default 3, at most 72) ends by itself: `cool_down` checks every 15 minutes | a forgotten "keep warm" |
 | The studio's Meta spend cap (`STUDIO_DAILY_BUDGET_USD`, $10 a day) | runaway Meta API spend |
 
-What it costs: the L4 is about $0.80 an hour while it runs, plus a little CPU and memory. An
-interview keeps it up for its length plus five minutes: about $0.20 for a 10-minute interview.
-`warm.sh on 3` is about $2.40. `cool_down` is a few CPU-seconds four times an hour (cents a
+Measured 2026-10-30, 4.3 s of speech once warm: L4 8.7 s (2.0x real time), **L40S 4.8 s
+(1.1x)**, as fast as the workstation, so the L40S it is. A cold start with everything cached took
+46 s; the very first start ever (image, models, preparing the anchor) took 11 minutes, once.
+
+What it costs: the L40S is about $1.95 an hour while it runs, plus a little CPU and memory. An
+interview keeps it up for its length plus five minutes: about $0.50 for a 10-minute interview.
+`warm.sh on 3` is about $5.85. `cool_down` is a few CPU-seconds four times an hour (cents a
 month). This workspace's Starter plan includes **$1.00** of compute a month (Modal's billing
 page, 2026-10-30; not $30 as an earlier version of this guide said), with a usage limit of $1
 until a payment method is added: without a card nothing can be charged. After adding one, **set
@@ -72,7 +76,7 @@ the usage limit** (Settings, Usage & billing, Usage limit) as the backstop: it c
 whatever happens in code.
 
 ```sh
-bash deploy/warm.sh on 3   # before a testing session; off by itself after three hours
+bash deploy/warm.sh on 3   # before a testing session (~$5.85); off by itself after three hours
 bash deploy/warm.sh off
 ```
 

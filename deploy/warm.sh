@@ -4,7 +4,7 @@
 #   bash deploy/warm.sh on [HOURS]   # default 3; switches itself off after (cool_down, every 15 min)
 #   bash deploy/warm.sh off
 #
-# An L4 kept warm costs about $0.80 an hour. Without `on`, it runs only while interviews use it
+# An L40S kept warm costs about $1.95 an hour. Without `on`, it runs only while interviews use it
 # and five idle minutes after. A redeploy also resets it to off.
 set -euo pipefail
 case "${1:-}" in on|off) ;; *) echo "usage: $0 on [HOURS] | off" >&2; exit 2 ;; esac
@@ -19,7 +19,7 @@ gpu = modal.Cls.from_name("iomarkets-live-studio", "Lipsync")()
 if mode == "on":
     state["warm_until"] = time.time() + hours * 3600
     gpu.update_autoscaler(min_containers=1)
-    print(f"lip-sync GPU kept warm for {hours:g} h (about ${0.80 * hours:.2f}), then off by itself")
+    print(f"lip-sync GPU kept warm for {hours:g} h (about ${1.95 * hours:.2f}), then off by itself")
 else:
     state["warm_until"] = 0
     gpu.update_autoscaler(min_containers=0)

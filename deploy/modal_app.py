@@ -7,7 +7,7 @@ container holding its socket, and one is plenty for judging. Secrets come from t
 secret `iomarkets-studio`; the spend ledger lives on a Volume so the daily cap survives
 restarts (Modal writes Volume changes back when the container stops).
 
-The anchor's lip-sync (lipsync/server.py) runs beside it on an L4 GPU, as a class with no public
+The anchor's lip-sync (lipsync/server.py) runs beside it on an L40S GPU, as a class with no public
 URL, scaled to zero after five idle minutes, one container at most. Opening the studio page with
 the token wakes it; until it is up, interviews show the anchor still. `deploy/warm.sh on HOURS`
 keeps it running for a testing session or judging, and switches itself off when the hours are
@@ -32,7 +32,7 @@ image = (
 
 # MuseTalk's own pinned stack (its README: Python 3.10, torch 2.0.1 on CUDA 11.8, mmcv 2.0.1),
 # at the commit the workstation runs. The workstation needed source builds for its Blackwell
-# GPU; an L4 takes the published wheels.
+# GPU; an L40S takes the published wheels.
 MUSETALK_COMMIT = "0a89dec"
 lipsync_image = (
     modal.Image.debian_slim(python_version="3.10")
@@ -67,6 +67,9 @@ lipsync_image = (
         f"cd /musetalk && git checkout {MUSETALK_COMMIT}",
         "ln -s /vol/models /musetalk/models",
     )
+    # MuseTalk's face detector downloads its weights (86 MB) through torch.hub on first use:
+    # keep them on the Volume, or every cold start fetches them again (~7 s).
+    .env({"TORCH_HOME": "/vol/torch"})
     .add_local_file(str(ROOT / "lipsync" / "server.py"), remote_path="/root/lipsync/server.py")
 )
 lipsync_volume = modal.Volume.from_name("iomarkets-lipsync", create_if_missing=True)
@@ -103,7 +106,9 @@ lipsync_state = modal.Dict.from_name("iomarkets-lipsync-state", create_if_missin
 
 @app.cls(
     image=lipsync_image,
-    gpu="L4",
+    # Measured 2026-10-30, 4.3 s of speech, once warm: L4 8.7 s (2.0x real time), L40S 4.8 s
+    # (1.1x, as the workstation's RTX 5060 Ti). An L40S keeps the anchor's pauses short.
+    gpu="L40S",
     volumes={"/vol": lipsync_volume},
     max_containers=1,  # one anchor, one loop position, and never two GPUs billing at once
     scaledown_window=5 * 60,  # idle five minutes, then off
@@ -111,7 +116,7 @@ lipsync_state = modal.Dict.from_name("iomarkets-lipsync-state", create_if_missin
     startup_timeout=15 * 60,  # the first start prepares the anchor (~2 min)
 )
 class Lipsync:
-    """lipsync/server.py on an L4, reachable only from this app: it has no public URL, so
+    """lipsync/server.py on an L40S, reachable only from this app: it has no public URL, so
     nothing outside the studio can start (and bill) the GPU."""
 
     @modal.enter()
