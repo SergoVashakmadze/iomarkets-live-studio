@@ -1,6 +1,6 @@
 # IoMarkets Live Studio
 
-An entry to the **Meta Global AI Developer Hackathon** (Oct 27 – Nov 4, 2026), problem
+An entry to the **Meta Global AI Developer Hackathon** (building Oct 26 (12:24 PM ET) – Nov 4, 2026), problem
 statement *Build for Your World*.
 
 A live interview studio for any topic (business news first: IoMarkets.tv): a guest talks to an
@@ -8,12 +8,13 @@ AI anchor in real time, Meta models
 listen, check the facts and cut the guest out of their background, and the result is a
 broadcast-ready segment.
 
-**Status:** being built during the hackathon. Nothing here predates Oct 27, 2026.
+**Status:** being built during the hackathon. Building opened when the Oct 26 kickoff ended (12:24 PM ET); see
+[`NEW_WORK.md`](NEW_WORK.md) for the two scaffold commits made earlier that morning.
 
 ## What was built during the hackathon
 
 See [`NEW_WORK.md`](NEW_WORK.md). It lists every feature built in the event window and, separately,
-every pre-existing service this repo calls but does not contain.
+every pre-existing, open-source or hosted piece it builds on.
 
 ## Try it
 
