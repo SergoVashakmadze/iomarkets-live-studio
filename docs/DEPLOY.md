@@ -36,6 +36,32 @@ To ship new code without touching the secret or the judges' link:
 Re-running `deploy.sh` redeploys and rotates the token. Once judges have a link, rotate with overlap
 instead (`docs/SECRETS.md`).
 
+## The anchor's lip-sync on a Modal GPU
+
+`lipsync/server.py` runs as the function `lipsync` on an **L4 GPU** in the same app, with
+MuseTalk's own pinned stack (Python 3.10, torch 2.0.1/CUDA 11.8, mmcv 2.0.1) at commit
+`0a89dec`. The studio finds it by itself (`STUDIO_LIPSYNC_URL`) and sends its token with every
+render. Modal needs a payment method on the workspace before it runs GPU functions.
+
+Once, to fill the private Volume `iomarkets-lipsync` (the anchor's media and the face-parsing
+weights are uploaded; MuseTalk's other weights are fetched from Hugging Face on Modal):
+
+```sh
+bash deploy/lipsync_setup.sh ../iomarkets.tv-newsroom ~/musetalk-local/MuseTalk
+```
+
+It **scales to zero** when idle (10 minutes). Opening the studio page wakes it; the first start
+prepares the anchor (~2 min, then cached on the Volume), later starts load models (~30 s).
+Interviews started before it answers show the anchor still, without lip-sync. For a testing
+session or the judging window, keep it running, and switch it back after:
+
+```sh
+bash deploy/warm.sh on    # ~$0.80/hour on an L4, ~$19/day
+bash deploy/warm.sh off
+```
+
+A redeploy resets it to off.
+
 ## Limits that shaped the setup
 
 - **One container** (`max_containers=1`): answer uploads go to the container holding the

@@ -84,11 +84,13 @@ async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = 
     if not url:
         return None
     files = {"audio": (mp3.name, mp3.read_bytes(), "audio/mpeg")}
+    # On Modal the lip-sync server is public and checks the studio's own token.
+    headers = {"X-Studio-Token": t} if (t := os.environ.get("STUDIO_TOKEN")) else {}
     try:
         timeout = httpx.Timeout(LIPSYNC_TIMEOUT_S, connect=2)
         async with httpx.AsyncClient(timeout=timeout) as client:
             data = {"shot": shot} | ({} if start is None else {"start": str(start)})
-            r = await client.post(f"{url}/speak", files=files, data=data)
+            r = await client.post(f"{url}/speak", files=files, data=data, headers=headers)
             r.raise_for_status()
     except httpx.HTTPError:
         return None
