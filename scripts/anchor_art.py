@@ -3,9 +3,11 @@
     uv run python scripts/anchor_art.py [--out DIR]
 
 Made on 2026-10-31, during the event, to replace the pre-existing HeyGen avatar and studio set
-(the organisers: everything built on must be open source or self-made). The anchor is a fictional
-person. Muse Image draws a new face each call, so this writes candidates to `--out` (default
-media/art/); the ones the studio uses were chosen by eye and cropped into src/studio/assets/:
+(the organisers: everything built on must be open source or self-made). The anchor,
+"Alexandra Morgan", is a fictional person: candidate anchor-1 of the Oct 31 batch (before the
+voice change she was Adrian Hale, a man). Muse Image draws a new face each call, so this writes
+candidates to `--out` (default media/art/); the ones the studio uses were chosen by eye and
+cropped into src/studio/assets/:
 
 - anchor.jpg       960x720, the live 4:3 shot:  crop=1707:1280:106:0, scale=960:720
 - anchor-wide.jpg  1280x720, the segment's wide shot: crop=1920:1080:0:40, scale=1280:720
@@ -27,10 +29,10 @@ ROOT = Path(__file__).resolve().parent.parent
 URL = "https://api.meta.ai/v1/images/generations"
 
 ANCHOR = (
-    "Photorealistic broadcast still: a fictional male television news anchor in his early "
-    "forties, short neat dark hair, light stubble, tailored charcoal suit, white shirt, no tie, "
-    "seated at a glossy anchor desk, facing the camera, warm composed expression, mouth closed, "
-    "head and shoulders and desk in frame, centred. Behind him a modern TV news studio in deep "
+    "Photorealistic broadcast still: a fictional female television news anchor in her late "
+    "thirties, shoulder-length dark hair, tailored navy blazer, seated at a glossy anchor desk, "
+    "facing the camera, warm composed expression, mouth closed, head and shoulders and desk in "
+    "frame, centred. Behind her a modern TV news studio in deep "
     "red and charcoal with soft bokeh screens and warm key lighting. Shot on a broadcast camera, "
     "4K, sharp focus on the face, no text, no logos, no watermark."
 )

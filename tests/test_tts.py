@@ -111,3 +111,29 @@ async def test_no_voice_sends_text_only():
     await s.open()
     await _settle()
     assert [m["type"] for m in sent] == ["anchor_thinking", "anchor_line"]
+
+
+async def test_native_voice_first_then_mms_if_it_fails(monkeypatch):
+    """With STUDIO_TTS_URL set the native voice speaks; if it fails, MMS does, never silence."""
+    calls: list[str] = []
+
+    async def native(text, timeout):
+        calls.append(text)
+        return _fake_wav(text)
+
+    monkeypatch.setenv("STUDIO_TTS_URL", "http://127.0.0.1:9")
+    monkeypatch.setattr(tts, "_native_wav", native)
+    monkeypatch.setattr(tts, "_speak", lambda text: (_ for _ in ()).throw(AssertionError("MMS")))
+    assert (await synthesize("Hello.")) and calls == ["Hello."]
+    assert tts.voice_name() == tts.NATIVE_VOICE
+
+    async def broken(text, timeout):
+        raise RuntimeError("down")
+
+    spoken: list[str] = []
+    monkeypatch.setattr(tts, "_native_wav", broken)
+    monkeypatch.setattr(tts, "_speak", lambda text: spoken.append(text) or _fake_wav(text))
+    assert await synthesize("Hello again.") and spoken == ["Hello again."]
+
+    monkeypatch.delenv("STUDIO_TTS_URL")
+    assert tts.voice_name() == tts.DEFAULT_VOICE

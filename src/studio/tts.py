@@ -20,7 +20,7 @@ import re
 import threading
 import wave
 
-from studio.speech_text import phrases
+from studio.speech_text import phrases, to_speech
 
 MODEL = "facebook/mms-tts-eng"
 DEFAULT_VOICE = "meta-mms-tts-eng-v2"  # also the greeting cache's key: v2 = calmer, rewritten text
@@ -98,10 +98,52 @@ async def _mp3(wav: bytes) -> bytes:
     return data
 
 
+# The anchor's main voice since Oct 31 (late): Meta's FastSpeech 2 on LJSpeech, a native US
+# English speaker, in its own service (voice/server.py): STUDIO_TTS_URL locally, or the Modal
+# class Voice with STUDIO_TTS=modal. MMS, above, is only the fallback when that is not set or
+# fails: the operator found it robotic and not native.
+NATIVE_VOICE = "meta-fastspeech2-ljspeech-v2"  # v2: IoMarkets as in IoT
+APP, VOICE_CLS = "iomarkets-live-studio", "Voice"
+
+
+def _native() -> str:
+    """ "url", "modal" or "" (no native voice configured: MMS)."""
+    if os.environ.get("STUDIO_TTS_URL"):
+        return "url"
+    return "modal" if os.environ.get("STUDIO_TTS") == "modal" else ""
+
+
+def voice_name() -> str:
+    """Which voice speaks now; the greeting's cache key."""
+    return NATIVE_VOICE if _native() else DEFAULT_VOICE
+
+
+async def _native_wav(text: str, timeout: float) -> bytes:
+    spoken = to_speech(text, keep_brand=True)
+    if _native() == "url":
+        import httpx
+
+        url = os.environ["STUDIO_TTS_URL"].rstrip("/") + "/speak"
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.post(url, json={"text": spoken})
+            r.raise_for_status()
+            return r.content
+    import modal
+
+    voice = modal.Cls.from_name(APP, VOICE_CLS)()
+    return await voice.speak.remote.aio(spoken)
+
+
 async def synthesize(text: str, voice: str | None = None, timeout: float = 30.0) -> bytes:
-    """One sentence to MP3 bytes. `voice` is accepted for the old interface; MMS has one."""
+    """One sentence to MP3 bytes: the native voice if configured, else (or if it fails) MMS.
+    `voice` is accepted for the old interface."""
 
     async def run() -> bytes:
+        if _native():
+            try:
+                return await _mp3(await _native_wav(text, timeout))
+            except Exception as e:  # never leave the anchor silent: fall back to MMS
+                print(f"[voice] native voice failed, MMS instead: {e!r}", flush=True)
         async with _lock:
             wav = await asyncio.to_thread(_speak, text)
         return await _mp3(wav)

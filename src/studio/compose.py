@@ -13,26 +13,21 @@ string, so a guest's name or a question cannot break or inject into the filter g
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
-import subprocess
 import textwrap
 from pathlib import Path
 
 import httpx
-import numpy as np
 
 from studio.cutout import BACKDROP, FPS, STUDIO_BACKGROUND, _run
 
 LABEL = "IoMarkets.tv  |  AI anchor"
 AI_NOTE = "AI-generated anchor: synthetic image and voice"
-ANCHOR_NAME = "Adrian Hale  |  AI anchor"
+ANCHOR_NAME = "Alexandra Morgan  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
 STUDIO = ASSETS / "studio.jpg"  # Muse Image, scripts/anchor_art.py
 ANCHOR_STUDIO = ASSETS / "anchor-wide.jpg"  # his picture in the wide shot, without lip-sync
-MOUTH_MAX = 0.7  # how far the mouth opens at the loudest; index.html has the same
-ANCHOR_MOUTH = ASSETS / "anchor-mouth-wide.png"  # his open mouth over it (scripts/anchor_mouth.py)
 LIPSYNC_TIMEOUT_S = 300
 CAPTION_SECONDS = 6
 SILENT_CARD_SECONDS = 3.5
@@ -106,60 +101,6 @@ async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = 
     return int(r.headers.get("x-cursor", 0))
 
 
-def mouth_envelope(pcm: np.ndarray, rate: int = 16000) -> np.ndarray:
-    """How open the anchor's mouth is, 0-1, per video frame: the voice's loudness, as the page
-    computes it live (index.html, mouthOpen). Arithmetic on the samples, no model."""
-    hop = rate // FPS
-    n = len(pcm) // hop
-    if n == 0:
-        return np.zeros(0)
-    frames = pcm[: n * hop].astype(np.float32).reshape(n, hop) / 32768
-    rms = np.sqrt((frames**2).mean(axis=1))
-    peak = max(float(np.percentile(rms, 95)), 0.02)
-    target = np.where(rms < 0.006, 0, MOUTH_MAX * np.clip(rms / (0.85 * peak), 0, 1))
-    level, out = 0.0, np.empty(n)
-    for i, t in enumerate(target):  # opens fast, closes softly
-        level += (t - level) * (0.65 if t > level else 0.4)
-        out[i] = level
-    return out
-
-
-def mouth_clip(mp3: Path, out: Path) -> bool:
-    """The anchor's wide shot, his mouth following `mp3`'s loudness, silent, at FPS. False if
-    his pictures are missing. Runs in a thread: plain numpy and ffmpeg."""
-    if not (ANCHOR_STUDIO.exists() and ANCHOR_MOUTH.exists()):
-        return False
-    w, h = 1280, 720
-
-    def decode(path: Path, *args: str) -> bytes:
-        cmd = ["ffmpeg", "-nostdin", "-v", "error", "-i", str(path), *args, "-"]
-        return subprocess.run(cmd, capture_output=True, check=True).stdout
-
-    raw = "-f", "rawvideo", "-vf", f"scale={w}:{h}", "-pix_fmt"
-    base = np.frombuffer(decode(ANCHOR_STUDIO, *raw, "rgb24"), np.uint8).reshape(h, w, 3)
-    rgba = np.frombuffer(decode(ANCHOR_MOUTH, *raw, "rgba"), np.uint8).reshape(h, w, 4)
-    pcm = np.frombuffer(decode(mp3, "-ac", "1", "-ar", "16000", "-f", "s16le"), np.int16)
-    env = mouth_envelope(pcm)
-    alpha = rgba[..., 3:].astype(np.float32) / 255
-    b, m = base.astype(np.float32), rgba[..., :3].astype(np.float32)
-    enc = subprocess.Popen(
-        ["ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
-         "-s", f"{w}x{h}", "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "veryfast",
-         "-pix_fmt", "yuv420p", str(out)],
-        stdin=subprocess.PIPE,
-    )  # fmt: skip
-    assert enc.stdin is not None
-    still = base.tobytes()
-    for e in env:
-        if e < 0.03:
-            enc.stdin.write(still)
-        else:
-            a = alpha * e
-            enc.stdin.write((b * (1 - a) + m * a).astype(np.uint8).tobytes())
-    enc.stdin.close()
-    return enc.wait() == 0 and len(env) > 0
-
-
 def _studio_input() -> list[str]:
     still = STUDIO if STUDIO.exists() else BACKDROP
     return ["-loop", "1", "-framerate", str(FPS), "-i", str(still)]
@@ -175,11 +116,7 @@ async def question_card(
     if mp3 and await lipsync(mp3, synced) is not None:
         inputs = ["-i", str(synced)]
         picture = f"[0:v]{fit},setsar=1,fps={FPS}[p]"
-    elif mp3 and await asyncio.to_thread(mouth_clip, mp3, workdir / f"{out.stem}.mouth.mp4"):
-        inputs = ["-i", str(workdir / f"{out.stem}.mouth.mp4")]
-        # The card runs 0.6 s past the voice: hold the last frame (mouth closed) to the end.
-        picture = f"[0:v]{fit},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=2[p]"
-    elif ANCHOR_STUDIO.exists():  # no voice: the anchor still
+    elif ANCHOR_STUDIO.exists():  # the anchor still: no lip-sync model the rules allow
         inputs = ["-loop", "1", "-framerate", str(FPS), "-i", str(ANCHOR_STUDIO)]
         picture = f"[0:v]{fit},setsar=1[p]"
     elif STUDIO.exists() or BACKDROP.exists():

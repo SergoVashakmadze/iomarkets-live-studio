@@ -7,7 +7,9 @@ container holding its socket, and one is plenty for judging. Secrets come from t
 secret `iomarkets-studio`; the spend ledger lives on a Volume so the daily cap survives
 restarts (Modal writes Volume changes back when the container stops).
 
-The anchor is a Muse Image still voiced by Meta's MMS-TTS on this container's CPU: no GPU.
+The anchor is a Muse Image still. Her voice is Meta's FastSpeech 2 (LJSpeech, a native US
+speaker) in the CPU class `Voice` below (voice/server.py, Python 3.10 for fairseq); MMS-TTS on the
+web container's CPU is the fallback. No GPU.
 """
 
 from pathlib import Path
@@ -32,6 +34,26 @@ image = (
     .add_local_dir(str(ROOT / "src" / "studio"), remote_path="/root/studio")
 )
 
+# The voice service's own image: fairseq 0.12 needs Python 3.10. The model, its vocoder and the
+# CMU Pronouncing Dictionary are fetched at build time, so a cold start downloads nothing.
+voice_image = (
+    modal.Image.debian_slim(python_version="3.10")
+    .apt_install("libsndfile1", "build-essential")  # fairseq 0.12.2 builds from source
+    # uv, not pip: pip refuses omegaconf 2.0.6 (fairseq's pin) over its old metadata.
+    .uv_pip_install(
+        requirements=[str(ROOT / "voice" / "requirements.txt")],
+        extra_index_url="https://download.pytorch.org/whl/cpu",
+        extra_options="--index-strategy unsafe-best-match",
+    )
+    .run_commands(
+        "python -c \"import nltk; nltk.download('cmudict', download_dir='/usr/share/nltk_data')\""
+    )
+    .add_local_file(
+        str(ROOT / "voice" / "server.py"), remote_path="/root/voice_server.py", copy=True
+    )
+    .run_commands("cd /root && python -c 'import voice_server; voice_server.Voice()'")
+)
+
 app = modal.App("iomarkets-live-studio")
 ledger_volume = modal.Volume.from_name("iomarkets-studio-ledger", create_if_missing=True)
 
@@ -49,7 +71,32 @@ ledger_volume = modal.Volume.from_name("iomarkets-studio-ledger", create_if_miss
 @modal.concurrent(max_inputs=50)
 @modal.asgi_app()
 def web():
+    import os
 
     from studio.server import create_app
 
+    os.environ.setdefault("STUDIO_TTS", "modal")  # the Voice class below; MMS if it fails
     return create_app()
+
+
+@app.cls(
+    image=voice_image,
+    cpu=8.0,  # 4 cores: 1.8-2.3 s a sentence; the anchor's first words wait on this
+    memory=4096,
+    max_containers=2,
+    scaledown_window=20 * 60,  # as the web container: warm for the whole session
+    timeout=60,
+)
+class Voice:
+    """The anchor's voice, Meta's FastSpeech 2: text (already written for the ear) to WAV.
+    No public URL: only the studio calls it."""
+
+    @modal.enter()
+    def load(self) -> None:
+        import voice_server
+
+        self.voice = voice_server.Voice()
+
+    @modal.method()
+    def speak(self, text: str) -> bytes:
+        return self.voice.speak(text)

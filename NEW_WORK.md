@@ -17,10 +17,27 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
-### Oct 31 (evening): a voice you can follow, a smaller mouth
+### Oct 31 (late): a native US voice, and Alexandra Morgan
 
-After the operator's first test ("very robotic", questions not understood; the mouth moved too
-much and even moved his nose):
+The operator: MMS and the Seamless voices "have some accents and do not sound like native
+speakers". Of Meta's speech models, only FastSpeech 2 on LJSpeech (fairseq S^2,
+`facebook/fastspeech2-en-ljspeech`) was trained on one native English speaker (US). Meta's
+Transformer TTS on the same data never stopped talking ("hi, hi, hi" for 55 s) and was dropped.
+
+- `voice/server.py`: FastSpeech 2 and its HiFi-GAN vocoder on the CPU (0.2-1.0 s a sentence),
+  in its own Python 3.10 environment for fairseq; on Modal, the CPU class `Voice`. The studio
+  calls it per sentence (`tts.py`, `STUDIO_TTS_URL` or `STUDIO_TTS=modal`) and falls back to MMS
+  if it fails, so the anchor is never silent.
+- Words become phonemes by lookup, with no model: a small lexicon first ("IoMarkets" as one
+  word, "Io" said as in IoT, then "markets": the operator's correction), then the CMU Pronouncing
+  Dictionary, then spelling rules for unknown names. The model card's phonemizer (g2p_en) was
+  not used: it runs a non-Meta tagger and a neural guesser. Commas become the model's own pause.
+- The voice is a woman's, so the anchor is again a woman, "Alexandra Morgan": another of the Oct
+  31 Muse Image portraits (`scripts/anchor_art.py`).
+
+### Oct 31 (evening): a voice you can follow
+
+After the operator's first test ("very robotic", questions not understood):
 
 - MMS's English vocabulary has no punctuation, "%", "$" or decimal point, so lines arrived as
   run-ons with figures mangled. `src/studio/speech_text.py` rewrites each line for the ear
@@ -28,8 +45,7 @@ much and even moved his nose):
   voiced alone with a 0.18 s pause, at calmer settings (noise 0.4, rate 0.92) and a steady level.
   Measured with Whisper as the listener, offline: word errors 0.22 to 0.17, and the questions
   with figures went from garbled ("riven you trepled in fist") to word-perfect.
-- The mouth patch now covers only the lips and upper chin, with a hard edge under the nose, and
-  opens at most 70 %, in proportion to loudness.
+- "IoMarkets" is said "eye oh markets", never "eomarkets".
 
 ### Oct 31: an anchor made entirely with Meta's models
 
@@ -47,13 +63,9 @@ and Microsoft's Edge voice are therefore gone.
   every model called at runtime must be Meta's, which rules out MuseTalk even self-hosted. So
   `lipsync/server.py`, its Modal L40S class and its setup scripts were deleted. Lip-sync returns
   only if Meta releases a model for it; the studio's lip-sync hook (`compose.lipsync_url`) stays.
-- **His mouth moves with his voice, with no model at runtime.** Muse Image's edit endpoint drew
-  the anchor once with his mouth open (`scripts/anchor_mouth.py`); OpenCV's ECC image
-  registration (optimisation, not a trained model) aligns it to the still, and only a feathered
-  mouth patch is kept. Live, the page measures the loudness of the voice it is playing (Web
-  Audio) and fades the open mouth in and out with it, over a slow camera drift; the segment's
-  question cards do the same arithmetic in numpy (`compose.mouth_clip`). It follows the rhythm
-  of speech, not individual sounds: not lip-sync, and labelled as such.
+- A mouth faded in with the voice's loudness (one Muse Image open-mouth picture, no model at
+  runtime) was built and tried the same evening, and removed: the operator judged it bad, and it
+  moved the nose. The anchor is a still with a slow camera drift.
 - The page's fallback voice uses only the device's own voices, never a browser's online ones.
 - Measured before the switch, the same replies lip-synced on the workstation's RTX 5060 Ti and on
   a Modal L40S: 1.15x and 1.10x real time, 4-6 s before the first word and 3-6 s of pauses in a

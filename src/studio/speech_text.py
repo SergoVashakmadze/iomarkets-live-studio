@@ -112,9 +112,21 @@ def _acronym(m: re.Match) -> str:
     return spelled + ("s" if plural else "")
 
 
-def to_speech(text: str) -> str:
-    """One line, written for the ear: every number and symbol as words."""
+def to_speech(text: str, keep_brand: bool = False) -> str:
+    """One line, written for the ear: every number and symbol as words. With `keep_brand`,
+    "IoMarkets" stays one word for a voice with its own pronunciation of it (voice/server.py);
+    otherwise it is spelled "eye oh markets tee vee" for MMS."""
     t = text.replace("’", "'").replace("—", ", ").replace("–", ", ")
+    # The brand, as said on air: "eye oh markets", never "eomarkets" (operator, Oct 31).
+    if not keep_brand:
+        t = re.sub(
+            r"\bIoMarkets(?:\.tv|\.TV| TV)?\b",
+            lambda m: "eye oh markets" + (" tee vee" if len(m.group(0)) > 9 else ""),
+            t,
+            flags=re.I,
+        )
+    else:
+        t = re.sub(r"\bIoMarkets(?:\.tv|\.TV| TV)\b", "IoMarkets TV", t, flags=re.I)
     t = re.sub(
         r"\bQ([1-4])\b",
         lambda m: "the " + ["first", "second", "third", "fourth"][int(m.group(1)) - 1] + " quarter",
