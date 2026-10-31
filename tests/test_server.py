@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import re
 
 import httpx
 import pytest
@@ -205,3 +206,10 @@ def test_only_the_token_holder_wakes_the_lip_sync_gpu(app_and_replay, monkeypatc
     assert woken == []
     client.get("/?token=s3cret")
     assert woken == [1]
+
+
+def test_picture_urls_carry_their_fingerprint(app_and_replay):
+    """A changed anchor picture is a new URL, so a browser's hour-long cache cannot hide it."""
+    page = TestClient(app_and_replay[0]).get("/").text
+    assert "__ASSETS_V__" not in page
+    assert re.search(r"v=[0-9a-f]{10}`", page)
