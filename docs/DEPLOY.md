@@ -38,7 +38,7 @@ instead (`docs/SECRETS.md`).
 
 ## No GPU, and the guards on spend
 
-The anchor is a Muse Image still voiced by Meta's MMS-TTS on the container's CPU. The MuseTalk
+The anchor is a Muse Image still voiced by Meta's FastSpeech 2 in the CPU class `Voice` (MMS-TTS on the web container is the fallback). The MuseTalk
 lip-sync class on an L40S (Oct 30) was removed on Oct 31: the organisers allow only Meta models
 at runtime. Nothing in this app starts a GPU.
 
