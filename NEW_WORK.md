@@ -29,9 +29,10 @@ and Microsoft's Edge voice are therefore gone.
 - **The anchor's picture and the studio set were made with Meta's Muse Image** (`muse-image-1.0`)
   on Oct 31 (`scripts/anchor_art.py`, prompts included). The anchor, "Adrian Hale", is a
   fictional person. The pictures are in this repo (`src/studio/assets/`).
-- **The anchor is shown still.** Lip-sync (`lipsync/server.py`, MuseTalk) is switched off by
-  default: it was built for the HeyGen avatar, and MuseTalk is not a Meta model. Next step after
-  the hackathon: lip-sync the Muse Image anchor with a model the rules allow.
+- **The anchor is shown still, and MuseTalk is removed.** The organisers confirmed (Oct 31) that
+  every model called at runtime must be Meta's, which rules out MuseTalk even self-hosted. So
+  `lipsync/server.py`, its Modal L40S class and its setup scripts were deleted. Lip-sync returns
+  only if Meta releases a model for it; the studio's lip-sync hook (`compose.lipsync_url`) stays.
 - The page's fallback voice uses only the device's own voices, never a browser's online ones.
 - Measured before the switch, the same replies lip-synced on the workstation's RTX 5060 Ti and on
   a Modal L40S: 1.15x and 1.10x real time, 4-6 s before the first word and 3-6 s of pauses in a
@@ -306,8 +307,8 @@ websockets (BSD-3), FastAPI (MIT), uvicorn (BSD-3), numpy (BSD-3 and others), py
 Open weights run by the studio itself: **Meta's MMS-TTS** (`facebook/mms-tts-eng`, CC-BY-NC-4.0),
 the anchor's voice.
 
-**MuseTalk v1.5** (open source, MIT, TMElyralab): `lipsync/server.py` was built on it (Oct 30)
-and is switched off since Oct 31; the studio does not call it unless configured to.
+**MuseTalk v1.5** (open source, MIT, TMElyralab): `lipsync/server.py` was built on it on Oct 30
+and removed on Oct 31; the submitted studio does not use it.
 
 Contained here but made before the event:
 

@@ -2,8 +2,7 @@
 
 Each answer is preceded by the AI anchor asking the question in the studio, with the question
 in a strap. The anchor's picture and the set were made with Meta's Muse Image
-(scripts/anchor_art.py). He is shown still: lip-sync (`lipsync/server.py` via
-`STUDIO_LIPSYNC_URL`, or Modal with `STUDIO_LIPSYNC=modal`) is off unless configured.
+(scripts/anchor_art.py). He is shown still (see `lipsync_url`).
 Each answer carries a lower third with the guest's name and role for its first seconds.
 Everything is joined with ffmpeg's concat filter, which scales, resamples and re-times every
 part, so cards and answers from any camera join cleanly.
@@ -14,7 +13,6 @@ string, so a guest's name or a question cannot break or inject into the filter g
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import textwrap
@@ -22,7 +20,6 @@ from pathlib import Path
 
 import httpx
 
-from studio import ledger
 from studio.cutout import BACKDROP, FPS, STUDIO_BACKGROUND, _run
 
 LABEL = "IoMarkets.tv  |  AI anchor"
@@ -63,40 +60,15 @@ def _text(path: Path, text: str) -> str:
 
 
 def lipsync_url() -> str:
-    """The lip-sync server, or "" (the default): the anchor is then shown still."""
+    """A lip-sync server, or "" (the default): the anchor is then shown still.
+
+    The hook is kept for a future Meta lip-sync model. Nothing in this repo serves it: MuseTalk,
+    used Oct 30, was removed on Oct 31 (organisers: only Meta models at runtime)."""
     return os.environ.get("STUDIO_LIPSYNC_URL", "").rstrip("/")
 
 
-# On Modal (STUDIO_LIPSYNC=modal) the lip-sync is the private class Lipsync in deploy/modal_app.py,
-# called directly: it has no URL, so nothing else can start the GPU.
-APP, LIPSYNC_CLS, STATE = "iomarkets-live-studio", "Lipsync", "iomarkets-lipsync-state"
-
-
-def _on_modal() -> bool:
-    return os.environ.get("STUDIO_LIPSYNC") == "modal"
-
-
-async def lipsync_wake() -> None:
-    """Start the GPU ahead of an interview (Modal only; a no-op call, then it idles 5 min)."""
-    if _on_modal() and ledger.gpu_allowed():
-        import modal
-
-        await modal.Cls.from_name(APP, LIPSYNC_CLS)().ping.spawn.aio()
-
-
 async def lipsync_up() -> bool:
-    """Whether lip-sync is ready now. On Modal this reads a flag and never starts the GPU, and
-    once today's GPU cap is spent the answer is no: the anchor is shown still."""
-    if _on_modal():
-        import modal
-
-        if not ledger.gpu_allowed():
-            return False
-        try:
-            state = modal.Dict.from_name(STATE, create_if_missing=True)
-            return bool(await state.get.aio("up", False))
-        except Exception:
-            return False
+    """Whether a lip-sync server is configured and up. None is, by default."""
     if not lipsync_url():
         return False
     try:
@@ -111,23 +83,6 @@ async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = 
     `out`. Returns where her loop ended (the next clip's `start`), or None if there is no
     lip-sync server or it fails. `start` sets where her loop begins (0: her still); by default
     it carries on from the server's last clip."""
-    if _on_modal():
-        import modal
-
-        if not ledger.gpu_allowed():
-            return None
-        t = asyncio.get_running_loop().time()
-        try:
-            speaker = modal.Cls.from_name(APP, LIPSYNC_CLS)()
-            data, cursor = await asyncio.wait_for(
-                speaker.speak.remote.aio(mp3.read_bytes(), shot, start), LIPSYNC_TIMEOUT_S
-            )
-        except Exception:
-            return None
-        finally:
-            ledger.charge("gpu", ledger.gpu_seconds(asyncio.get_running_loop().time() - t))
-        out.write_bytes(data)
-        return cursor
     url = lipsync_url()
     if not url:
         return None

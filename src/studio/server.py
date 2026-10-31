@@ -140,9 +140,8 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     async def index(token: str | None = Query(None)) -> str:
-        # Make the greeting (and the lip-sync GPU) ready while the operator sets up, so going
-        # live starts at once. Only for the token's holders: a stranger or a crawler loading
-        # the page must not start a GPU.
+        # Make the greeting ready while the operator sets up, so going live starts at once.
+        # Only for the token's holders: a stranger or a crawler must not spend anything.
         if os.environ.get("STUDIO_VOICE") != "browser" and _token_ok(token) and not warming:
             task = asyncio.create_task(_warm_greeting())
             warming.add(task)
@@ -293,7 +292,6 @@ def create_app(
 
 async def _warm_greeting() -> None:
     with contextlib.suppress(Exception):
-        await compose.lipsync_wake()
         await greeting.prepare(synthesize, await compose.lipsync_up())
 
 

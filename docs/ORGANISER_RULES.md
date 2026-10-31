@@ -16,6 +16,7 @@ From Cerebral Valley, confirmed by Adam Blumenfeld ("p accurate"):
 - Track is chosen in the submission form. Startup needs an incorporated company with an EIN or
   the national equivalent; otherwise Indie.
 - Non-Meta models may be used alongside Meta's, but Meta's must be a real part of the project.
+  **Superseded Oct 31:** every model called at runtime must be Meta's (below).
 
 Adam added: everything you build off of must be open source and clearly disclosed.
 
@@ -32,8 +33,11 @@ own ruling):
 3. Track: ask in the questions channel whether a UK company number and UTR count; Indie is fine
    if unsure. **Registered as Indie.**
 
-Asked back on Oct 31: whether MuseTalk (MIT, self-hosted) may lip-sync the anchor, given the
-Oct 27 answer that non-Meta models may be used alongside Meta's. Until answered, lip-sync is off.
+Follow-up answer, Oct 31: "every model your project calls at runtime must be a Meta model",
+which replaced the Oct 27 guidance that non-Meta models could run alongside Meta's. MuseTalk is
+not Meta's, so it cannot lip-sync the anchor, even self-hosted. **Done:** MuseTalk removed; the
+anchor is a still. The track question was again deferred to the organisers: **Indie** unless
+they say otherwise.
 
 ## Where the repo stands
 
