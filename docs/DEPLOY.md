@@ -45,7 +45,7 @@ at runtime. Nothing in this app starts a GPU.
 | Guard | What it stops |
 |---|---|
 | The page prepares the greeting only for the token's holders | a stranger's page load spending anything |
-| The daily total (`STUDIO_DAILY_BUDGET_USD`, $10) refuses new briefs and interviews once spent | runaway spend of any kind |
+| The daily total (`STUDIO_DAILY_BUDGET_USD`: $20 since Oct 31 for the testers, $10 by default) refuses new briefs and interviews once spent | runaway spend of any kind |
 | An interview ends by itself after 3 minutes with no one speaking (`IDLE_END_S`), and after 15 minutes in any case | a forgotten tab keeping the microphone and transcription busy |
 
 ## Limits that shaped the setup

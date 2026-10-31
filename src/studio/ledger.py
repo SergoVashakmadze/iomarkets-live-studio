@@ -6,6 +6,7 @@ web searches, SAM frames, seconds of audio streamed), priced at the Standard-mod
 published at dev.meta.ai/docs/pricing-rate-limits (read 2026-10-27), and added to a ledger.
 Once today's total (UTC) reaches `STUDIO_DAILY_BUDGET_USD` (default $10), new briefs and
 interviews are refused; one already running finishes.
+The deployed studio sets it in the Modal secret: $20 from 2026-10-31, for the testers' day.
 
 The anchor's lip-sync on Modal's GPU is metered too ("gpu": render time at the L40S rate, plus
 the five idle minutes after each interview), under the same daily total and its own smaller cap
