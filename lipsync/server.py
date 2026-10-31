@@ -1,5 +1,10 @@
 """The anchor's lip-sync: MuseTalk v1.5 over her moving loop, so head and body move as she talks.
 
+OFF since 2026-10-31. It was built for the pre-existing HeyGen avatar, which the organisers ruled
+out (not open source), and MuseTalk is not a Meta model. Kept for the roadmap: lip-sync the Muse
+Image anchor once a Meta model or a ruling allows it. The studio uses it only when
+STUDIO_LIPSYNC_URL (or STUDIO_LIPSYNC=modal) is set.
+
 Runs in a MuseTalk checkout's environment (MuseTalk is MIT, github.com/TMElyralab/MuseTalk),
 with that checkout as the working directory, since its models load from ./models:
 

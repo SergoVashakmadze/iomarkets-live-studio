@@ -25,7 +25,15 @@ ROOT = Path(__file__).resolve().parent.parent
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .apt_install("ffmpeg", "fonts-dejavu-core")  # drawtext in the segment needs a font
+    # CPU torch first: requirements.txt pins torch==...+cpu, which only that index serves.
+    .pip_install("torch==2.15.0", index_url="https://download.pytorch.org/whl/cpu")
     .pip_install_from_requirements(str(ROOT / "deploy" / "requirements.txt"))
+    # The anchor's voice, Meta's MMS-TTS: baked into the image, so a cold start never downloads it.
+    .run_commands(
+        "python -c \"from transformers import AutoTokenizer, VitsModel; "
+        "AutoTokenizer.from_pretrained('facebook/mms-tts-eng'); "
+        "VitsModel.from_pretrained('facebook/mms-tts-eng')\""
+    )
     .env({"STUDIO_LEDGER": "/data/ledger.json"})
     .add_local_dir(str(ROOT / "src" / "studio"), remote_path="/root/studio")
 )
@@ -91,11 +99,11 @@ ledger_volume = modal.Volume.from_name("iomarkets-studio-ledger", create_if_miss
 @modal.concurrent(max_inputs=50)
 @modal.asgi_app()
 def web():
-    import os
 
     from studio.server import create_app
 
-    os.environ.setdefault("STUDIO_LIPSYNC", "modal")  # compose.lipsync calls Lipsync.speak
+    # Lip-sync is off (2026-10-31): the anchor is a Muse Image still. Setting STUDIO_LIPSYNC=modal
+    # in the secret would switch the L40S class below back on.
     return create_app()
 
 

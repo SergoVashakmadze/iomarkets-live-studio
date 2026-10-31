@@ -70,12 +70,12 @@ MAX_FRAME_BYTES = 1_400_000  # one JPEG frame; base64 must fit a 2 MiB WebSocket
 MAX_INTERVIEW_S = 15 * 60
 # A forgotten tab must not keep the microphone, speech recognition and the GPU running.
 IDLE_END_S = 3 * 60
-# The studio's pictures; studio.jpg and the anchor's are pre-existing and built locally
-# (scripts/anchor_assets.py), so they may be missing: the page falls back to backdrop.jpg.
+# The studio's pictures: the set and the anchor, made with Meta's Muse Image
+# (scripts/anchor_art.py); the page falls back to backdrop.jpg if one is missing.
 ASSETS = {
     "backdrop.jpg": "image/jpeg",
     "studio.jpg": "image/jpeg",
-    "anchor.png": "image/png",
+    "anchor.jpg": "image/jpeg",
 }
 
 

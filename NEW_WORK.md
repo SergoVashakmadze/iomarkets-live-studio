@@ -17,6 +17,26 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Oct 31: an anchor made entirely with Meta's models
+
+The organisers' answer (Discord, Oct 31): everything built on must be open source or self-made,
+and the models called at runtime must be Meta's. The HeyGen avatar, the pre-existing studio set
+and Microsoft's Edge voice are therefore gone.
+
+- **The anchor's voice is Meta's MMS-TTS** (`facebook/mms-tts-eng`, open weights, CC-BY-NC-4.0),
+  run in the studio's own process on the CPU (`src/studio/tts.py`): 0.3-0.8 s a sentence on the
+  CPU, measured. MMS has one English voice, a man's, so the anchor is now a man.
+- **The anchor's picture and the studio set were made with Meta's Muse Image** (`muse-image-1.0`)
+  on Oct 31 (`scripts/anchor_art.py`, prompts included). The anchor, "Adrian Hale", is a
+  fictional person. The pictures are in this repo (`src/studio/assets/`).
+- **The anchor is shown still.** Lip-sync (`lipsync/server.py`, MuseTalk) is switched off by
+  default: it was built for the HeyGen avatar, and MuseTalk is not a Meta model. Next step after
+  the hackathon: lip-sync the Muse Image anchor with a model the rules allow.
+- The page's fallback voice uses only the device's own voices, never a browser's online ones.
+- Measured before the switch, the same replies lip-synced on the workstation's RTX 5060 Ti and on
+  a Modal L40S: 1.15x and 1.10x real time, 4-6 s before the first word and 3-6 s of pauses in a
+  12 s reply on either GPU, so lip-sync, not the GPU, was the anchor's delay.
+
 ### Oct 30: the anchor speaks first, at once
 
 - A fixed greeting ("Welcome to IoMarkets TV. I'm Alexandra Morgan, and we're live.") is voiced
@@ -267,37 +287,34 @@ Commits: see the `feat/day1-responses-agent-loop` PR.
 
 No code from IoMarkets.tv's earlier studio is used, and `src/` calls none of its backends. (An
 earlier version of this section said the repo called that backend over HTTP. It never did.)
-What the studio does take from IoMarkets.tv is media: the anchor's avatar and the studio set,
-listed below, kept out of this repo.
+Since Oct 31 the studio uses no IoMarkets.tv media except the logo: the anchor and the set are
+made with Muse Image during the event (above).
 
 Hosted services, called over HTTPS:
 
 - **Meta**: Muse Spark 1.3 (Responses API, web search, vision, Files API), Muse Voice Transcribe,
-  SAM 3.1 (`api.meta.ai`).
+  SAM 3.1, and Muse Image for the anchor's picture and the set, made once (`api.meta.ai`).
 - **Muse Spark Open** (open weights, Muse Model License), served by Fireworks (`api.fireworks.ai`).
-- **Microsoft Edge text-to-speech**, through the open-source `edge-tts` client (LGPL-3.0). The
-  service itself is Microsoft's and not open source; it only reads the anchor's own lines.
 - **Yahoo Finance** quote endpoint (Scout's `market_quote` tool), and the **YouTube / Vimeo
   oEmbed** endpoints (title and channel of a pasted video).
 
 Open-source libraries (`pyproject.toml`): httpx (BSD-3), pydantic (MIT), certifi (MPL-2.0),
 websockets (BSD-3), FastAPI (MIT), uvicorn (BSD-3), numpy (BSD-3 and others), python-multipart
-(Apache-2.0), edge-tts (LGPL-3.0), and Meta's `meta-sam-parser` (SAM License).
+(Apache-2.0), PyTorch (BSD-3), Hugging Face transformers (Apache-2.0), and Meta's
+`meta-sam-parser` (SAM License).
 
-**MuseTalk v1.5** (open source, MIT, TMElyralab) and its models, installed on the workstation
-(`~/musetalk-local`): `lipsync/server.py` runs on it, outside the studio's own environment.
+Open weights run by the studio itself: **Meta's MMS-TTS** (`facebook/mms-tts-eng`, CC-BY-NC-4.0),
+the anchor's voice.
+
+**MuseTalk v1.5** (open source, MIT, TMElyralab): `lipsync/server.py` was built on it (Oct 30)
+and is switched off since Oct 31; the studio does not call it unless configured to.
 
 Contained here but made before the event:
 
 - The IoMarkets logo (Rainmaker Partners Ltd, 2026), embedded in the studio page as a 176 px WebP
   for the top bar, the favicon and the on-air corner bug.
 
-Used by the studio, made before the event, and kept out of this repo (built locally by
-`scripts/anchor_assets.py` from the IoMarkets.tv newsroom; git ignores them):
-
-- **The anchor, "Alexandra Morgan"**: Teresa, an avatar from HeyGen's library (sourced
-  2026-04-23): her 6.6 s talking loop and its mask, from which the lip-sync server and her
-  still are made. Not open source: HeyGen's terms apply.
-- **The IoMarkets TV studio background** (the red studio set).
+Used Oct 30 only, no longer used since Oct 31, and never in this repo: a HeyGen library
+avatar (Teresa) and the IoMarkets TV studio background, both made before the event.
 
 No pre-existing datasets are used. Test fixtures are recordings of this repo's own live calls.

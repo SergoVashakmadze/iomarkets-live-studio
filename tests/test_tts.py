@@ -22,32 +22,38 @@ def test_sentences():
     assert sentences("It grew 5.4% in FY26. Why?") == ["It grew 5.4% in FY26.", "Why?"]
 
 
-class FakeCommunicate:
-    calls: list[tuple[str, str]] = []
+def _fake_wav(text: str) -> bytes:
+    import io
+    import wave
 
-    def __init__(self, text, voice):
-        FakeCommunicate.calls.append((text, voice))
-        self.text = text
-
-    async def stream(self):
-        yield {"type": "WordBoundary"}
-        yield {"type": "audio", "data": b"mp3:"}
-        yield {"type": "audio", "data": self.text.encode()}
-
-
-async def test_synthesize_collects_audio(monkeypatch):
-    monkeypatch.setattr(tts.edge_tts, "Communicate", FakeCommunicate)
-    monkeypatch.delenv("STUDIO_VOICE", raising=False)
-    assert await synthesize("Hello.") == b"mp3:Hello."
-    assert FakeCommunicate.calls[-1] == ("Hello.", "en-GB-LibbyNeural")
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(16000)
+        w.writeframes(b"\x00\x01" * 1600 * max(1, len(text) // 10))
+    return out.getvalue()
 
 
-async def test_synthesize_with_no_audio_fails(monkeypatch):
-    class Silent(FakeCommunicate):
-        async def stream(self):
-            yield {"type": "WordBoundary"}
+async def test_synthesize_gives_mp3_in_call_order(monkeypatch):
+    """Meta's MMS-TTS is stubbed (no model download in tests); the WAV goes out as MP3."""
+    spoken: list[str] = []
 
-    monkeypatch.setattr(tts.edge_tts, "Communicate", Silent)
+    def speak(text):
+        spoken.append(text)
+        return _fake_wav(text)
+
+    monkeypatch.setattr(tts, "_speak", speak)
+    out = await asyncio.gather(synthesize("First."), synthesize("Second, longer sentence."))
+    assert spoken == ["First.", "Second, longer sentence."]
+    assert all(o[:3] == b"ID3" or o[:2] in (b"\xff\xfb", b"\xff\xf3") for o in out)
+
+
+async def test_synthesize_failure_raises(monkeypatch):
+    def broken(text):
+        raise RuntimeError("model missing")
+
+    monkeypatch.setattr(tts, "_speak", broken)
     with pytest.raises(RuntimeError):
         await synthesize("Hello.")
 

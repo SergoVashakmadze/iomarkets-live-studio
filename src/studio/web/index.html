@@ -295,6 +295,7 @@ const MODELS = [
   ["vision", "Muse Spark 1.3", "chart reading"],
   ["sam", "SAM 3.1", "guest cutout"],
   ["open", "Muse Spark Open", "brief editor (open weights)"],
+  ["voice", "MMS-TTS", "anchor voice (open weights)"],
 ];
 const busy = {}, uses = {};
 for (const [key, name, role] of MODELS) {
@@ -377,20 +378,17 @@ showCaption();
 // If Chrome pauses the camera anyway, start it again while the interview runs.
 $("cam").addEventListener("pause", () => { if (stream) $("cam").play().catch(() => {}); });
 
-// Programme: what a viewer sees, drawn on a canvas. The IoMarkets TV studio, the AI anchor and
-// the guest's camera side by side, name straps under each, a ticker of fact-checks. The anchor
-// (pre-existing media, scripts/anchor_assets.py) speaks in lip-synced clips when the server has
-// MuseTalk; otherwise she holds still, rather than move her mouth out of time with the words.
+// Programme: what a viewer sees, drawn on a canvas. The studio, the AI anchor and the guest's
+// camera side by side, name straps under each, a ticker of fact-checks. The anchor's picture and
+// the studio set were made with Meta's Muse Image (scripts/anchor_art.py). He speaks in
+// lip-synced clips only when a lip-sync server is configured; otherwise his picture holds still,
+// rather than move a mouth out of time with the words.
 const art = {};
-for (const n of ["studio.jpg", "backdrop.jpg", "anchor.png"]) {
+for (const n of ["studio.jpg", "backdrop.jpg", "anchor.jpg"]) {
   art[n] = Object.assign(new Image(), { src: withToken(`/assets/${n}`) });
 }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
 const studio = () => ready(art["studio.jpg"]) ? art["studio.jpg"] : ready(art["backdrop.jpg"]) ? art["backdrop.jpg"] : null;
-// The anchor's 4:3 shot (scripts/anchor_assets.py, SHOT): the studio crop in studio.jpg (x, y,
-// sw, sh), and where her still sits in the 960x720 shot (ax, ay, aw, ah): her box
-// (700, 260+24, 520, 808) in 1920x1080, less the crop's corner, times 960/1080.
-const SHOT = { w: 960, x: 420, y: 230, sw: 1080, sh: 810, ax: 248.9, ay: 48, aw: 462.2, ah: 718.2 };
 
 // The anchor's audio goes to the speakers and to the programme recording.
 function anchorBus() {
@@ -460,19 +458,18 @@ function drawProgram() {
     c.fillText("● LIVE", 1153, 55);
   }
 
-  // The anchor, in her own 4:3 shot of the studio: the lip-synced clip while one plays (or the
-  // last one, held), else her still, framed exactly like the clips.
-  const L = BOX.left, k = BOX.w / SHOT.w;
+  // The anchor, in his own 4:3 shot: the lip-synced clip while one plays (or the last one,
+  // held), else his picture (anchor.jpg, 960x720, the same framing).
+  const L = BOX.left;
   c.save();
   c.beginPath(); c.rect(L, BOX.y, BOX.w, BOX.h); c.clip();
-  // Between sentences she holds the last clip's last frame: the next one carries on from it.
+  // Between sentences he holds the last clip's last frame: the next one carries on from it.
   const shown = anchorClip ?? anchorHold;
   if (shown && shown.readyState >= 2) c.drawImage(shown, L, BOX.y, BOX.w, BOX.h);
   else {
-    if (set === art["studio.jpg"]) c.drawImage(set, SHOT.x, SHOT.y, SHOT.sw, SHOT.sh, L, BOX.y, BOX.w, BOX.h);
+    const still = art["anchor.jpg"];
+    if (ready(still)) cover(c, still, still.naturalWidth, still.naturalHeight, L, BOX.y, BOX.w, BOX.h);
     else if (set) cover(c, set, set.naturalWidth, set.naturalHeight, L, BOX.y, BOX.w, BOX.h);
-    const still = art["anchor.png"];
-    if (ready(still)) c.drawImage(still, L + SHOT.ax * k, BOX.y + SHOT.ay * k, SHOT.aw * k, SHOT.ah * k);
   }
   c.fillStyle = "rgba(0,0,0,.6)";
   c.fillRect(L + BOX.w - 132, BOX.y + 12, 120, 24);
@@ -481,7 +478,7 @@ function drawProgram() {
   c.fillText("AI-GENERATED", L + BOX.w - 124, BOX.y + 29);
   c.restore();
   frame(c, L);
-  strap(c, L, "Alexandra Morgan", "AI anchor · IoMarkets.tv · synthetic image and voice");
+  strap(c, L, "Adrian Hale", "AI anchor · IoMarkets.tv · synthetic image and voice");
 
   // The guest's camera.
   const R = BOX.right, cam = $("cam");
@@ -766,6 +763,7 @@ let speakingFlag = false;
 function setSpeaking(on) {
   if (on === speakingFlag) return;
   speakingFlag = on;
+  if (!on) modelOff("voice");
   send({ type: "anchor", speaking: on });
   setStatus(on ? "Anchor speaking" : "Listening", true);
 }
@@ -785,9 +783,11 @@ function browserVoice(text) {
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-GB";
-  // The anchor on screen is a woman: prefer a female British voice if the browser has one.
-  const voices = speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en-GB"));
-  u.voice = voices.find((v) => /female|libby|sonia|hazel|susan|serena|kate/i.test(v.name)) ?? voices[0] ?? null;
+  // Only the device's own voices: a browser's online voices are someone else's AI model, and
+  // the studio calls no model at runtime but Meta's. The anchor is a man: prefer a male voice.
+  const voices = speechSynthesis.getVoices().filter((v) => v.localService && v.lang.startsWith("en"));
+  if (!voices.length) return;                             // the transcript still shows the line
+  u.voice = voices.find((v) => /\bmale\b|daniel|george|arthur|david|mark|ryan|alex/i.test(v.name)) ?? voices[0];
   u.onstart = () => setSpeaking(true);
   u.onend = u.onerror = () => setSpeaking(false);
   speechSynthesis.speak(u);
@@ -970,6 +970,7 @@ async function onMessage(m) {
       speak(m.id, m.text);
       break;
     case "anchor_audio":
+      model("voice", 1);                                    // one sentence voiced by MMS-TTS
       onAudio(m);
       break;
     case "anchor_audio_failed":

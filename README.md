@@ -53,25 +53,15 @@ without downtime.
   decoded with Meta's `meta-sam-parser` (SAM License) (since Oct 27); Muse Spark 1.3 with image
   input and strict JSON for chart reading, and with web search for Fact-Check (since Oct 27).
 - **Open weights:** Muse Spark Open, served by Fireworks, edits Scout's brief (since Oct 27).
-  **Built with Muse Spark Open.**
+  **Built with Muse Spark Open.** Meta's MMS-TTS, run by the studio on the CPU, is the anchor's
+  voice (since Oct 31).
+- **Made with Muse Image:** the anchor's picture and the studio set (`scripts/anchor_art.py`).
 
-## Not Meta
+## The anchor
 
-The anchor's voice is Microsoft Edge text-to-speech (Meta has no speech-synthesis model); it
-only ever receives the anchor's own lines.
-
-The anchor's picture is a pre-existing HeyGen avatar (not in this repo), lip-synced by
-`lipsync/server.py` on MuseTalk (MIT) when it is running. See `NEW_WORK.md`, "Pre-existing".
-
-To give the studio its anchor and studio set on this machine (needs the IoMarkets.tv newsroom
-checkout next to this one):
-
-```sh
-uv run python scripts/anchor_assets.py
-# lip-sync, live and in the segment, on the local GPU (first start prepares the anchor, ~2 min):
-cd ~/musetalk-local/MuseTalk && ~/musetalk-local/venv/bin/python \
-  "../../Documents/d-drive/New Projects/iomarkets-live-studio/lipsync/server.py"
-```
+Every model the studio calls at runtime is Meta's. The anchor, "Adrian Hale", is fictional: his
+picture was made with Muse Image, and his voice is MMS-TTS. He is shown still for now; lip-sync
+(`lipsync/server.py`, MuseTalk) is off by default and is the next step after the hackathon.
 
 ## Licence
 

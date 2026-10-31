@@ -1,9 +1,9 @@
 """Packaging the segment: question cards, lower thirds, one MP4.
 
-Each answer is preceded by the AI anchor asking the question in the IoMarkets TV studio, with
-the question in a strap. The anchor is lip-synced by the studio's MuseTalk server
-(`lipsync/server.py`, `STUDIO_LIPSYNC_URL`, default http://127.0.0.1:8766), which moves her
-whole loop as she talks; without it she is shown still.
+Each answer is preceded by the AI anchor asking the question in the studio, with the question
+in a strap. The anchor's picture and the set were made with Meta's Muse Image
+(scripts/anchor_art.py). He is shown still: lip-sync (`lipsync/server.py` via
+`STUDIO_LIPSYNC_URL`, or Modal with `STUDIO_LIPSYNC=modal`) is off unless configured.
 Each answer carries a lower third with the guest's name and role for its first seconds.
 Everything is joined with ffmpeg's concat filter, which scales, resamples and re-times every
 part, so cards and answers from any camera join cleanly.
@@ -27,10 +27,10 @@ from studio.cutout import BACKDROP, FPS, STUDIO_BACKGROUND, _run
 
 LABEL = "IoMarkets.tv  |  AI anchor"
 AI_NOTE = "AI-generated anchor: synthetic image and voice"
-ANCHOR_NAME = "Alexandra Morgan  |  AI anchor"
+ANCHOR_NAME = "Adrian Hale  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
-STUDIO = ASSETS / "studio.jpg"  # pre-existing, built by scripts/anchor_assets.py
-ANCHOR_STUDIO = ASSETS / "anchor-studio.png"  # her still in the wide shot, without lip-sync
+STUDIO = ASSETS / "studio.jpg"  # Muse Image, scripts/anchor_art.py
+ANCHOR_STUDIO = ASSETS / "anchor-wide.jpg"  # his picture in the wide shot, without lip-sync
 LIPSYNC_TIMEOUT_S = 300
 CAPTION_SECONDS = 6
 SILENT_CARD_SECONDS = 3.5
@@ -63,7 +63,8 @@ def _text(path: Path, text: str) -> str:
 
 
 def lipsync_url() -> str:
-    return os.environ.get("STUDIO_LIPSYNC_URL", "http://127.0.0.1:8766").rstrip("/")
+    """The lip-sync server, or "" (the default): the anchor is then shown still."""
+    return os.environ.get("STUDIO_LIPSYNC_URL", "").rstrip("/")
 
 
 # On Modal (STUDIO_LIPSYNC=modal) the lip-sync is the private class Lipsync in deploy/modal_app.py,

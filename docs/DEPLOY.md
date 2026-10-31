@@ -38,6 +38,9 @@ instead (`docs/SECRETS.md`).
 
 ## The anchor's lip-sync on a Modal GPU
 
+**Off since 2026-10-31** (the anchor is a Muse Image still; see `docs/ORGANISER_RULES.md`).
+Nothing below runs unless the secret sets `STUDIO_LIPSYNC=modal`.
+
 `lipsync/server.py` runs as the class `Lipsync` on an **L40S GPU** in the same app, with MuseTalk's
 own pinned stack (Python 3.10, torch 2.0.1/CUDA 11.8, mmcv 2.0.1) at commit `0a89dec`. The
 studio calls it directly (`STUDIO_LIPSYNC=modal`). Modal needs a payment method on the
