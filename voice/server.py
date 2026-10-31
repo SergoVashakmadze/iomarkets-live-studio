@@ -35,6 +35,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 MODEL = "facebook/fastspeech2-en-ljspeech"
 RATE = 22050
 
+# Delivery for business TV: FastSpeech 2 predicts each sound's length, pitch and energy; these
+# scale its predictions. Duration 0.86 (14 % quicker), pitch range x1.7 and lifted +0.45 (in the
+# model's normalised units), energy x1.4: "very energetic", the operator's pick of four by ear
+# (Oct 31). Whisper still follows it, with the odd slip on a word.
+DURATION, PITCH_RANGE, PITCH_LIFT, ENERGY = 0.86, 1.7, 0.45, 1.4
+
 # Said our way. Keys are lower case; values are ARPAbet with stress, as in CMUdict.
 LEXICON = {
     "iomarkets": "AY1 OW2 M AA1 R K AH0 T S",  # "Io" as in IoT, then "markets" (operator, by ear)
@@ -107,8 +113,8 @@ class Phonemizer:
 
     def __call__(self, text: str) -> list[str]:
         out: list[str] = []
-        for tok in re.findall(r"[A-Za-z][A-Za-z'\-]*|[,;:]", text):
-            if tok in ",;:":
+        for tok in re.findall(r"[A-Za-z][A-Za-z'\-]*|[,;:.!?]", text):
+            if tok in ",;:.!?":
                 if out and out[-1] != "sp":
                     out.append("sp")
             else:
@@ -135,8 +141,30 @@ class Voice:
         )
         TTSHubInterface.update_cfg_with_data_cfg(cfg, task.data_cfg)
         self.torch, self.hub, self.task, self.model = torch, TTSHubInterface, task, models[0]
+        self._energetic(self.model.encoder.var_adaptor)
         self.generator = task.build_generator(models, cfg)
         self.phonemes = Phonemizer()
+
+    def _energetic(self, va) -> None:
+        """Apply DURATION, PITCH_RANGE, PITCH_LIFT and ENERGY to every sentence. fairseq's
+        variance adaptor takes the three factors but its generator never passes them, and has
+        no lift, so its two methods are wrapped here."""
+        import types
+
+        torch, forward, pitch = self.torch, va.forward, va.get_pitch_emb
+
+        def lifted(adaptor, x, tgt=None, factor=1.0):
+            out, emb = pitch(x, tgt, factor)
+            if tgt is None:
+                out = out + PITCH_LIFT
+                emb = adaptor.embed_pitch(torch.bucketize(out, adaptor.pitch_bins.to(x.device)))
+            return out, emb
+
+        def styled(x, mask, durations=None, pitches=None, energies=None, *_, **__):
+            return forward(x, mask, durations, pitches, energies, DURATION, PITCH_RANGE, ENERGY)
+
+        va.get_pitch_emb = types.MethodType(lifted, va)
+        va.forward = styled
 
     def speak(self, text: str) -> bytes:
         """One sentence to 16-bit mono WAV bytes at 22.05 kHz, peaking at -1 dB."""
