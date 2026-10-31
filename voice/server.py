@@ -37,7 +37,7 @@ RATE = 22050
 
 # Said our way. Keys are lower case; values are ARPAbet with stress, as in CMUdict.
 LEXICON = {
-    "iomarkets": "AY1 OW1 M AA1 R K AH0 T S",  # "Io" as in IoT, both letters said, then "markets"
+    "iomarkets": "AY1 OW2 M AA1 R K AH0 T S",  # "Io" as in IoT, then "markets" (operator, by ear)
     "tv": "T IY1 V IY1",
     "muse": "M Y UW1 Z",
     "llama": "L AA1 M AH0",
