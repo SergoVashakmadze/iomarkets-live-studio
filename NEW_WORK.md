@@ -33,6 +33,13 @@ and Microsoft's Edge voice are therefore gone.
   every model called at runtime must be Meta's, which rules out MuseTalk even self-hosted. So
   `lipsync/server.py`, its Modal L40S class and its setup scripts were deleted. Lip-sync returns
   only if Meta releases a model for it; the studio's lip-sync hook (`compose.lipsync_url`) stays.
+- **His mouth moves with his voice, with no model at runtime.** Muse Image's edit endpoint drew
+  the anchor once with his mouth open (`scripts/anchor_mouth.py`); OpenCV's ECC image
+  registration (optimisation, not a trained model) aligns it to the still, and only a feathered
+  mouth patch is kept. Live, the page measures the loudness of the voice it is playing (Web
+  Audio) and fades the open mouth in and out with it, over a slow camera drift; the segment's
+  question cards do the same arithmetic in numpy (`compose.mouth_clip`). It follows the rhythm
+  of speech, not individual sounds: not lip-sync, and labelled as such.
 - The page's fallback voice uses only the device's own voices, never a browser's online ones.
 - Measured before the switch, the same replies lip-synced on the workstation's RTX 5060 Ti and on
   a Modal L40S: 1.15x and 1.10x real time, 4-6 s before the first word and 3-6 s of pauses in a

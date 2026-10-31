@@ -60,8 +60,9 @@ without downtime.
 ## The anchor
 
 Every model the studio calls at runtime is Meta's. The anchor, "Adrian Hale", is fictional: his
-picture was made with Muse Image, and his voice is MMS-TTS. He is shown still: the rules allow
-only Meta models at runtime, and Meta has no lip-sync model yet. MuseTalk lip-sync, built Oct 30,
+picture was made with Muse Image, and his voice is MMS-TTS. His mouth opens and closes with the
+loudness of his voice (an open-mouth picture drawn once by Muse Image, faded in by arithmetic: no
+model at runtime). True lip-sync waits for a Meta model: the rules allow only Meta's at runtime. MuseTalk lip-sync, built Oct 30,
 was removed on Oct 31.
 
 ## Licence

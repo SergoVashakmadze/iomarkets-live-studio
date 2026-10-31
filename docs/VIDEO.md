@@ -30,7 +30,7 @@ model visible at the moment it works, and say plainly what was built when.
 |---|---|---|---|---|
 | 0:00-0:07 | `01-title` card | Disclosure line on the card | "Pre-existing: Meta's models and open-source libraries. Built this week: the whole studio, and the AI anchor, made with Meta's Muse Image and MMS voice. IoMarkets Live Studio: a live interview with an AI anchor." | Rules (the video must open with this line) |
 | 0:06-0:16 | `02-problem` card | | "A live interview takes a presenter, a researcher, a fact-checker and an editor. Small newsrooms go without. This does all four, live, on Meta's models." | Impact |
-| 0:16-0:34 | Screen: type the guest, paste a link, drop their deck, **Prepare brief** | Badges light; brief appears with PRESSURE POINTS | "Scout reads the guest's deck and links with Muse Spark and searches the web; the Devil's Advocate lists the claims to test, each with a question." | Meta tooling, Impact |
+| 0:16-0:34 | Screen: type the guest, paste a link, drop their deck, **Prepare brief** | Badges light; brief appears with PRESSURE POINTS | "Scout reads the guest's deck and links with Muse Spark and searches the web; Muse Spark Open, Meta's open-weights model on Fireworks, edits it into the brief; the Devil's Advocate lists the claims to test, each with a question." | Meta tooling, Impact |
 | 0:34-1:00 | Screen: tick consent, **Go live**; anchor opens; guest answers | Voice Transcribe badge on while the guest talks; live transcript; anchor line | "The guest speaks; Muse Voice Transcribe hears every word as it is said, and the anchor, on Muse Spark, answers in about two seconds." | Demo |
 | 1:00-1:12 | Screen: the guest **interrupts** the anchor | Anchor audio stops; "Guest · interrupted" | "And they can interrupt, like a real interview." | Demo |
 | 1:12-1:45 | Screen: guest holds up the chart, **Show chart** | Vision badge; chart read; Fact-Check badge; **CONTRADICTED** with source; then the anchor raises it | "Muse Spark reads the chart off the camera. Fact-Check checks every figure against the web: this one is wrong, and the anchor says so, politely, with the source." | Meta tooling, Impact |
@@ -53,5 +53,5 @@ Waiting time (Scout's 20-40 s, the last cut-outs) may be **sped up**, labelled o
 
 ## Export
 
-1920x1080, 30 fps, H.264, AAC, under 3:00. Upload unlisted to YouTube for the submission, and
+1920x1080, 30 fps, H.264, AAC, under 3:00. Upload unlisted to YouTube for the submission (Cerebral Valley platform, due Nov 4, 9 PM ET), and
 post a 45-60 s cut (the barge-in and the CONTRADICTED moment) to X for the Most Viral prize.

@@ -76,6 +76,7 @@ ASSETS = {
     "backdrop.jpg": "image/jpeg",
     "studio.jpg": "image/jpeg",
     "anchor.jpg": "image/jpeg",
+    "anchor-mouth.png": "image/png",
 }
 
 
