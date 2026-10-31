@@ -37,7 +37,7 @@ RATE = 22050
 
 # Said our way. Keys are lower case; values are ARPAbet with stress, as in CMUdict.
 LEXICON = {
-    "iomarkets": "AY2 OW0 M AA1 R K IH0 T S",  # operator's pick, Oct 31: one word, no gap
+    "iomarkets": "AY1 OW1 M AA1 R K AH0 T S",  # "Io" as in IoT, both letters said, then "markets"
     "tv": "T IY1 V IY1",
     "muse": "M Y UW1 Z",
     "llama": "L AA1 M AH0",
@@ -145,8 +145,24 @@ class Voice:
         phones = self.phonemes(text)
         if not phones:
             raise ValueError("nothing to say")
+        audio = self.speak_phonemes(" ".join(phones))
+        rate = RATE
+        audio = np.concatenate([audio, np.zeros(int(rate * 0.12), np.float32)])  # breath after
+        audio *= 0.89 / max(float(np.abs(audio).max()), 1e-3)
+        out = io.BytesIO()
+        with wave.open(out, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(rate)
+            w.writeframes((np.clip(audio, -1, 1) * 32767).astype(np.int16).tobytes())
+        return out.getvalue()
+
+    def speak_phonemes(self, phones: str):
+        """ARPAbet (space-separated, `sp` for a pause) to float32 audio at RATE."""
+        import numpy as np
+
         tokens = self.task.src_dict.encode_line(
-            " ".join(phones), add_if_not_exist=False, append_eos=True
+            phones, add_if_not_exist=False, append_eos=True
         ).long()
         sample = {
             "net_input": {
@@ -158,17 +174,8 @@ class Voice:
             "speaker": None,
         }
         with self.torch.inference_mode():
-            wav, rate = self.hub.get_prediction(self.task, self.model, self.generator, sample)
-        audio = wav.numpy().astype(np.float32)
-        audio = np.concatenate([audio, np.zeros(int(rate * 0.12), np.float32)])  # breath after
-        audio *= 0.89 / max(float(np.abs(audio).max()), 1e-3)
-        out = io.BytesIO()
-        with wave.open(out, "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(rate)
-            w.writeframes((np.clip(audio, -1, 1) * 32767).astype(np.int16).tobytes())
-        return out.getvalue()
+            wav, _ = self.hub.get_prediction(self.task, self.model, self.generator, sample)
+        return wav.numpy().astype(np.float32)
 
 
 def serve(voice: Voice, host: str, port: int) -> None:
