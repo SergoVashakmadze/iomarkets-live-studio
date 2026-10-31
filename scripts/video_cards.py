@@ -31,7 +31,7 @@ CARDS = {
                 WHITE,
             ),
             (
-                "software, and the AI anchor, made with Meta's Muse Image and MMS-TTS voice.",
+                "software, and the AI anchor, made with Meta's Muse Image and FastSpeech 2.",
                 34,
                 WHITE,
             ),

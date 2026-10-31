@@ -41,7 +41,7 @@ is required before going live, and raw recordings are deleted as soon as they ar
 | **Muse Spark 1.3**, image input + strict JSON | Reads a chart held up to the camera | 2.2 s for the model; 4.8 s frame to figures |
 | **SAM 3.1**, hosted, Files API + streaming | Cuts the guest out of each answer | runs at 1.6x real time; a 12 s answer cut out in about 25 s |
 | **Muse Spark Open** (open weights, via Fireworks) | Edits Scout's research into the anchor's brief; sees only public research, never the guest | Built with Muse Spark Open |
-| **MMS-TTS** (open weights, run by the studio) | The anchor's voice | 0.3-0.8 s a sentence on the CPU |
+| **FastSpeech 2** (fairseq, LJSpeech: a native US speaker; open weights, run by the studio) | The anchor's voice, with an energetic delivery for business TV; Meta's MMS-TTS is the fallback | ~0.75 s for a short sentence, on CPU |
 | **Muse Image** | The anchor's picture and the studio set, made once | |
 
 The page shows a strip of these model roles that light up as each one works, so a viewer can
@@ -72,8 +72,8 @@ see the stack in action.
 Everything in this repository, written from 27 October to 4 November 2026: see `NEW_WORK.md`
 for each piece and its commits. IoMarkets.tv had an earlier interview studio on other
 providers; this is a ground-up rebuild on Meta's stack, and no code was copied from it. The
-anchor's picture and the studio set were made with Muse Image during the event, and his voice
-is Meta's MMS-TTS: every model the studio calls is Meta's.
+anchor's picture and the studio set were made with Muse Image during the event, and her voice
+is Meta's FastSpeech 2: every model the studio calls is Meta's.
 
 ## Try it
 
