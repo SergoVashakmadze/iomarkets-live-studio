@@ -384,7 +384,7 @@ $("cam").addEventListener("pause", () => { if (stream) $("cam").play().catch(() 
 // lip-synced clips only when a lip-sync server is configured; otherwise his picture holds still,
 // rather than move a mouth out of time with the words.
 const art = {};
-for (const n of ["studio.jpg", "backdrop.jpg", "anchor.jpg", "anchor-mouth.png"]) {
+for (const n of ["studio.jpg", "backdrop.jpg", "anchor.jpg"]) {
   art[n] = Object.assign(new Image(), { src: withToken(`/assets/${n}`) });
 }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
@@ -397,31 +397,8 @@ function anchorBus() {
     player.mix = player.createMediaStreamDestination();
     player.bus.connect(player.destination);
     player.bus.connect(player.mix);
-    player.level = player.createAnalyser();                // the anchor's mouth follows this
-    player.level.fftSize = 1024;
-    player.bus.connect(player.level);
   }
   return player.bus;
-}
-
-// The anchor's mouth: how loud his voice is right now, read from the audio being played. Plain
-// arithmetic, no model: the organisers allow only Meta models at runtime, and the open mouth
-// itself was drawn once by Muse Image (scripts/anchor_mouth.py).
-const MOUTH_MAX = 0.7;                   // compose.MOUTH_MAX: the same in the segment
-let mouthLevel = 0, mouthPeak = 0.05;
-const mouthBuf = new Float32Array(1024);
-function mouthOpen() {
-  let rms = 0;
-  if (player?.level && speakingFlag) {
-    player.level.getFloatTimeDomainData(mouthBuf);
-    for (const v of mouthBuf) rms += v * v;
-    rms = Math.sqrt(rms / mouthBuf.length);
-  }
-  mouthPeak = Math.max(rms, mouthPeak * 0.998, 0.02);      // follows the voice's own loudness
-  // At most 70 % open, and in proportion to loudness: a full flap read as too much.
-  const target = rms < 0.006 ? 0 : MOUTH_MAX * Math.min(1, rms / (0.85 * mouthPeak));
-  mouthLevel += (target - mouthLevel) * (target > mouthLevel ? 0.65 : 0.4);  // opens fast, closes softly
-  return mouthLevel;
 }
 
 const ticker = { items: [], x: 1280 };
@@ -490,19 +467,15 @@ function drawProgram() {
   const shown = anchorClip ?? anchorHold;
   if (shown && shown.readyState >= 2) c.drawImage(shown, L, BOX.y, BOX.w, BOX.h);
   else {
-    const still = art["anchor.jpg"], mouth = art["anchor-mouth.png"];
+    const still = art["anchor.jpg"];
     if (ready(still)) {
-      // A slow camera drift so the shot is never frozen, and the mouth over it while he speaks.
+      // A slow camera drift so the shot is never frozen. The mouth does not move: without a Meta
+      // lip-sync model it could only be faked, and a fake mouth looked wrong (operator, Oct 31).
       const t = performance.now() / 1000, z = 1.025 + 0.005 * Math.sin(t * 1.1);
       const cx = L + BOX.w / 2, cy = BOX.y + BOX.h * 0.45;
       c.save();
       c.translate(cx, cy); c.rotate(0.004 * Math.sin(t * 0.7)); c.scale(z, z); c.translate(-cx, -cy);
       cover(c, still, still.naturalWidth, still.naturalHeight, L, BOX.y, BOX.w, BOX.h);
-      const open = mouthOpen();
-      if (ready(mouth) && open > 0.03) {
-        c.globalAlpha = open;
-        cover(c, mouth, mouth.naturalWidth, mouth.naturalHeight, L, BOX.y, BOX.w, BOX.h);
-      }
       c.restore();
     } else if (set) cover(c, set, set.naturalWidth, set.naturalHeight, L, BOX.y, BOX.w, BOX.h);
   }
