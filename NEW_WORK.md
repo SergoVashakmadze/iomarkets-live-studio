@@ -17,6 +17,20 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Oct 31 (evening): a voice you can follow, a smaller mouth
+
+After the operator's first test ("very robotic", questions not understood; the mouth moved too
+much and even moved his nose):
+
+- MMS's English vocabulary has no punctuation, "%", "$" or decimal point, so lines arrived as
+  run-ons with figures mangled. `src/studio/speech_text.py` rewrites each line for the ear
+  (numbers, money, percentages, years, quarters, acronyms) and cuts it at commas; each phrase is
+  voiced alone with a 0.18 s pause, at calmer settings (noise 0.4, rate 0.92) and a steady level.
+  Measured with Whisper as the listener, offline: word errors 0.22 to 0.17, and the questions
+  with figures went from garbled ("riven you trepled in fist") to word-perfect.
+- The mouth patch now covers only the lips and upper chin, with a hard edge under the nose, and
+  opens at most 70 %, in proportion to loudness.
+
 ### Oct 31: an anchor made entirely with Meta's models
 
 The organisers' answer (Discord, Oct 31): everything built on must be open source or self-made,

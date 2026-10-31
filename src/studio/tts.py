@@ -20,9 +20,17 @@ import re
 import threading
 import wave
 
+from studio.speech_text import phrases
+
 MODEL = "facebook/mms-tts-eng"
-DEFAULT_VOICE = "meta-mms-tts-eng"  # also the greeting cache's key
+DEFAULT_VOICE = "meta-mms-tts-eng-v2"  # also the greeting cache's key: v2 = calmer, rewritten text
 SEED = 7  # one take of the voice's rhythm, the same every run
+# Calmer than MMS's defaults (0.667, 0.8, 1.0): steadier, slightly slower, easier to follow.
+# Measured 2026-10-31 on eight anchor questions with Whisper as the listener (offline, not in
+# the studio): with speech_text's rewriting, word errors fell from 0.22 to 0.17, and the
+# questions with figures went from garbled ("riven you trepled in fist") to word-perfect.
+NOISE_SCALE, NOISE_SCALE_DURATION, SPEAKING_RATE = 0.4, 0.6, 0.92
+PHRASE_PAUSE_S, SENTENCE_TAIL_S = 0.18, 0.12
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _lock = asyncio.Lock()
 _model = None
@@ -43,19 +51,31 @@ def _load():
         from transformers import AutoTokenizer, VitsModel
 
         torch.set_num_threads(max(1, min(4, os.cpu_count() or 1)))
-        _model = (AutoTokenizer.from_pretrained(MODEL), VitsModel.from_pretrained(MODEL).eval())
+        model = VitsModel.from_pretrained(MODEL).eval()
+        model.noise_scale, model.noise_scale_duration = NOISE_SCALE, NOISE_SCALE_DURATION
+        model.speaking_rate = SPEAKING_RATE
+        _model = (AutoTokenizer.from_pretrained(MODEL), model)
     return _model
 
 
 def _speak(text: str) -> bytes:
-    """One sentence to 16-bit mono WAV bytes."""
+    """One sentence to 16-bit mono WAV bytes: rewritten for the ear (speech_text), each phrase
+    voiced alone with a short pause between, then brought to a steady level."""
     import numpy as np
     import torch
 
     tok, model = _load()
-    torch.manual_seed(SEED)
-    with torch.inference_mode():
-        audio = model(**tok(text, return_tensors="pt")).waveform[0].numpy()
+    rate = model.config.sampling_rate
+    chunks = []
+    for i, phrase in enumerate(phrases(text) or [text]):
+        if i:
+            chunks.append(np.zeros(int(rate * PHRASE_PAUSE_S), np.float32))
+        torch.manual_seed(SEED)
+        with torch.inference_mode():
+            chunks.append(model(**tok(phrase, return_tensors="pt")).waveform[0].numpy())
+    chunks.append(np.zeros(int(rate * SENTENCE_TAIL_S), np.float32))
+    audio = np.concatenate(chunks)
+    audio *= 0.89 / max(float(np.abs(audio).max()), 1e-3)  # peak at -1 dB, every sentence alike
     pcm = (np.clip(audio, -1, 1) * 32767).astype(np.int16).tobytes()
     out = io.BytesIO()
     with wave.open(out, "wb") as w:

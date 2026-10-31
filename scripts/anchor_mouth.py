@@ -25,7 +25,8 @@ import numpy as np
 
 ASSETS = Path(__file__).resolve().parent.parent / "src" / "studio" / "assets"
 PROMPT = "Same photo, identical in every way, except his mouth is open mid-word, as if speaking"
-MOUTH = ((480, 300), (85, 58))  # centre and radii in anchor.jpg (960x720), by eye
+MOUTH = ((480, 294), (60, 32))  # lips and upper chin in anchor.jpg (960x720), by eye
+NOSE_Y = (266, 276)  # nothing above 266 (the nose ends ~262), full strength from 276
 UPPER_FACE = (330, 110, 630, 330)  # x0, y0, x1, y1: eyes and nose, for the alignment
 # anchor.jpg and anchor-wide.jpg are crops of one Muse Image picture (scripts/anchor_art.py):
 # live crop 1707x1280 at x 106 scaled to 960x720; wide crop 1920x1080 at y 40 scaled to 1280x720.
@@ -65,7 +66,10 @@ def mouth_layer(base: np.ndarray, opened: np.ndarray) -> np.ndarray:
     aligned = cv2.warpAffine(opened, warp, (w, h), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP)
     mask = np.zeros((h, w), np.float32)
     cv2.ellipse(mask, *MOUTH, 0, 0, 360, 1, -1)
-    mask = cv2.GaussianBlur(mask, (0, 0), 14)
+    mask = cv2.GaussianBlur(mask, (0, 0), 8)
+    top, full = NOSE_Y  # a hard ceiling under the nose: the feather must not reach it
+    ramp = np.clip((np.arange(h, dtype=np.float32) - top) / (full - top), 0, 1)
+    mask *= ramp[:, None]
     inside = mask > 0.5
     out = aligned.astype(np.float32)
     for c in range(3):  # the edit's light differs a little: match the still's
