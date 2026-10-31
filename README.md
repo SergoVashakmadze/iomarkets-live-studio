@@ -53,14 +53,15 @@ without downtime.
   decoded with Meta's `meta-sam-parser` (SAM License) (since Oct 27); Muse Spark 1.3 with image
   input and strict JSON for chart reading, and with web search for Fact-Check (since Oct 27).
 - **Open weights:** Muse Spark Open, served by Fireworks, edits Scout's brief (since Oct 27).
-  **Built with Muse Spark Open.** Meta's MMS-TTS, run by the studio on the CPU, is the anchor's
-  voice (since Oct 31).
+  **Built with Muse Spark Open.** Meta's FastSpeech 2 and MMS-TTS, run by the studio on the CPU, are the
+  anchor's voice and its fallback (since Oct 31).
 - **Made with Muse Image:** the anchor's picture and the studio set (`scripts/anchor_art.py`).
 
 ## The anchor
 
-Every model the studio calls at runtime is Meta's. The anchor, "Adrian Hale", is fictional: his
-picture was made with Muse Image, and his voice is MMS-TTS. He is shown still, with a slow camera
+Every model the studio calls at runtime is Meta's. The anchor, "Alexandra Morgan", is fictional: her
+picture was made with Muse Image, and her voice is Meta's FastSpeech 2 (a native US English
+speaker, `voice/server.py`), with MMS-TTS as the fallback. She is shown still, with a slow camera
 drift: the rules allow only Meta models at runtime, and Meta has no lip-sync model yet. MuseTalk lip-sync, built Oct 30,
 was removed on Oct 31.
 

@@ -1,0 +1,11 @@
+# The anchor's voice service (voice/server.py), Python 3.10. torch from the CPU index:
+#   --extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1
+torchaudio==2.11.1
+fairseq==0.12.2
+numpy==1.26.4
+omegaconf==2.0.6
+soundfile==0.14.0
+sentencepiece==0.2.2
+nltk==3.10.4
+huggingface_hub<0.25

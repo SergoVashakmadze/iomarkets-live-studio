@@ -381,7 +381,7 @@ $("cam").addEventListener("pause", () => { if (stream) $("cam").play().catch(() 
 // Programme: what a viewer sees, drawn on a canvas. The studio, the AI anchor and the guest's
 // camera side by side, name straps under each, a ticker of fact-checks. The anchor's picture and
 // the studio set were made with Meta's Muse Image (scripts/anchor_art.py). He speaks in
-// lip-synced clips only when a lip-sync server is configured; otherwise his picture holds still,
+// lip-synced clips only when a lip-sync server is configured; otherwise her picture holds still,
 // rather than move a mouth out of time with the words.
 const art = {};
 for (const n of ["studio.jpg", "backdrop.jpg", "anchor.jpg"]) {
@@ -458,12 +458,12 @@ function drawProgram() {
     c.fillText("● LIVE", 1153, 55);
   }
 
-  // The anchor, in his own 4:3 shot: the lip-synced clip while one plays (or the last one,
-  // held), else his picture (anchor.jpg, 960x720, the same framing).
+  // The anchor, in her own 4:3 shot: the lip-synced clip while one plays (or the last one,
+  // held), else her picture (anchor.jpg, 960x720, the same framing).
   const L = BOX.left;
   c.save();
   c.beginPath(); c.rect(L, BOX.y, BOX.w, BOX.h); c.clip();
-  // Between sentences he holds the last clip's last frame: the next one carries on from it.
+  // Between sentences she holds the last clip's last frame: the next one carries on from it.
   const shown = anchorClip ?? anchorHold;
   if (shown && shown.readyState >= 2) c.drawImage(shown, L, BOX.y, BOX.w, BOX.h);
   else {
@@ -486,7 +486,7 @@ function drawProgram() {
   c.fillText("AI-GENERATED", L + BOX.w - 124, BOX.y + 29);
   c.restore();
   frame(c, L);
-  strap(c, L, "Adrian Hale", "AI anchor · IoMarkets.tv · synthetic image and voice");
+  strap(c, L, "Alexandra Morgan", "AI anchor · IoMarkets.tv · synthetic image and voice");
 
   // The guest's camera.
   const R = BOX.right, cam = $("cam");
@@ -792,10 +792,10 @@ function browserVoice(text) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-GB";
   // Only the device's own voices: a browser's online voices are someone else's AI model, and
-  // the studio calls no model at runtime but Meta's. The anchor is a man: prefer a male voice.
+  // the studio calls no model at runtime but Meta's. The anchor is a woman: prefer a female voice.
   const voices = speechSynthesis.getVoices().filter((v) => v.localService && v.lang.startsWith("en"));
   if (!voices.length) return;                             // the transcript still shows the line
-  u.voice = voices.find((v) => /\bmale\b|daniel|george|arthur|david|mark|ryan|alex/i.test(v.name)) ?? voices[0];
+  u.voice = voices.find((v) => /female|samantha|karen|moira|tessa|serena|kate|susan|zira|hazel/i.test(v.name)) ?? voices[0];
   u.onstart = () => setSpeaking(true);
   u.onend = u.onerror = () => setSpeaking(false);
   speechSynthesis.speak(u);

@@ -17,9 +17,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from studio import compose
-from studio.tts import DEFAULT_VOICE
+from studio.tts import voice_name
 
-GREETING = "Welcome to IoMarkets TV. I'm Adrian Hale, and we're live."
+GREETING = "Welcome to IoMarkets TV. I'm Alexandra Morgan, and we're live."
 _lock = asyncio.Lock()
 
 
@@ -40,7 +40,7 @@ def cache_dir() -> Path:
 
 async def prepare(voice: Callable[[str], Awaitable[bytes]], synced: bool) -> Prepared:
     """The greeting's voice, and its lip-synced clip when `synced`: made once, then from disk."""
-    name = os.environ.get("STUDIO_VOICE") or DEFAULT_VOICE
+    name = voice_name()
     key = hashlib.sha1(f"{GREETING}|{name}".encode()).hexdigest()[:12]
     async with _lock:  # the page's warm-up and a first interview may ask at once
         mp3 = cache_dir() / f"greeting-{key}.mp3"

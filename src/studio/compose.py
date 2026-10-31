@@ -24,7 +24,7 @@ from studio.cutout import BACKDROP, FPS, STUDIO_BACKGROUND, _run
 
 LABEL = "IoMarkets.tv  |  AI anchor"
 AI_NOTE = "AI-generated anchor: synthetic image and voice"
-ANCHOR_NAME = "Adrian Hale  |  AI anchor"
+ANCHOR_NAME = "Alexandra Morgan  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
 STUDIO = ASSETS / "studio.jpg"  # Muse Image, scripts/anchor_art.py
 ANCHOR_STUDIO = ASSETS / "anchor-wide.jpg"  # his picture in the wide shot, without lip-sync

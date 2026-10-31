@@ -17,6 +17,24 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Oct 31 (late): a native US voice, and Alexandra Morgan
+
+The operator: MMS and the Seamless voices "have some accents and do not sound like native
+speakers". Of Meta's speech models, only FastSpeech 2 on LJSpeech (fairseq S^2,
+`facebook/fastspeech2-en-ljspeech`) was trained on one native English speaker (US). Meta's
+Transformer TTS on the same data never stopped talking ("hi, hi, hi" for 55 s) and was dropped.
+
+- `voice/server.py`: FastSpeech 2 and its HiFi-GAN vocoder on the CPU (0.2-1.0 s a sentence),
+  in its own Python 3.10 environment for fairseq; on Modal, the CPU class `Voice`. The studio
+  calls it per sentence (`tts.py`, `STUDIO_TTS_URL` or `STUDIO_TTS=modal`) and falls back to MMS
+  if it fails, so the anchor is never silent.
+- Words become phonemes by lookup, with no model: a small lexicon first ("IoMarkets" as one
+  word, eye-oh-MAR-kits, the operator's pick of three by ear), then the CMU Pronouncing
+  Dictionary, then spelling rules for unknown names. The model card's phonemizer (g2p_en) was
+  not used: it runs a non-Meta tagger and a neural guesser. Commas become the model's own pause.
+- The voice is a woman's, so the anchor is again a woman, "Alexandra Morgan": another of the Oct
+  31 Muse Image portraits (`scripts/anchor_art.py`).
+
 ### Oct 31 (evening): a voice you can follow
 
 After the operator's first test ("very robotic", questions not understood):
