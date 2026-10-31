@@ -17,6 +17,16 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Oct 31 (night): an energetic delivery for business TV
+
+The operator: "less robotic and more enthusiastic/energetic". FastSpeech 2 predicts each sound's
+length, pitch and energy; `voice/server.py` now scales those predictions (14 % quicker, pitch
+range x1.7 and lifted, energy x1.4: "very energetic", the operator's pick of four by ear), and
+the studio puts the voice through a broadcast chain (presence, gentle compression, limiter;
+ffmpeg filters, no model). Full stops now pause as commas do. Whisper still follows it, with the
+odd slip on a word. Picture URLs carry a fingerprint of the pictures, so a browser's cache never
+shows a replaced anchor.
+
 ### Oct 31 (late): a native US voice, and Alexandra Morgan
 
 The operator: MMS and the Seamless voices "have some accents and do not sound like native

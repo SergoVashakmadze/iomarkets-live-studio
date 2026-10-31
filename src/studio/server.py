@@ -19,6 +19,7 @@ import asyncio
 import base64
 import binascii
 import contextlib
+import hashlib
 import hmac
 import json
 import os
@@ -136,6 +137,15 @@ def create_app(
         }
 
     page = files("studio.web").joinpath("index.html").read_text()
+    # The pictures are cached for an hour: their fingerprint in each URL makes a changed picture
+    # a new URL, so browsers fetch it at once (the anchor changed twice on Oct 31).
+    pics = files("studio.assets")
+    version = hashlib.sha1(
+        b"".join(
+            pics.joinpath(n).read_bytes() for n in sorted(ASSETS) if pics.joinpath(n).is_file()
+        )
+    ).hexdigest()[:10]
+    page = page.replace("__ASSETS_V__", version)
     warming: set[asyncio.Task] = set()
 
     @app.get("/", response_class=HTMLResponse)

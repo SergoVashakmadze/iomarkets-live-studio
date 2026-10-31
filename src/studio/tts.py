@@ -86,10 +86,19 @@ def _speak(text: str) -> bytes:
     return out.getvalue()
 
 
-async def _mp3(wav: bytes) -> bytes:
+# Broadcast processing for the native voice: a little low cut, presence at 3 kHz, gentle
+# compression and a limiter, as a TV voice chain does. Signal processing, not a model.
+BROADCAST = (
+    "highpass=f=70,equalizer=f=3000:t=q:w=1.2:g=3.5,equalizer=f=200:t=q:w=1:g=-1.5,"
+    "acompressor=threshold=-18dB:ratio=3:attack=5:release=60:makeup=3,alimiter=limit=0.9"
+)
+
+
+async def _mp3(wav: bytes, broadcast: bool = False) -> bytes:
+    fx = ["-af", BROADCAST] if broadcast else []
     proc = await asyncio.create_subprocess_exec(
-        "ffmpeg", "-nostdin", "-v", "error", "-f", "wav", "-i", "pipe:0",
-        "-c:a", "libmp3lame", "-b:a", "96k", "-f", "mp3", "pipe:1",
+        "ffmpeg", "-nostdin", "-v", "error", "-f", "wav", "-i", "pipe:0", *fx,
+        "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "pipe:1",
         stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
     )  # fmt: skip
     data, _ = await proc.communicate(wav)
@@ -102,7 +111,7 @@ async def _mp3(wav: bytes) -> bytes:
 # English speaker, in its own service (voice/server.py): STUDIO_TTS_URL locally, or the Modal
 # class Voice with STUDIO_TTS=modal. MMS, above, is only the fallback when that is not set or
 # fails: the operator found it robotic and not native.
-NATIVE_VOICE = "meta-fastspeech2-ljspeech-v2"  # v2: IoMarkets as in IoT
+NATIVE_VOICE = "meta-fastspeech2-ljspeech-v3"  # v3: energetic delivery, broadcast processing
 APP, VOICE_CLS = "iomarkets-live-studio", "Voice"
 
 
@@ -141,7 +150,7 @@ async def synthesize(text: str, voice: str | None = None, timeout: float = 30.0)
     async def run() -> bytes:
         if _native():
             try:
-                return await _mp3(await _native_wav(text, timeout))
+                return await _mp3(await _native_wav(text, timeout), broadcast=True)
             except Exception as e:  # never leave the anchor silent: fall back to MMS
                 print(f"[voice] native voice failed, MMS instead: {e!r}", flush=True)
         async with _lock:

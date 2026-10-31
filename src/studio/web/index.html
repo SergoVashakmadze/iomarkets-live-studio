@@ -385,7 +385,8 @@ $("cam").addEventListener("pause", () => { if (stream) $("cam").play().catch(() 
 // rather than move a mouth out of time with the words.
 const art = {};
 for (const n of ["studio.jpg", "backdrop.jpg", "anchor.jpg"]) {
-  art[n] = Object.assign(new Image(), { src: withToken(`/assets/${n}`) });
+  // v: the pictures' own fingerprint (server.py), so a new anchor is never hidden by the cache.
+  art[n] = Object.assign(new Image(), { src: withToken(`/assets/${n}`) + `${token ? "&" : "?"}v=__ASSETS_V__` });
 }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
 const studio = () => ready(art["studio.jpg"]) ? art["studio.jpg"] : ready(art["backdrop.jpg"]) ? art["backdrop.jpg"] : null;
