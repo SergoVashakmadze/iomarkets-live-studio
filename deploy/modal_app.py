@@ -30,7 +30,7 @@ image = (
     .pip_install_from_requirements(str(ROOT / "deploy" / "requirements.txt"))
     # The anchor's voice, Meta's MMS-TTS: baked into the image, so a cold start never downloads it.
     .run_commands(
-        "python -c \"from transformers import AutoTokenizer, VitsModel; "
+        'python -c "from transformers import AutoTokenizer, VitsModel; '
         "AutoTokenizer.from_pretrained('facebook/mms-tts-eng'); "
         "VitsModel.from_pretrained('facebook/mms-tts-eng')\""
     )

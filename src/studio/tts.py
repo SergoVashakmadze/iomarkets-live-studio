@@ -17,6 +17,7 @@ import asyncio
 import io
 import os
 import re
+import threading
 import wave
 
 MODEL = "facebook/mms-tts-eng"
@@ -25,6 +26,7 @@ SEED = 7  # one take of the voice's rhythm, the same every run
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _lock = asyncio.Lock()
 _model = None
+_load_lock = threading.Lock()  # two first calls at once load it once
 
 
 def sentences(text: str) -> list[str]:
@@ -34,7 +36,9 @@ def sentences(text: str) -> list[str]:
 
 def _load():
     global _model
-    if _model is None:
+    with _load_lock:
+        if _model is not None:
+            return _model
         import torch
         from transformers import AutoTokenizer, VitsModel
 
