@@ -1,9 +1,8 @@
 """Packaging the segment: question cards, lower thirds, one MP4.
 
-Each answer is preceded by the AI anchor asking the question in the IoMarkets TV studio, with
-the question in a strap. The anchor is lip-synced by the studio's MuseTalk server
-(`lipsync/server.py`, `STUDIO_LIPSYNC_URL`, default http://127.0.0.1:8766), which moves her
-whole loop as she talks; without it she is shown still.
+Each answer is preceded by the AI anchor asking the question in the studio, with the question
+in a strap. The anchor's picture and the set were made with Meta's Muse Image
+(scripts/anchor_art.py). He is shown still (see `lipsync_url`).
 Each answer carries a lower third with the guest's name and role for its first seconds.
 Everything is joined with ffmpeg's concat filter, which scales, resamples and re-times every
 part, so cards and answers from any camera join cleanly.
@@ -17,20 +16,22 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import subprocess
 import textwrap
 from pathlib import Path
 
 import httpx
+import numpy as np
 
-from studio import ledger
 from studio.cutout import BACKDROP, FPS, STUDIO_BACKGROUND, _run
 
 LABEL = "IoMarkets.tv  |  AI anchor"
 AI_NOTE = "AI-generated anchor: synthetic image and voice"
-ANCHOR_NAME = "Alexandra Morgan  |  AI anchor"
+ANCHOR_NAME = "Adrian Hale  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
-STUDIO = ASSETS / "studio.jpg"  # pre-existing, built by scripts/anchor_assets.py
-ANCHOR_STUDIO = ASSETS / "anchor-studio.png"  # her still in the wide shot, without lip-sync
+STUDIO = ASSETS / "studio.jpg"  # Muse Image, scripts/anchor_art.py
+ANCHOR_STUDIO = ASSETS / "anchor-wide.jpg"  # his picture in the wide shot, without lip-sync
+ANCHOR_MOUTH = ASSETS / "anchor-mouth-wide.png"  # his open mouth over it (scripts/anchor_mouth.py)
 LIPSYNC_TIMEOUT_S = 300
 CAPTION_SECONDS = 6
 SILENT_CARD_SECONDS = 3.5
@@ -63,39 +64,15 @@ def _text(path: Path, text: str) -> str:
 
 
 def lipsync_url() -> str:
-    return os.environ.get("STUDIO_LIPSYNC_URL", "http://127.0.0.1:8766").rstrip("/")
+    """A lip-sync server, or "" (the default): the anchor is then shown still.
 
-
-# On Modal (STUDIO_LIPSYNC=modal) the lip-sync is the private class Lipsync in deploy/modal_app.py,
-# called directly: it has no URL, so nothing else can start the GPU.
-APP, LIPSYNC_CLS, STATE = "iomarkets-live-studio", "Lipsync", "iomarkets-lipsync-state"
-
-
-def _on_modal() -> bool:
-    return os.environ.get("STUDIO_LIPSYNC") == "modal"
-
-
-async def lipsync_wake() -> None:
-    """Start the GPU ahead of an interview (Modal only; a no-op call, then it idles 5 min)."""
-    if _on_modal() and ledger.gpu_allowed():
-        import modal
-
-        await modal.Cls.from_name(APP, LIPSYNC_CLS)().ping.spawn.aio()
+    The hook is kept for a future Meta lip-sync model. Nothing in this repo serves it: MuseTalk,
+    used Oct 30, was removed on Oct 31 (organisers: only Meta models at runtime)."""
+    return os.environ.get("STUDIO_LIPSYNC_URL", "").rstrip("/")
 
 
 async def lipsync_up() -> bool:
-    """Whether lip-sync is ready now. On Modal this reads a flag and never starts the GPU, and
-    once today's GPU cap is spent the answer is no: the anchor is shown still."""
-    if _on_modal():
-        import modal
-
-        if not ledger.gpu_allowed():
-            return False
-        try:
-            state = modal.Dict.from_name(STATE, create_if_missing=True)
-            return bool(await state.get.aio("up", False))
-        except Exception:
-            return False
+    """Whether a lip-sync server is configured and up. None is, by default."""
     if not lipsync_url():
         return False
     try:
@@ -110,23 +87,6 @@ async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = 
     `out`. Returns where her loop ended (the next clip's `start`), or None if there is no
     lip-sync server or it fails. `start` sets where her loop begins (0: her still); by default
     it carries on from the server's last clip."""
-    if _on_modal():
-        import modal
-
-        if not ledger.gpu_allowed():
-            return None
-        t = asyncio.get_running_loop().time()
-        try:
-            speaker = modal.Cls.from_name(APP, LIPSYNC_CLS)()
-            data, cursor = await asyncio.wait_for(
-                speaker.speak.remote.aio(mp3.read_bytes(), shot, start), LIPSYNC_TIMEOUT_S
-            )
-        except Exception:
-            return None
-        finally:
-            ledger.charge("gpu", ledger.gpu_seconds(asyncio.get_running_loop().time() - t))
-        out.write_bytes(data)
-        return cursor
     url = lipsync_url()
     if not url:
         return None
@@ -145,6 +105,60 @@ async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = 
     return int(r.headers.get("x-cursor", 0))
 
 
+def mouth_envelope(pcm: np.ndarray, rate: int = 16000) -> np.ndarray:
+    """How open the anchor's mouth is, 0-1, per video frame: the voice's loudness, as the page
+    computes it live (index.html, mouthOpen). Arithmetic on the samples, no model."""
+    hop = rate // FPS
+    n = len(pcm) // hop
+    if n == 0:
+        return np.zeros(0)
+    frames = pcm[: n * hop].astype(np.float32).reshape(n, hop) / 32768
+    rms = np.sqrt((frames**2).mean(axis=1))
+    peak = max(float(np.percentile(rms, 95)), 0.02)
+    target = np.where(rms < 0.006, 0, np.clip(rms / (0.7 * peak), 0, 1) ** 0.7)
+    level, out = 0.0, np.empty(n)
+    for i, t in enumerate(target):  # opens fast, closes softly
+        level += (t - level) * (0.65 if t > level else 0.4)
+        out[i] = level
+    return out
+
+
+def mouth_clip(mp3: Path, out: Path) -> bool:
+    """The anchor's wide shot, his mouth following `mp3`'s loudness, silent, at FPS. False if
+    his pictures are missing. Runs in a thread: plain numpy and ffmpeg."""
+    if not (ANCHOR_STUDIO.exists() and ANCHOR_MOUTH.exists()):
+        return False
+    w, h = 1280, 720
+
+    def decode(path: Path, *args: str) -> bytes:
+        cmd = ["ffmpeg", "-nostdin", "-v", "error", "-i", str(path), *args, "-"]
+        return subprocess.run(cmd, capture_output=True, check=True).stdout
+
+    raw = "-f", "rawvideo", "-vf", f"scale={w}:{h}", "-pix_fmt"
+    base = np.frombuffer(decode(ANCHOR_STUDIO, *raw, "rgb24"), np.uint8).reshape(h, w, 3)
+    rgba = np.frombuffer(decode(ANCHOR_MOUTH, *raw, "rgba"), np.uint8).reshape(h, w, 4)
+    pcm = np.frombuffer(decode(mp3, "-ac", "1", "-ar", "16000", "-f", "s16le"), np.int16)
+    env = mouth_envelope(pcm)
+    alpha = rgba[..., 3:].astype(np.float32) / 255
+    b, m = base.astype(np.float32), rgba[..., :3].astype(np.float32)
+    enc = subprocess.Popen(
+        ["ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
+         "-s", f"{w}x{h}", "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "veryfast",
+         "-pix_fmt", "yuv420p", str(out)],
+        stdin=subprocess.PIPE,
+    )  # fmt: skip
+    assert enc.stdin is not None
+    still = base.tobytes()
+    for e in env:
+        if e < 0.03:
+            enc.stdin.write(still)
+        else:
+            a = alpha * e
+            enc.stdin.write((b * (1 - a) + m * a).astype(np.uint8).tobytes())
+    enc.stdin.close()
+    return enc.wait() == 0 and len(env) > 0
+
+
 def _studio_input() -> list[str]:
     still = STUDIO if STUDIO.exists() else BACKDROP
     return ["-loop", "1", "-framerate", str(FPS), "-i", str(still)]
@@ -160,7 +174,11 @@ async def question_card(
     if mp3 and await lipsync(mp3, synced) is not None:
         inputs = ["-i", str(synced)]
         picture = f"[0:v]{fit},setsar=1,fps={FPS}[p]"
-    elif ANCHOR_STUDIO.exists():  # no lip-sync: the anchor still, not a mouth out of time
+    elif mp3 and await asyncio.to_thread(mouth_clip, mp3, workdir / f"{out.stem}.mouth.mp4"):
+        inputs = ["-i", str(workdir / f"{out.stem}.mouth.mp4")]
+        # The card runs 0.6 s past the voice: hold the last frame (mouth closed) to the end.
+        picture = f"[0:v]{fit},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=2[p]"
+    elif ANCHOR_STUDIO.exists():  # no voice: the anchor still
         inputs = ["-loop", "1", "-framerate", str(FPS), "-i", str(ANCHOR_STUDIO)]
         picture = f"[0:v]{fit},setsar=1[p]"
     elif STUDIO.exists() or BACKDROP.exists():

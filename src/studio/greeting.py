@@ -19,7 +19,7 @@ from pathlib import Path
 from studio import compose
 from studio.tts import DEFAULT_VOICE
 
-GREETING = "Welcome to IoMarkets TV. I'm Alexandra Morgan, and we're live."
+GREETING = "Welcome to IoMarkets TV. I'm Adrian Hale, and we're live."
 _lock = asyncio.Lock()
 
 

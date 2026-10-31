@@ -4,6 +4,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from studio import compose
@@ -110,3 +111,17 @@ async def test_text_card(tmp_path):
     await compose.text_card(lines, out, tmp_path, width=640, height=360, seconds=1.5)
     w, h, d, audio = await compose.media_info(out)
     assert (w, h, audio) == (640, 360, True) and 1.4 < d < 1.6
+
+
+def test_mouth_envelope_follows_loudness():
+    """Silence keeps the mouth shut; speech opens it; it never leaves 0-1."""
+    rate = 16000
+    silence = np.zeros(rate, np.int16)
+    tone = (np.sin(np.arange(rate) / 8) * 12000).astype(np.int16)
+    env = compose.mouth_envelope(np.concatenate([silence, tone, silence]), rate)
+    fps = compose.FPS
+    assert len(env) == 3 * fps
+    assert env[: fps - 1].max() == 0
+    assert env[fps + 5 : 2 * fps].min() > 0.8
+    assert env[-5:].max() < 0.05
+    assert env.min() >= 0 and env.max() <= 1

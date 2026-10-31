@@ -70,12 +70,13 @@ MAX_FRAME_BYTES = 1_400_000  # one JPEG frame; base64 must fit a 2 MiB WebSocket
 MAX_INTERVIEW_S = 15 * 60
 # A forgotten tab must not keep the microphone, speech recognition and the GPU running.
 IDLE_END_S = 3 * 60
-# The studio's pictures; studio.jpg and the anchor's are pre-existing and built locally
-# (scripts/anchor_assets.py), so they may be missing: the page falls back to backdrop.jpg.
+# The studio's pictures: the set and the anchor, made with Meta's Muse Image
+# (scripts/anchor_art.py); the page falls back to backdrop.jpg if one is missing.
 ASSETS = {
     "backdrop.jpg": "image/jpeg",
     "studio.jpg": "image/jpeg",
-    "anchor.png": "image/png",
+    "anchor.jpg": "image/jpeg",
+    "anchor-mouth.png": "image/png",
 }
 
 
@@ -140,9 +141,8 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     async def index(token: str | None = Query(None)) -> str:
-        # Make the greeting (and the lip-sync GPU) ready while the operator sets up, so going
-        # live starts at once. Only for the token's holders: a stranger or a crawler loading
-        # the page must not start a GPU.
+        # Make the greeting ready while the operator sets up, so going live starts at once.
+        # Only for the token's holders: a stranger or a crawler must not spend anything.
         if os.environ.get("STUDIO_VOICE") != "browser" and _token_ok(token) and not warming:
             task = asyncio.create_task(_warm_greeting())
             warming.add(task)
@@ -293,7 +293,6 @@ def create_app(
 
 async def _warm_greeting() -> None:
     with contextlib.suppress(Exception):
-        await compose.lipsync_wake()
         await greeting.prepare(synthesize, await compose.lipsync_up())
 
 

@@ -15,7 +15,9 @@ dependencies = [
     "uvicorn>=0.32",
     "meta-sam-parser>=0.1.0",
     "numpy>=2.1",
-    "edge-tts>=7.3.1",
+    # The anchor's voice: Meta's MMS-TTS on the CPU (src/studio/tts.py).
+    "torch>=2.9",
+    "transformers>=4.57",
     "python-multipart>=0.0.20",
 ]
 
@@ -33,6 +35,15 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# CPU-only torch: the studio voices on the CPU, and the CUDA wheels are gigabytes.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/studio"]

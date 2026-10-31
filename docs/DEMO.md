@@ -69,7 +69,7 @@ The daily spend cap ($10 by default) covers several rehearsals; one full run cos
 >    trains on content. Public research about me and my work, but not my voice, face or words, may
 >    also be processed by Fireworks AI.
 > 3. Cut me out of my background and place me in a virtual studio.
-> 4. Publish the resulting video, my name and my role, as part of a hackathon entry (Devpost,
+> 4. Publish the resulting video, my name and my role, as part of a hackathon entry (Cerebral Valley,
 >    YouTube, X and the IoMarkets.tv website), with on-screen notice that the anchor is
 >    AI-generated.
 >

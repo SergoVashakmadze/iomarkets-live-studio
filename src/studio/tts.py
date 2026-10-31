@@ -1,26 +1,32 @@
-"""The anchor's voice: Microsoft Edge text-to-speech (Meta has no speech model).
+"""The anchor's voice: Meta's MMS text-to-speech (`facebook/mms-tts-eng`), run in this process.
 
-Only the anchor's own lines are sent: never anything the guest said. Lines are split into
-sentences and synthesised in parallel, so the page can start playing the first sentence while
-the rest are still being made. The anchor on screen is a woman, so the voice is too. Measured
-2026-10-30, a 25-word line, first audio / whole line: en-GB-LibbyNeural 0.6 / 1.0 s (the
-default), en-GB-RyanNeural 0.7 / 1.0 s, en-GB-SoniaNeural 3.3 / 8.4 s (too slow: the page falls
-back to the browser's voice after 3 s).
+The organisers' answer of 2026-10-31: every model the studio calls at runtime must be Meta's,
+and Microsoft's Edge voice is not, so the anchor speaks with Meta's own open-weights MMS model
+(VITS, CC-BY-NC-4.0), on the CPU. Measured 2026-10-31 on the workstation: 0.3-0.8 s per sentence
+on the CPU, 0.03 s on the GPU; MMS has one English voice, a man's.
 
-edge-tts verifies TLS with certifi (>=2026.10.23 here) and must be 7.3.1 or later: older
-releases get HTTP 403.
+Only the anchor's own lines are spoken: never anything the guest said, and nothing leaves the
+machine. Lines are split into sentences, so the page starts playing the first while the rest
+are made. Sentences are voiced one at a time, in order (an asyncio lock is first come, first
+served), so the first sentence is always ready first.
 """
 
 from __future__ import annotations
 
 import asyncio
+import io
 import os
 import re
+import threading
+import wave
 
-import edge_tts
-
-DEFAULT_VOICE = "en-GB-LibbyNeural"
+MODEL = "facebook/mms-tts-eng"
+DEFAULT_VOICE = "meta-mms-tts-eng"  # also the greeting cache's key
+SEED = 7  # one take of the voice's rhythm, the same every run
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+_lock = asyncio.Lock()
+_model = None
+_load_lock = threading.Lock()  # two first calls at once load it once
 
 
 def sentences(text: str) -> list[str]:
@@ -28,17 +34,61 @@ def sentences(text: str) -> list[str]:
     return [p for p in parts if p]
 
 
-async def synthesize(text: str, voice: str | None = None, timeout: float = 10.0) -> bytes:
-    """One sentence to MP3 bytes."""
-    voice = voice or os.environ.get("STUDIO_VOICE") or DEFAULT_VOICE
+def _load():
+    global _model
+    with _load_lock:
+        if _model is not None:
+            return _model
+        import torch
+        from transformers import AutoTokenizer, VitsModel
+
+        torch.set_num_threads(max(1, min(4, os.cpu_count() or 1)))
+        _model = (AutoTokenizer.from_pretrained(MODEL), VitsModel.from_pretrained(MODEL).eval())
+    return _model
+
+
+def _speak(text: str) -> bytes:
+    """One sentence to 16-bit mono WAV bytes."""
+    import numpy as np
+    import torch
+
+    tok, model = _load()
+    torch.manual_seed(SEED)
+    with torch.inference_mode():
+        audio = model(**tok(text, return_tensors="pt")).waveform[0].numpy()
+    pcm = (np.clip(audio, -1, 1) * 32767).astype(np.int16).tobytes()
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(model.config.sampling_rate)
+        w.writeframes(pcm)
+    return out.getvalue()
+
+
+async def _mp3(wav: bytes) -> bytes:
+    proc = await asyncio.create_subprocess_exec(
+        "ffmpeg", "-nostdin", "-v", "error", "-f", "wav", "-i", "pipe:0",
+        "-c:a", "libmp3lame", "-b:a", "96k", "-f", "mp3", "pipe:1",
+        stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+    )  # fmt: skip
+    data, _ = await proc.communicate(wav)
+    if proc.returncode != 0 or not data:
+        raise RuntimeError("ffmpeg could not encode the voice")
+    return data
+
+
+async def synthesize(text: str, voice: str | None = None, timeout: float = 30.0) -> bytes:
+    """One sentence to MP3 bytes. `voice` is accepted for the old interface; MMS has one."""
 
     async def run() -> bytes:
-        audio = bytearray()
-        async for chunk in edge_tts.Communicate(text, voice).stream():
-            if chunk["type"] == "audio":
-                audio += chunk["data"]
-        if not audio:
-            raise RuntimeError("no audio returned")
-        return bytes(audio)
+        async with _lock:
+            wav = await asyncio.to_thread(_speak, text)
+        return await _mp3(wav)
 
     return await asyncio.wait_for(run(), timeout)
+
+
+async def warm() -> None:
+    """Load the model ahead of the first line (a few seconds, once)."""
+    await asyncio.to_thread(_load)

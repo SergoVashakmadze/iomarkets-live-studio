@@ -3,7 +3,7 @@
     uv run python scripts/studio_art.py
 
 Drawn here as SVG during the hackathon and rendered by headless Chrome. The studio uses it only
-when the IoMarkets TV studio background (scripts/anchor_assets.py) is not on this machine.
+when studio.jpg (Muse Image, scripts/anchor_art.py) is missing.
 """
 
 # ruff: noqa: E501  (SVG markup reads better unwrapped)
