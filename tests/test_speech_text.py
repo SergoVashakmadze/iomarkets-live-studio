@@ -25,3 +25,10 @@ def test_phrases_cut_at_commas_and_dashes():
         "show less.",
     ]
     assert phrases("...") == []
+
+
+def test_brand_is_said_eye_oh():
+    assert to_speech("Welcome to IoMarkets TV.") == "Welcome to eye oh markets tee vee."
+    assert (
+        to_speech("on IoMarkets.tv and iomarkets") == "on eye oh markets tee vee and eye oh markets"
+    )
