@@ -407,6 +407,7 @@ function anchorBus() {
 // The anchor's mouth: how loud his voice is right now, read from the audio being played. Plain
 // arithmetic, no model: the organisers allow only Meta models at runtime, and the open mouth
 // itself was drawn once by Muse Image (scripts/anchor_mouth.py).
+const MOUTH_MAX = 0.7;                   // compose.MOUTH_MAX: the same in the segment
 let mouthLevel = 0, mouthPeak = 0.05;
 const mouthBuf = new Float32Array(1024);
 function mouthOpen() {
@@ -417,7 +418,8 @@ function mouthOpen() {
     rms = Math.sqrt(rms / mouthBuf.length);
   }
   mouthPeak = Math.max(rms, mouthPeak * 0.998, 0.02);      // follows the voice's own loudness
-  const target = rms < 0.006 ? 0 : Math.min(1, rms / (0.7 * mouthPeak)) ** 0.7;
+  // At most 70 % open, and in proportion to loudness: a full flap read as too much.
+  const target = rms < 0.006 ? 0 : MOUTH_MAX * Math.min(1, rms / (0.85 * mouthPeak));
   mouthLevel += (target - mouthLevel) * (target > mouthLevel ? 0.65 : 0.4);  // opens fast, closes softly
   return mouthLevel;
 }

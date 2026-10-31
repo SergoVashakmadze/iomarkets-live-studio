@@ -114,7 +114,7 @@ async def test_text_card(tmp_path):
 
 
 def test_mouth_envelope_follows_loudness():
-    """Silence keeps the mouth shut; speech opens it; it never leaves 0-1."""
+    """Silence keeps the mouth shut; speech opens it, never past MOUTH_MAX."""
     rate = 16000
     silence = np.zeros(rate, np.int16)
     tone = (np.sin(np.arange(rate) / 8) * 12000).astype(np.int16)
@@ -122,6 +122,6 @@ def test_mouth_envelope_follows_loudness():
     fps = compose.FPS
     assert len(env) == 3 * fps
     assert env[: fps - 1].max() == 0
-    assert env[fps + 5 : 2 * fps].min() > 0.8
+    assert env[fps + 5 : 2 * fps].min() > 0.6
     assert env[-5:].max() < 0.05
-    assert env.min() >= 0 and env.max() <= 1
+    assert env.min() >= 0 and env.max() <= compose.MOUTH_MAX

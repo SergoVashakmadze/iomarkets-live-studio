@@ -31,6 +31,7 @@ ANCHOR_NAME = "Adrian Hale  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
 STUDIO = ASSETS / "studio.jpg"  # Muse Image, scripts/anchor_art.py
 ANCHOR_STUDIO = ASSETS / "anchor-wide.jpg"  # his picture in the wide shot, without lip-sync
+MOUTH_MAX = 0.7  # how far the mouth opens at the loudest; index.html has the same
 ANCHOR_MOUTH = ASSETS / "anchor-mouth-wide.png"  # his open mouth over it (scripts/anchor_mouth.py)
 LIPSYNC_TIMEOUT_S = 300
 CAPTION_SECONDS = 6
@@ -115,7 +116,7 @@ def mouth_envelope(pcm: np.ndarray, rate: int = 16000) -> np.ndarray:
     frames = pcm[: n * hop].astype(np.float32).reshape(n, hop) / 32768
     rms = np.sqrt((frames**2).mean(axis=1))
     peak = max(float(np.percentile(rms, 95)), 0.02)
-    target = np.where(rms < 0.006, 0, np.clip(rms / (0.7 * peak), 0, 1) ** 0.7)
+    target = np.where(rms < 0.006, 0, MOUTH_MAX * np.clip(rms / (0.85 * peak), 0, 1))
     level, out = 0.0, np.empty(n)
     for i, t in enumerate(target):  # opens fast, closes softly
         level += (t - level) * (0.65 if t > level else 0.4)
