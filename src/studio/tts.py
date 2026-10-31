@@ -102,7 +102,7 @@ async def _mp3(wav: bytes) -> bytes:
 # English speaker, in its own service (voice/server.py): STUDIO_TTS_URL locally, or the Modal
 # class Voice with STUDIO_TTS=modal. MMS, above, is only the fallback when that is not set or
 # fails: the operator found it robotic and not native.
-NATIVE_VOICE = "meta-fastspeech2-ljspeech-v1"
+NATIVE_VOICE = "meta-fastspeech2-ljspeech-v2"  # v2: IoMarkets as in IoT
 APP, VOICE_CLS = "iomarkets-live-studio", "Voice"
 
 
