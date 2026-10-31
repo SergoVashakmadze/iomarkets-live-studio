@@ -328,9 +328,9 @@ class LiveSession:
         """The line's text, then its audio in order, one message per sentence. With `hold`, the
         sentences are voiced (and rendered) at once but the line goes out only at that time."""
         assert self.voice is not None
-        parts = sentences(line) or [line]
-        if self.lipsync:
-            parts = _short_start(parts)
+        # A long first sentence is split at its first comma, so her first words come sooner: the
+        # voice takes ~1 s for a short phrase, ~2 s for a long sentence (Modal, Oct 31).
+        parts = _short_start(sentences(line) or [line])
         jobs = [asyncio.create_task(self.voice(p)) for p in parts]
         announced = False
         loop = asyncio.get_running_loop()

@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 import re
 import sys
 import wave
@@ -128,7 +129,7 @@ class Voice:
         from fairseq.checkpoint_utils import load_model_ensemble_and_task_from_hf_hub
         from fairseq.models.text_to_speech.hub_interface import TTSHubInterface
 
-        torch.set_num_threads(4)
+        torch.set_num_threads(max(1, min(8, os.cpu_count() or 1)))
         models, cfg, task = load_model_ensemble_and_task_from_hf_hub(
             MODEL, arg_overrides={"vocoder": "hifigan", "fp16": False, "cpu": True}
         )

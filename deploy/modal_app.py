@@ -38,10 +38,12 @@ image = (
 # CMU Pronouncing Dictionary are fetched at build time, so a cold start downloads nothing.
 voice_image = (
     modal.Image.debian_slim(python_version="3.10")
-    .apt_install("libsndfile1")
-    .pip_install_from_requirements(
-        str(ROOT / "voice" / "requirements.txt"),
+    .apt_install("libsndfile1", "build-essential")  # fairseq 0.12.2 builds from source
+    # uv, not pip: pip refuses omegaconf 2.0.6 (fairseq's pin) over its old metadata.
+    .uv_pip_install(
+        requirements=[str(ROOT / "voice" / "requirements.txt")],
         extra_index_url="https://download.pytorch.org/whl/cpu",
+        extra_options="--index-strategy unsafe-best-match",
     )
     .run_commands(
         "python -c \"import nltk; nltk.download('cmudict', download_dir='/usr/share/nltk_data')\""
@@ -79,7 +81,7 @@ def web():
 
 @app.cls(
     image=voice_image,
-    cpu=4.0,
+    cpu=8.0,  # 4 cores: 1.8-2.3 s a sentence; the anchor's first words wait on this
     memory=4096,
     max_containers=2,
     scaledown_window=20 * 60,  # as the web container: warm for the whole session
