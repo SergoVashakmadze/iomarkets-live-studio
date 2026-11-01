@@ -77,6 +77,9 @@ ASSETS = {
     "backdrop.jpg": "image/jpeg",
     "studio.jpg": "image/jpeg",
     "anchor.jpg": "image/jpeg",
+    # Teresa (pre-existing, git-ignored, scripts/anchor_assets.py): used when present
+    "teresa-studio.jpg": "image/jpeg",
+    "teresa.png": "image/png",
 }
 
 

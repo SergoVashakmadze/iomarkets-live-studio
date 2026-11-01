@@ -13,3 +13,8 @@ media/
 video/cards/
 video/*.mp4
 video/*.srt
+
+# Pre-existing IoMarkets.tv media (Teresa), built locally by scripts/anchor_assets.py; not in this repo
+src/studio/assets/teresa-studio.jpg
+src/studio/assets/teresa.png
+src/studio/assets/teresa-wide.png

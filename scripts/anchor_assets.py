@@ -4,14 +4,16 @@
 
 The anchor (Teresa, a HeyGen-sourced avatar) and the IoMarkets TV studio background predate the
 hackathon and are not open source, so they stay out of this public repo: this script writes them
-to src/studio/assets/, which git ignores (NEW_WORK.md, "Pre-existing"). Without them the studio
+to src/studio/assets/, which git ignores (NEW_WORK.md, "Pre-existing"). They carry their own names, so they never
+overwrite the Muse Image set and anchor (studio.jpg, anchor.jpg) that ship in the repo: the page
+and compose.py use Teresa's files when present, and the Muse Image ones otherwise. Without them the studio
 falls back to the drawn backdrop and shows no anchor picture.
 
 Outputs:
-- studio.jpg          the studio background, 1920x1080
-- anchor.png          the anchor's loop, first frame, with transparency, cropped, 720 high: her
+- teresa-studio.jpg   the studio background, 1920x1080
+- teresa.png          the anchor's loop, first frame, with transparency, cropped, 720 high: her
                       still when no lip-synced clip is playing
-- anchor-studio.png   that frame on the studio background, 1280x720: her still in the
+- teresa-wide.png     that frame on the studio background, 1280x720: her still in the
                       segment when there is no lip-sync server (lipsync/server.py)
 """
 
@@ -57,19 +59,19 @@ def main() -> None:
     studio = src / "studio_background_iomarkets_tv.png"
     OUT.mkdir(exist_ok=True)
 
-    ff("-i", str(studio), "-vf", "scale=1920:1080", "-q:v", "3", str(OUT / "studio.jpg"))
+    ff("-i", str(studio), "-vf", "scale=1920:1080", "-q:v", "3", str(OUT / "teresa-studio.jpg"))
     x, y, w, h = person_box(mask)
     crop = f"crop={w}:{h}:{x}:{y},scale=-2:{H}"
     keyed = f"[0:v]{crop}[c];[1:v]{crop},format=gray[m];[c][m]alphamerge"
     ff("-i", str(loop), "-i", str(mask), "-filter_complex",
-       keyed + ",format=rgba", "-frames:v", "1", str(OUT / "anchor.png"))  # fmt: skip
+       keyed + ",format=rgba", "-frames:v", "1", str(OUT / "teresa.png"))  # fmt: skip
     # The full frame for MuseTalk: the anchor where the loop has her, over the studio's desk,
     # 24 px lower so the loop's bottom edge (y 1068) falls off the frame.
     ff("-i", str(studio), "-i", str(loop), "-i", str(mask), "-filter_complex",
        "[2:v]format=gray[m];[1:v][m]alphamerge[a];[0:v]scale=1920:1080[bg];"
        "[bg][a]overlay=0:24,scale=1280:720", "-frames:v", "1",
-       str(OUT / "anchor-studio.png"))  # fmt: skip
-    for name in ("studio.jpg", "anchor.png", "anchor-studio.png"):
+       str(OUT / "teresa-wide.png"))  # fmt: skip
+    for name in ("teresa-studio.jpg", "teresa.png", "teresa-wide.png"):
         print(f"{name}: {(OUT / name).stat().st_size // 1024} KB")
 
 

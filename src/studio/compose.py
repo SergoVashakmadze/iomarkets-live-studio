@@ -29,8 +29,14 @@ LABEL = "IoMarkets.tv  |  AI anchor"
 AI_NOTE = "AI-generated anchor: synthetic image and voice"
 ANCHOR_NAME = "Alexandra Morgan  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
-STUDIO = ASSETS / "studio.jpg"  # Muse Image, scripts/anchor_art.py
-ANCHOR_STUDIO = ASSETS / "anchor-wide.jpg"  # his picture in the wide shot, without lip-sync
+def _first(*names: str) -> Path:
+    """The first of these assets that exists, else the last: Teresa's (git-ignored, built by
+    scripts/anchor_assets.py) when she is there, else the Muse Image ones that ship in the repo."""
+    return next((ASSETS / n for n in names if (ASSETS / n).exists()), ASSETS / names[-1])
+
+
+STUDIO = _first("teresa-studio.jpg", "studio.jpg")  # the set behind the cards
+ANCHOR_STUDIO = _first("teresa-wide.png", "anchor-wide.jpg")  # the anchor's wide still, no lip-sync
 LIPSYNC_TIMEOUT_S = 300
 CAPTION_SECONDS = 6
 SILENT_CARD_SECONDS = 3.5
