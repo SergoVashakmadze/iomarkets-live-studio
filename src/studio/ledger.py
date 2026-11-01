@@ -36,8 +36,8 @@ SAM_PER_FRAME = 0.20 / 1000
 SAM_MIN_FRAMES = 50
 
 DEFAULT_BUDGET_USD = 10.0
-# Modal L40S $1.95/hour (modal.com/pricing, read 2026-10-30) plus the container's CPU and memory.
-GPU_PER_HOUR = 2.10
+# Modal L40S $1.95/hour (modal.com/pricing, read 2026-10-30) plus 8 cores and 16 GiB (~$0.50).
+GPU_PER_HOUR = 2.50
 GPU_IDLE_S = 5 * 60  # the GPU's scaledown window after the last render (deploy/modal_app.py)
 DEFAULT_GPU_BUDGET_USD = 5.0
 

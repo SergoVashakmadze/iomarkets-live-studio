@@ -454,7 +454,7 @@ function drawProgram() {
   if (ready($("mark"))) c.drawImage($("mark"), 40, 18, 72 * $("mark").naturalWidth / $("mark").naturalHeight, 72);
   c.fillStyle = "#fff";
   c.font = "800 22px Inter, system-ui, sans-serif";
-  c.fillText("IOMARKETS.TV", 124, 50);
+  c.fillText("IoMarkets TV", 124, 50);
   c.fillStyle = "#9fb3c8";
   c.font = "600 15px Inter, system-ui, sans-serif";
   c.fillText("LIVE STUDIO", 124, 74);
@@ -472,6 +472,7 @@ function drawProgram() {
   c.save();
   c.beginPath(); c.rect(L, BOX.y, BOX.w, BOX.h); c.clip();
   // Between sentences she holds the last clip's last frame: the next one carries on from it.
+  syncAnchor();
   const shown = anchorClip ?? anchorHold;
   if (shown && shown.readyState >= 2) c.drawImage(shown, L, BOX.y, BOX.w, BOX.h);
   else {
@@ -530,7 +531,7 @@ function drawProgram() {
   c.fillRect(0, 670, 190, 50);
   c.fillStyle = "#1a1000";
   c.font = "800 20px Inter, system-ui, sans-serif";
-  c.fillText("IOMARKETS.TV", 18, 702);
+  c.fillText("IoMarkets.TV", 18, 702);
 }
 setInterval(drawProgram, 40);   // 25 fps; an interval, not rAF, so recording goes on if the tab loses focus
 
@@ -583,7 +584,9 @@ function addLine(who, text, cls) {
   el.querySelector(".who").textContent = who;
   el.querySelector(".text").textContent = text;
   $("log").append(el);
-  el.scrollIntoView({ block: "nearest" });
+  // Scroll the transcript box only: scrollIntoView also scrolls the page, which moved the
+  // programme (and Teresa) out of the operator's view each time a line was added.
+  const log = $("log"); log.scrollTop = log.scrollHeight;
   return el;
 }
 
@@ -792,7 +795,7 @@ function stopVoice() {
   if (anchorClip) { anchorClip.pause(); anchorHold = anchorClip; anchorClip = null; }
   if (voiceLine) {
     clearTimeout(voiceLine.timer);
-    try { voiceLine.source?.stop(); } catch {}
+    for (const src of voiceLine.sources ?? []) { try { src.stop(); } catch {} }
     voiceLine = null;
   }
   speechSynthesis.cancel();
@@ -815,14 +818,16 @@ function browserVoice(text) {
 
 function speak(id, text) {
   stopVoice();
-  const line = { id, text, parts: new Map(), next: 0, source: null, fallback: false };
+  // sched: the next part to schedule; endAt: when the audio scheduled so far ends (AudioContext
+  // clock); items: each scheduled part's start and end, for the picture to follow.
+  const line = { id, text, parts: new Map(), sched: 0, endAt: 0, items: [], sources: [], fallback: false };
   // Lip-synced sentences take a few seconds to render: wait for them rather than switch voice.
   line.timer = setTimeout(() => fallBack(line), lipsyncLive ? 30000 : 3000);
   voiceLine = line;
 }
 
 function fallBack(line) {
-  if (voiceLine !== line || line.next > 0 || line.source) return;
+  if (voiceLine !== line || line.sched > 0) return;
   line.fallback = true;
   browserVoice(line.text);
 }
@@ -832,10 +837,13 @@ async function onAudio(m) {
   if (!line || line.id !== m.id || line.fallback) return;   // stopped, superseded or fell back
   const bytes = Uint8Array.from(atob(m.mp3), (c) => c.charCodeAt(0));
   player ??= new AudioContext();
+  const t = performance.now();
   const [buffer, video] = await Promise.all([player.decodeAudioData(bytes.buffer), m.video ? loadClip(m.video) : null]);
+  // Telemetry for the operator's logs: how long a part took to be playable on this page.
+  send({ type: "playback", line: m.id, part: m.part, load_ms: Math.round(performance.now() - t), clip: !!video, wanted: !!m.video });
   if (voiceLine !== line) return;
   line.parts.set(m.part, { buffer, video, last: m.last });
-  if (!line.source) playNext(line);
+  schedule(line);
 }
 
 // A sentence's lip-synced clip (MuseTalk, silent picture): ready to play, or null.
@@ -845,29 +853,52 @@ async function loadClip(name) {
   return v.readyState >= 2 ? v : null;
 }
 
-function playNext(line) {
-  if (voiceLine !== line) return;
-  const part = line.parts.get(line.next);
-  if (!part) { line.source = null; return; }               // wait for the next sentence
-  clearTimeout(line.timer);
-  const src = player.createBufferSource();
-  src.buffer = part.buffer;
-  src.connect(anchorBus());
-  src.onended = () => {
-    if (part.video && anchorClip === part.video) { anchorHold = anchorClip; anchorClip = null; }
-    if (voiceLine !== line) return;
-    line.next += 1;
-    line.source = null;
-    if (part.last) { voiceLine = null; setSpeaking(false); } else playNext(line);
-  };
-  line.source = src;
-  setSpeaking(true);
-  if (part.video) {                                         // picture and voice start together
-    anchorClip = part.video;
-    anchorClip.currentTime = 0;
+// Each sentence is scheduled on the audio clock, the moment it is playable and in order, to start
+// exactly when the one before ends. Nothing waits for an "ended" event on the page's main thread,
+// which a busy or older computer delays, so the voice has no gaps between sentences that are
+// already here. The picture follows the audio clock (syncAnchor), not the other way round.
+function schedule(line) {
+  while (voiceLine === line && line.parts.has(line.sched)) {
+    const part = line.parts.get(line.sched);
+    const src = player.createBufferSource();
+    src.buffer = part.buffer;
+    src.connect(anchorBus());
+    const startAt = Math.max(player.currentTime + 0.03, line.endAt);
+    if (line.sched > 0 && startAt > line.endAt + 0.05) {    // she had run dry: report how long
+      send({ type: "playback", line: line.id, part: line.sched, gap_ms: Math.round((startAt - line.endAt) * 1000) });
+    }
+    clearTimeout(line.timer);
+    src.start(startAt);
+    line.items.push({ startAt, endAt: startAt + part.buffer.duration, video: part.video });
+    line.endAt = startAt + part.buffer.duration;
+    line.sources.push(src);
+    if (line.sched === 0) setSpeaking(true);
+    if (part.last) src.onended = () => {
+      if (voiceLine !== line) return;
+      if (anchorClip) { anchorClip.pause(); anchorHold = anchorClip; anchorClip = null; }
+      voiceLine = null;
+      setSpeaking(false);
+    };
+    line.sched += 1;
+  }
+}
+
+// Called every frame: show the clip of the sentence the audio clock is in, at its place in it.
+function syncAnchor() {
+  const line = voiceLine;
+  if (!line || !player) return;
+  const t = player.currentTime;
+  const cur = line.items.find((p) => t >= p.startAt && t < p.endAt);
+  if (!cur || !cur.video) return;                           // between sentences or no clip: hold the last frame
+  if (anchorClip !== cur.video) {
+    if (anchorClip) { anchorClip.pause(); anchorHold = anchorClip; }
+    anchorClip = cur.video;
+  }
+  const want = t - cur.startAt;
+  if (anchorClip.paused || Math.abs(anchorClip.currentTime - want) > 0.35) {
+    anchorClip.currentTime = Math.max(0, want);
     anchorClip.play().catch(() => {});
   }
-  src.start();
 }
 
 function send(msg) {
@@ -994,7 +1025,7 @@ async function onMessage(m) {
       onAudio(m);
       break;
     case "anchor_audio_failed":
-      if (voiceLine?.id === m.id && !voiceLine.source && voiceLine.next === 0) fallBack(voiceLine);
+      if (voiceLine?.id === m.id && voiceLine.sched === 0) fallBack(voiceLine);
       break;
     case "stop_anchor":
       stopVoice();

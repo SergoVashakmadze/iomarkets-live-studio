@@ -29,6 +29,8 @@ LABEL = "IoMarkets.tv  |  AI anchor"
 AI_NOTE = "AI-generated anchor: synthetic image and voice"
 ANCHOR_NAME = "Alexandra Morgan  |  AI anchor"
 ASSETS = Path(__file__).parent / "assets"
+
+
 def _first(*names: str) -> Path:
     """The first of these assets that exists, else the last: Teresa's (git-ignored, built by
     scripts/anchor_assets.py) when she is there, else the Muse Image ones that ship in the repo."""

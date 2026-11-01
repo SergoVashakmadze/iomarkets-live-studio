@@ -163,6 +163,11 @@ lipsync_state = modal.Dict.from_name("iomarkets-lipsync-state", create_if_missin
     # Measured 2026-10-30, 4.3 s of speech, once warm: L4 8.7 s (2.0x real time), L40S 4.8 s
     # (1.1x, as the workstation's RTX 5060 Ti). An L40S keeps the anchor's pauses short.
     gpu="L40S",
+    # Per frame the CPU resizes and blends the face (cv2) and libx264 encodes the clip. With no
+    # cpu= Modal gave this class ~0.125 of a core, so renders took ~1.2x real time and an H100
+    # gained nothing (2026-11-01). 8 cores is about $0.40 an hour more.
+    cpu=8.0,
+    memory=16384,
     volumes={"/vol": lipsync_volume},
     max_containers=1,  # one anchor, one loop position, and never two GPUs billing at once
     scaledown_window=5 * 60,  # idle five minutes, then off

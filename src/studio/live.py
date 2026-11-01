@@ -33,6 +33,9 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
+import os
+import tempfile
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -70,6 +73,82 @@ def _short_start(parts: list[str], words: int = 9) -> list[str]:
     if not sep or len(head.split()) < 3 or not tail:
         return parts
     return [head + ",", tail, *parts[1:]]
+
+
+RENDER_RATIO = 1.1  # lip-sync seconds per second of speech (fit to 2026-11-01's ~60 renders)...
+RENDER_OVERHEAD_S = 1.0  # ...plus a fixed cost per sentence (encode, upload)
+MAX_BUFFER_S = 8.0  # the longest the first clip is held back
+
+
+async def _mp3_seconds(mp3: bytes) -> float | None:
+    """The length of an MP3 in seconds, or None if ffprobe cannot tell.
+
+    From a file: ffprobe reports N/A for an MP3 on a pipe (checked 2026-11-01)."""
+    path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+            f.write(mp3)
+            path = f.name
+        proc = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+        )  # fmt: skip
+        try:
+            out, _ = await asyncio.wait_for(proc.communicate(), 10)
+        except BaseException:
+            proc.kill()
+            raise
+        return float(out.decode().strip())
+    except Exception:
+        return None
+    finally:
+        if path:
+            with contextlib.suppress(OSError):
+                os.unlink(path)
+
+
+def buffer_seconds(
+    durations: list[float], ratio: float = RENDER_RATIO, overhead: float = RENDER_OVERHEAD_S
+) -> float:
+    """How long after its first clip is ready a line must wait to play without a break.
+
+    Clip i is ready (ratio * its speech + overhead) after clip i-1, and plays after the speech of
+    parts 0..i-1; the wait is the worst shortfall, never negative or beyond the cap."""
+    worst, ready = 0.0, 0.0
+    for i in range(1, len(durations)):
+        ready += ratio * durations[i] + overhead
+        worst = max(worst, ready - sum(durations[:i]))
+    return min(worst, MAX_BUFFER_S)
+
+
+_BREAK_BEFORE = {"and", "but", "which", "that", "because", "while", "so", "or", "where", "when"}
+
+
+def _even_parts(parts: list[str], max_words: int = 11) -> list[str]:
+    """Cut long sentences into pieces of similar length, at commas or conjunctions if possible.
+
+    A clip is ready about (its speech + 1 s) after the one before it, so the wait before she can
+    speak without a break is set by the longest piece and by how many there are (fit to
+    2026-11-01's renders): a 9.6 s piece after a 3.4 s one waited 8 s; pieces of ~3.5 s wait ~4."""
+    out: list[str] = []
+    for part in parts:
+        words = part.split()
+        if len(words) <= max_words:
+            out.append(part)
+            continue
+        mid = len(words) / 2
+        # Break after punctuation, or before a conjunction: whichever is nearest the middle.
+        cuts = [
+            i
+            for i in range(3, len(words) - 2)
+            if words[i - 1][-1] in ",;:" or words[i].lower() in _BREAK_BEFORE
+        ]
+        cut = min(cuts, key=lambda i: abs(i - mid)) if cuts else round(mid)
+        head, tail = " ".join(words[:cut]), " ".join(words[cut:])
+        if head[-1] not in ".!?,;:":
+            head += ","  # a short pause, not a falling full stop
+        out.extend(_even_parts([head, tail], max_words))
+    return out
 
 
 @dataclass
@@ -324,46 +403,88 @@ class LiveSession:
             self._speaking.cancel()
         self._speaking = None
 
+    async def _buffer(self, jobs: list[asyncio.Task], loop: asyncio.AbstractEventLoop) -> None:
+        """Hold the first clip back so the others, still rendering, stay ahead of its playback."""
+        t_ready = loop.time()
+        try:
+            mp3s = await asyncio.gather(*jobs)
+        except Exception:
+            return  # a voice failed: _speak's own error path handles it
+        lengths = await asyncio.gather(*(_mp3_seconds(m) for m in mp3s))
+        if any(x is None for x in lengths):
+            print("[speak] could not measure the speech: no hold", flush=True)
+            return
+        wait = buffer_seconds([x for x in lengths if x is not None]) - (loop.time() - t_ready)
+        print(
+            f"[speak] speech {[round(x, 1) for x in lengths if x]}s, holding {max(wait, 0):.1f}s",
+            flush=True,
+        )
+        if wait > 0:
+            await asyncio.sleep(wait)
+
     async def _speak(self, line_id: int, line: str, hold: float = 0.0) -> None:
         """The line's text, then its audio in order, one message per sentence. With `hold`, the
-        sentences are voiced (and rendered) at once but the line goes out only at that time."""
+        sentences are voiced (and rendered) at once but the line goes out only at that time.
+
+        Lip-sync renders at about 1.2x the speech's length and one sentence after another, so a
+        line that starts the moment its first clip is ready runs dry mid-sentence. The first clip
+        is therefore held back just long enough for the rest to keep ahead of playback."""
         assert self.voice is not None
         # A long first sentence is split at its first comma, so her first words come sooner: the
         # voice takes ~1 s for a short phrase, ~2 s for a long sentence (Modal, Oct 31).
-        parts = _short_start(sentences(line) or [line])
+        parts = _even_parts(_short_start(sentences(line) or [line]))
         jobs = [asyncio.create_task(self.voice(p)) for p in parts]
         announced = False
         loop = asyncio.get_running_loop()
         t0 = loop.time()
+        ready: asyncio.Queue = asyncio.Queue()  # (part, message), or the exception that stopped it
+
+        async def render() -> None:
+            try:
+                for i, job in enumerate(jobs):
+                    mp3 = await job
+                    t_voice = loop.time() - t0
+                    msg = {
+                        "type": "anchor_audio",
+                        "id": line_id,
+                        "part": i,
+                        "last": i == len(jobs) - 1,
+                        "mp3": base64.b64encode(mp3).decode(),
+                    }
+                    if self.lipsync:
+                        t_sync = loop.time()
+                        try:
+                            msg["video"] = await self.lipsync(mp3, line_id, i)
+                        except asyncio.CancelledError:
+                            raise
+                        except Exception:
+                            msg["video"] = None  # this sentence goes out as audio only
+                        # One line per sentence in the logs (Modal's too), to see where time goes.
+                        print(
+                            f"[speak] line {line_id} part {i}: voiced at {t_voice:.1f}s, "
+                            f"lip-sync {loop.time() - t_sync:.1f}s, "
+                            f"out at {loop.time() - t0:.1f}s, "
+                            f"clip {'yes' if msg['video'] else 'no'}",
+                            flush=True,
+                        )
+                    await ready.put((i, msg))
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                await ready.put(e)
+
+        renderer = asyncio.create_task(render())
         try:
             if not hold:
                 await self.send({"type": "anchor_line", "id": line_id, "text": line})
                 announced = True
-            for i, job in enumerate(jobs):
-                mp3 = await job
-                t_voice = loop.time() - t0
-                msg = {
-                    "type": "anchor_audio",
-                    "id": line_id,
-                    "part": i,
-                    "last": i == len(jobs) - 1,
-                    "mp3": base64.b64encode(mp3).decode(),
-                }
-                if self.lipsync:
-                    t_sync = loop.time()
-                    try:
-                        msg["video"] = await self.lipsync(mp3, line_id, i)
-                    except asyncio.CancelledError:
-                        raise
-                    except Exception:
-                        msg["video"] = None  # this sentence goes out as audio only
-                    # One line per sentence in the logs (Modal's too), to see where time goes.
-                    print(
-                        f"[speak] line {line_id} part {i}: voiced at {t_voice:.1f}s, "
-                        f"lip-sync {loop.time() - t_sync:.1f}s, out at {loop.time() - t0:.1f}s, "
-                        f"clip {'yes' if msg['video'] else 'no'}",
-                        flush=True,
-                    )
+            for _ in jobs:
+                item = await ready.get()
+                if isinstance(item, Exception):
+                    raise item
+                i, msg = item
+                if i == 0 and self.lipsync and msg.get("video") and len(jobs) > 1:
+                    await self._buffer(jobs, loop)
                 if not announced:  # the greeting has finished: on air
                     await self._wait_until(hold)
                     await self.send({"type": "anchor_line", "id": line_id, "text": line})
@@ -377,5 +498,6 @@ class LiveSession:
                 await self.send({"type": "anchor_line", "id": line_id, "text": line})
             await self.send({"type": "anchor_audio_failed", "id": line_id})
         finally:
+            renderer.cancel()
             for job in jobs:
                 job.cancel()
