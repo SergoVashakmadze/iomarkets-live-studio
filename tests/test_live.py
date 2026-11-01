@@ -4,7 +4,7 @@ import asyncio
 
 from studio.agents.factcheck import ChartReading, Check, Figure
 from studio.asr import GuestPartial, GuestPaused, GuestStarted, GuestTurn
-from studio.live import Greeting, LiveSession, _short_start
+from studio.live import Greeting, LiveSession, _even_parts, _short_start
 
 
 class FakeAnchor:
@@ -342,7 +342,26 @@ def test_buffer_seconds_holds_the_first_clip_just_long_enough():
 
     assert buffer_seconds([3.0]) == 0.0  # one clip: nothing to wait for
     assert buffer_seconds([5.0, 2.0], ratio=1.0, overhead=0.0) == 0.0  # renders faster than plays
-    # Parts 2.5 s then 6.5 s at 1.25x + 0.8 s: the second is ready 8.925 s after the first, which
-    # plays for only 2.5 s, so the first waits 6.425 s.
-    assert abs(buffer_seconds([2.5, 6.5]) - 6.425) < 1e-9
+    # Parts 2.5 s then 6.5 s at 1.1x + 1 s: the second is ready 8.15 s after the first, which
+    # plays for only 2.5 s, so the first waits 5.65 s.
+    assert abs(buffer_seconds([2.5, 6.5]) - 5.65) < 1e-9
     assert buffer_seconds([1.0, 40.0]) == MAX_BUFFER_S  # never beyond the cap
+
+
+def test_even_parts_cuts_long_sentences_near_the_middle_at_a_natural_break():
+    short = "What drove the result?"
+    assert _even_parts([short]) == [short]
+    long = (
+        "Your fund returned twelve percent last year, which beat the index, but costs rose sharply."
+    )
+    got = _even_parts([long])
+    assert got == [
+        "Your fund returned twelve percent last year,",
+        "which beat the index, but costs rose sharply.",
+    ]
+    # No break words at all: the middle, with a comma so she pauses rather than falls.
+    plain = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen"
+    got = _even_parts([plain])
+    assert len(got) == 2 and all(len(g.split()) <= 11 for g in got)
+    assert got[0].endswith(",")
+    assert " ".join(got).replace(",", "") == plain

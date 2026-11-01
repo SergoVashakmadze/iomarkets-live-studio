@@ -75,8 +75,8 @@ def _short_start(parts: list[str], words: int = 9) -> list[str]:
     return [head + ",", tail, *parts[1:]]
 
 
-RENDER_RATIO = 1.25  # lip-sync seconds per second of speech (fit to 2026-11-01's 40 renders)...
-RENDER_OVERHEAD_S = 0.8  # ...plus a fixed cost per sentence (encode, upload)
+RENDER_RATIO = 1.1  # lip-sync seconds per second of speech (fit to 2026-11-01's ~60 renders)...
+RENDER_OVERHEAD_S = 1.0  # ...plus a fixed cost per sentence (encode, upload)
 MAX_BUFFER_S = 8.0  # the longest the first clip is held back
 
 
@@ -119,6 +119,36 @@ def buffer_seconds(
         ready += ratio * durations[i] + overhead
         worst = max(worst, ready - sum(durations[:i]))
     return min(worst, MAX_BUFFER_S)
+
+
+_BREAK_BEFORE = {"and", "but", "which", "that", "because", "while", "so", "or", "where", "when"}
+
+
+def _even_parts(parts: list[str], max_words: int = 11) -> list[str]:
+    """Cut long sentences into pieces of similar length, at commas or conjunctions if possible.
+
+    A clip is ready about (its speech + 1 s) after the one before it, so the wait before she can
+    speak without a break is set by the longest piece and by how many there are (fit to
+    2026-11-01's renders): a 9.6 s piece after a 3.4 s one waited 8 s; pieces of ~3.5 s wait ~4."""
+    out: list[str] = []
+    for part in parts:
+        words = part.split()
+        if len(words) <= max_words:
+            out.append(part)
+            continue
+        mid = len(words) / 2
+        # Break after punctuation, or before a conjunction: whichever is nearest the middle.
+        cuts = [
+            i
+            for i in range(3, len(words) - 2)
+            if words[i - 1][-1] in ",;:" or words[i].lower() in _BREAK_BEFORE
+        ]
+        cut = min(cuts, key=lambda i: abs(i - mid)) if cuts else round(mid)
+        head, tail = " ".join(words[:cut]), " ".join(words[cut:])
+        if head[-1] not in ".!?,;:":
+            head += ","  # a short pause, not a falling full stop
+        out.extend(_even_parts([head, tail], max_words))
+    return out
 
 
 @dataclass
@@ -402,7 +432,7 @@ class LiveSession:
         assert self.voice is not None
         # A long first sentence is split at its first comma, so her first words come sooner: the
         # voice takes ~1 s for a short phrase, ~2 s for a long sentence (Modal, Oct 31).
-        parts = _short_start(sentences(line) or [line])
+        parts = _even_parts(_short_start(sentences(line) or [line]))
         jobs = [asyncio.create_task(self.voice(p)) for p in parts]
         announced = False
         loop = asyncio.get_running_loop()
