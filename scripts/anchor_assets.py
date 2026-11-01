@@ -4,7 +4,8 @@
 
 The anchor (Teresa, a HeyGen-sourced avatar) and the IoMarkets TV studio background predate the
 hackathon and are not open source, so they stay out of this public repo: this script writes them
-to src/studio/assets/, which git ignores (NEW_WORK.md, "Pre-existing"). They carry their own names, so they
+to src/studio/assets/, which git ignores (NEW_WORK.md, "Pre-existing").
+They carry their own names, so they
 never overwrite the Muse Image set and anchor (studio.jpg, anchor.jpg) that ship in the repo:
 the page and compose.py use Teresa's files when present, and the Muse Image ones otherwise.
 Without them the studio falls back to the drawn backdrop and shows no anchor picture.
