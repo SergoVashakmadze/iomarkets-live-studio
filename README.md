@@ -55,15 +55,22 @@ without downtime.
 - **Open weights:** Muse Spark Open, served by Fireworks, edits Scout's brief (since Oct 27).
   **Built with Muse Spark Open.** Meta's FastSpeech 2 and MMS-TTS, run by the studio on the CPU, are the
   anchor's voice and its fallback (since Oct 31).
-- **Made with Muse Image:** the anchor's picture and the studio set (`scripts/anchor_art.py`).
+- **Made with Muse Image:** the fallback anchor picture and set (`scripts/anchor_art.py`).
 
 ## The anchor
 
-Every model the studio calls at runtime is Meta's. The anchor, "Alexandra Morgan", is fictional: her
-picture was made with Muse Image, and her voice is Meta's FastSpeech 2 (a native US English
-speaker, `voice/server.py`), with MMS-TTS as the fallback. She is shown still, with a slow camera
-drift: the rules allow only Meta models at runtime, and Meta has no lip-sync model yet. MuseTalk lip-sync, built Oct 30,
-was removed on Oct 31.
+Every Meta model the studio calls at runtime is listed above. The anchor, "Teresa", is an AI presenter and is
+labelled as one on the page. Two parts of her are **pre-existing, not built this week**: her picture is an avatar
+made earlier with HeyGen, and so is the studio background she sits in. Her voice is Meta's FastSpeech 2
+(`voice/server.py`, MMS-TTS as fallback). Her lip-sync is **MuseTalk** v1.5 (open source, MIT), running on one
+Modal GPU (`lipsync/server.py`, `deploy/modal_app.py`); an organiser confirmed in writing that both are allowed
+(`docs/ORGANISER_RULES.md`). If the lip-sync service is down, the page falls back to a still Teresa and the
+text and voice carry on. The earlier still anchor "Alexandra Morgan" (Muse Image) remains as the fallback
+picture when Teresa's image files are absent.
+
+The first words take about 8-11 s after the guest stops: the lip-sync renders at roughly real time, so
+the studio voices and renders the reply in short pieces and holds the first clip until the rest will not
+run dry. After that there are no gaps. Faster options are in `docs/HANDOVER_2026-11-01.md`.
 
 ## Licence
 
