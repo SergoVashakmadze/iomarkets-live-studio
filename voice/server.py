@@ -106,6 +106,21 @@ LEXICON = {
     "why": "W AY1",
     "zed": "Z EH1 D",
     "labours": "L EY1 B ER0 Z",
+    # Life sciences, after a pharmacologist's interview (Nov 1); checked with voice/check.py.
+    "rac": "R AE1 K",
+    "gtpase": "JH IY1 T IY1 P IY1 EY2 S",
+    "gtpases": "JH IY1 T IY1 P IY1 EY2 S IH0 Z",
+    "kinase": "K AY1 N EY2 S",
+    "kinases": "K AY1 N EY2 S IH0 Z",
+    "phosphorylation": "F AA2 S F ER0 AH0 L EY1 SH AH0 N",
+    "allosteric": "AE2 L AH0 S T EH1 R IH0 K",
+    "pharmacokinetics": "F AA2 R M AH0 K OW0 K IH0 N EH1 T IH0 K S",
+    "pharmacodynamics": "F AA2 R M AH0 K OW0 D AY0 N AE1 M IH0 K S",
+    "crispr": "K R IH1 S P ER0",
+    "mrna": "EH1 M AA1 R EH1 N EY1",
+    "proteomics": "P R OW2 T IY0 AA1 M IH0 K S",
+    "cryo": "K R AY1 OW0",
+    "purinergic": "P Y UH2 R IH0 N ER1 JH IH0 K",
 }
 
 # UK spellings, rewritten to the US forms CMUdict holds, most specific first ("authorised" ->

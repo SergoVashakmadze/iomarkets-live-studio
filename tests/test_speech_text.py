@@ -32,3 +32,20 @@ def test_brand_is_said_eye_oh():
     assert (
         to_speech("on IoMarkets.tv and iomarkets") == "on eye oh markets tee vee and eye oh markets"
     )
+
+
+def test_letters_and_digits_in_one_name_are_all_said():
+    # Nov 1, a pharmacologist's interview: the voice said "P2Y1" as "P Y".
+    assert (
+        to_speech("The P2Y1 receptor, Rac1 and small G proteins")
+        == "The pee two why one receptor, Rac one and small G proteins"
+    )
+    assert to_speech("P2Y12 inhibitors") == "pee two why twelve inhibitors"
+    assert to_speech("GPT4 and a 3D scan") == "jee pee tee four and a three dee scan"
+    assert to_speech("COVID19 and B2B") == "covid nineteen and bee two bee"
+    assert to_speech("in the 1990s and 2020s") == "in the nineteen nineties and twenty twenties"
+    # Already handled forms keep their reading.
+    assert to_speech("Q3, FY26, 300k, $5m, the 21st") == (
+        "the third quarter, fiscal twenty twenty-six, three hundred thousand, five million dollars,"
+        " the twenty-first"
+    )

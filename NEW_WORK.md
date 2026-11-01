@@ -17,6 +17,13 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 1 (night): scientific names said in full
+
+A pharmacologist tester could not follow the anchor on "P2Y1 receptor" and "Rac1". The voice drops
+digits, and nothing turned "P2Y1" into words, so it came out "P Y". `speech_text.to_speech` now says
+every part of a name mixing letters and digits ("pee two why one", "Rac one") and decades ("the
+nineteen nineties"); the voice's lexicon gained fourteen life-science words.
+
 ### Nov 1 (evening): Go live says why the camera will not start
 
 A tester pressed Go live and nothing seemed to happen. The page opened the session first, and
