@@ -379,6 +379,14 @@ async def _run_live(
                         control = _json(msg["text"])
                         if control.get("type") == "anchor":
                             session.set_anchor_speaking(bool(control.get("speaking")))
+                        elif control.get("type") == "playback":
+                            # How long the page waited for a sentence (numbers only, for the logs).
+                            fields = {
+                                k: control[k]
+                                for k in ("line", "part", "load_ms", "gap_ms", "clip", "wanted")
+                                if isinstance(control.get(k), int | bool)
+                            }
+                            print(f"[playback] {fields}", flush=True)
                         elif control.get("type") == "frame":
                             jpeg = _jpeg(control.get("jpeg"))
                             if jpeg:

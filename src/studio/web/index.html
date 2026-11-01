@@ -834,7 +834,10 @@ async function onAudio(m) {
   if (!line || line.id !== m.id || line.fallback) return;   // stopped, superseded or fell back
   const bytes = Uint8Array.from(atob(m.mp3), (c) => c.charCodeAt(0));
   player ??= new AudioContext();
+  const t = performance.now();
   const [buffer, video] = await Promise.all([player.decodeAudioData(bytes.buffer), m.video ? loadClip(m.video) : null]);
+  // Telemetry for the operator's logs: how long a part took to be playable on this page.
+  send({ type: "playback", line: m.id, part: m.part, load_ms: Math.round(performance.now() - t), clip: !!video, wanted: !!m.video });
   if (voiceLine !== line) return;
   line.parts.set(m.part, { buffer, video, last: m.last });
   if (!line.source) playNext(line);
@@ -850,8 +853,12 @@ async function loadClip(name) {
 function playNext(line) {
   if (voiceLine !== line) return;
   const part = line.parts.get(line.next);
-  if (!part) { line.source = null; return; }               // wait for the next sentence
+  if (!part) { line.source = null; line.waitSince ??= performance.now(); return; }  // wait for the next sentence
   clearTimeout(line.timer);
+  if (line.waitSince) {                                    // she had run dry: report how long
+    send({ type: "playback", line: line.id, part: line.next, gap_ms: Math.round(performance.now() - line.waitSince) });
+    line.waitSince = null;
+  }
   const src = player.createBufferSource();
   src.buffer = part.buffer;
   src.connect(anchorBus());
