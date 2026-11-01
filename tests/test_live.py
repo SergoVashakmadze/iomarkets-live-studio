@@ -341,8 +341,8 @@ def test_buffer_seconds_holds_the_first_clip_just_long_enough():
     from studio.live import MAX_BUFFER_S, buffer_seconds
 
     assert buffer_seconds([3.0]) == 0.0  # one clip: nothing to wait for
-    assert buffer_seconds([5.0, 2.0], ratio=1.0) == 0.0  # renders faster than it plays
-    # Parts 2.5 s then 6.5 s at 1.3x: the second is ready 8.45 s after the first, which plays
-    # for only 2.5 s, so the first waits 5.95 s.
-    assert abs(buffer_seconds([2.5, 6.5]) - 5.95) < 1e-9
+    assert buffer_seconds([5.0, 2.0], ratio=1.0, overhead=0.0) == 0.0  # renders faster than plays
+    # Parts 2.5 s then 6.5 s at 1.25x + 0.8 s: the second is ready 8.925 s after the first, which
+    # plays for only 2.5 s, so the first waits 6.425 s.
+    assert abs(buffer_seconds([2.5, 6.5]) - 6.425) < 1e-9
     assert buffer_seconds([1.0, 40.0]) == MAX_BUFFER_S  # never beyond the cap

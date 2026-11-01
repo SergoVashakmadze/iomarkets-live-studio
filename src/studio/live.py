@@ -75,7 +75,8 @@ def _short_start(parts: list[str], words: int = 9) -> list[str]:
     return [head + ",", tail, *parts[1:]]
 
 
-RENDER_RATIO = 1.3  # lip-sync seconds per second of speech (measured 2026-11-01 on L40S and H100)
+RENDER_RATIO = 1.25  # lip-sync seconds per second of speech (fit to 2026-11-01's 40 renders)...
+RENDER_OVERHEAD_S = 0.8  # ...plus a fixed cost per sentence (encode, upload)
 MAX_BUFFER_S = 8.0  # the longest the first clip is held back
 
 
@@ -106,14 +107,17 @@ async def _mp3_seconds(mp3: bytes) -> float | None:
                 os.unlink(path)
 
 
-def buffer_seconds(durations: list[float], ratio: float = RENDER_RATIO) -> float:
+def buffer_seconds(
+    durations: list[float], ratio: float = RENDER_RATIO, overhead: float = RENDER_OVERHEAD_S
+) -> float:
     """How long after its first clip is ready a line must wait to play without a break.
 
-    Clip i is ready ratio * (the speech of parts 1..i) after the first, and plays after the
-    speech of parts 0..i-1; the wait is the worst shortfall, never negative or beyond the cap."""
-    worst = 0.0
+    Clip i is ready (ratio * its speech + overhead) after clip i-1, and plays after the speech of
+    parts 0..i-1; the wait is the worst shortfall, never negative or beyond the cap."""
+    worst, ready = 0.0, 0.0
     for i in range(1, len(durations)):
-        worst = max(worst, ratio * sum(durations[1 : i + 1]) - sum(durations[:i]))
+        ready += ratio * durations[i] + overhead
+        worst = max(worst, ready - sum(durations[:i]))
     return min(worst, MAX_BUFFER_S)
 
 
