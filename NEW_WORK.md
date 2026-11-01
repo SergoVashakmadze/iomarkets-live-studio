@@ -362,3 +362,13 @@ Used Oct 30 only, no longer used since Oct 31, and never in this repo: a HeyGen 
 avatar (Teresa) and the IoMarkets TV studio background, both made before the event.
 
 No pre-existing datasets are used. Test fixtures are recordings of this repo's own live calls.
+
+## Nov 1: lip-sync restored (work in progress)
+
+The organiser (Adam Blumenfeld, Discord, 2026-11-01; `docs/ORGANISER_RULES.md`) confirmed that
+MuseTalk (MIT, open source) and the pre-existing HeyGen avatar (Teresa, disclosed in the demo
+video) are both allowed, on either track. This branch undoes `3ba69a0`: `lipsync/server.py`, the
+Modal L40S class `Lipsync` (`deploy/modal_app.py`, beside the CPU `Voice` class), the setup and
+keep-warm scripts, and the lip-sync paths in `compose.py` and `server.py`. Teresa's media are not
+in this repo (pre-existing, not open source): they are on the Modal Volume `iomarkets-lipsync`
+and are built locally by `scripts/anchor_assets.py` (see `docs/HANDOVER_2026-11-01.md`).

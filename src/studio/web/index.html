@@ -275,7 +275,8 @@
     </div>
   </section>
 
-  <footer>The anchor is an AI system and its voice is synthetic (Microsoft Edge text-to-speech).
+  <footer>The anchor is an AI system: her voice is synthetic (Meta's FastSpeech 2), and her picture is a
+    pre-existing HeyGen library avatar lip-synced with MuseTalk (open source).
     Guest speech is transcribed by Meta's Muse Voice Transcribe; the anchor, chart reading and
     fact-checks run on Muse Spark; SAM 3.1 cuts the guest out. Nothing here is medical, legal or
     investment advice. Built with Muse Spark Open.</footer>
@@ -384,12 +385,18 @@ $("cam").addEventListener("pause", () => { if (stream) $("cam").play().catch(() 
 // lip-synced clips only when a lip-sync server is configured; otherwise her picture holds still,
 // rather than move a mouth out of time with the words.
 const art = {};
-for (const n of ["studio.jpg", "backdrop.jpg", "anchor.jpg"]) {
+for (const n of ["studio.jpg", "backdrop.jpg", "anchor.jpg", "teresa-studio.jpg", "teresa.png"]) {
   // v: the pictures' own fingerprint (server.py), so a new anchor is never hidden by the cache.
   art[n] = Object.assign(new Image(), { src: withToken(`/assets/${n}`) + `${token ? "&" : "?"}v=__ASSETS_V__` });
 }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
-const studio = () => ready(art["studio.jpg"]) ? art["studio.jpg"] : ready(art["backdrop.jpg"]) ? art["backdrop.jpg"] : null;
+// Teresa (pre-existing HeyGen avatar, git-ignored, scripts/anchor_assets.py) when the server has her
+// pictures; otherwise the Muse Image anchor and set that ship in the repo.
+const teresa = () => ready(art["teresa-studio.jpg"]) && ready(art["teresa.png"]);
+const studio = () => teresa() ? art["teresa-studio.jpg"] : ready(art["studio.jpg"]) ? art["studio.jpg"] : ready(art["backdrop.jpg"]) ? art["backdrop.jpg"] : null;
+// Her 4:3 shot (scripts/anchor_assets.py): the studio crop in teresa-studio.jpg (x, y, sw, sh), and
+// where her still sits in the 960x720 shot (ax, ay, aw, ah), as lipsync/server.py frames the clips.
+const SHOT = { w: 960, x: 420, y: 230, sw: 1080, sh: 810, ax: 248.9, ay: 48, aw: 462.2, ah: 718.2 };
 
 // The anchor's audio goes to the speakers and to the programme recording.
 function anchorBus() {
@@ -469,7 +476,11 @@ function drawProgram() {
   if (shown && shown.readyState >= 2) c.drawImage(shown, L, BOX.y, BOX.w, BOX.h);
   else {
     const still = art["anchor.jpg"];
-    if (ready(still)) {
+    if (teresa()) {
+      const k = BOX.w / SHOT.w;
+      c.drawImage(art["teresa-studio.jpg"], SHOT.x, SHOT.y, SHOT.sw, SHOT.sh, L, BOX.y, BOX.w, BOX.h);
+      c.drawImage(art["teresa.png"], L + SHOT.ax * k, BOX.y + SHOT.ay * k, SHOT.aw * k, SHOT.ah * k);
+    } else if (ready(still)) {
       // A slow camera drift so the shot is never frozen. The mouth does not move: without a Meta
       // lip-sync model it could only be faked, and a fake mouth looked wrong (operator, Oct 31).
       const t = performance.now() / 1000, z = 1.025 + 0.005 * Math.sin(t * 1.1);
