@@ -28,10 +28,10 @@ model visible at the moment it works, and say plainly what was built when.
 
 | Time | Shot | On screen | Voice-over (operator) | Scores |
 |---|---|---|---|---|
-| 0:00-0:07 | `01-title` card | Disclosure line on the card | "Pre-existing: Meta's models and open-source libraries. Built this week: the whole studio, and the AI anchor, made with Meta's Muse Image and voiced by Meta's FastSpeech 2. IoMarkets Live Studio: a live interview with an AI anchor." | Rules (the video must open with this line) |
+| 0:00-0:07 | `01-title` card | Disclosure line on the card | "Pre-existing: Meta's models and open-source libraries. Pre-existing, not built this week: the anchor Teresa, an AI avatar made earlier with HeyGen, and her studio background. Her lip-sync is MuseTalk, open source, as the organisers confirmed. Built this week: the whole studio, with her voice from Meta's FastSpeech 2. IoMarkets Live Studio: a live interview with an AI anchor." | Rules (the video must open with this line) |
 | 0:06-0:16 | `02-problem` card | | "A live interview takes a presenter, a researcher, a fact-checker and an editor. Small newsrooms go without. This does all four, live, on Meta's models." | Impact |
 | 0:16-0:34 | Screen: type the guest, paste a link, drop their deck, **Prepare brief** | Badges light; brief appears with PRESSURE POINTS | "Scout reads the guest's deck and links with Muse Spark and searches the web; Muse Spark Open, Meta's open-weights model on Fireworks, edits it into the brief; the Devil's Advocate lists the claims to test, each with a question." | Meta tooling, Impact |
-| 0:34-1:00 | Screen: tick consent, **Go live**; anchor opens; guest answers | Voice Transcribe badge on while the guest talks; live transcript; anchor line | "The guest speaks; Muse Voice Transcribe hears every word as it is said, and the anchor, on Muse Spark, answers in about two seconds." | Demo |
+| 0:34-1:00 | Screen: tick consent, **Go live**; anchor opens; guest answers | Voice Transcribe badge on while the guest talks; live transcript; anchor line | "The guest speaks; Muse Voice Transcribe hears every word as it is said, and the anchor, Teresa, on Muse Spark, answers; her first words take a few seconds because the lip-sync renders live." | Demo |
 | 1:00-1:12 | Screen: the guest **interrupts** the anchor | Anchor audio stops; "Guest · interrupted" | "And they can interrupt, like a real interview." | Demo |
 | 1:12-1:45 | Screen: guest holds up the chart, **Show chart** | Vision badge; chart read; Fact-Check badge; **CONTRADICTED** with source; then the anchor raises it | "Muse Spark reads the chart off the camera. Fact-Check checks every figure against the web: this one is wrong, and the anchor says so, politely, with the source." | Meta tooling, Impact |
 | 1:45-2:00 | Screen: the guest replies; **End interview** | SAM badge counts; "cut-outs done" | "Each answer has already been cut out of the guest's room by SAM 3.1 while the interview went on." | Technical |
@@ -49,6 +49,9 @@ Waiting time (Scout's 20-40 s, the last cut-outs) may be **sped up**, labelled o
   you pressed Go live. Burn them in: many judges watch muted.
 - Keep the page's own "AI system ... synthetic voice" footer visible in at least one shot, and
   the `04-new-work` card's "The anchor is AI" line (EU AI Act Art. 50 disclosure).
+- The opening card must say Teresa and her studio background are pre-existing (HeyGen) and that MuseTalk
+  (open source) lip-syncs her: an organiser ruled this allowed if disclosed in the video (2026-11-01).
+- Do not cut out the 8-11 s wait before her first words in the live shots; speed it up and label it ("4x").
 - If a guest's figure is wrong on purpose (the chart), say so in the voice-over or a caption.
 
 ## Export

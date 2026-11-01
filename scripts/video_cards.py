@@ -26,12 +26,12 @@ CARDS = {
             ("", 30, WHITE),
             # The video must open with this disclosure (docs/ORGANISER_RULES.md).
             (
-                "Pre-existing: Meta's models and open-source libraries. New this week: the studio",
+                "Pre-existing: Meta's models, open-source MuseTalk, and the anchor Teresa",
                 34,
                 WHITE,
             ),
             (
-                "software, and the AI anchor, made with Meta's Muse Image and FastSpeech 2.",
+                "(a HeyGen avatar) with her studio. New this week: the studio software.",
                 34,
                 WHITE,
             ),
