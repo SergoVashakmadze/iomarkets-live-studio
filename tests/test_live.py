@@ -236,8 +236,11 @@ async def test_each_sentence_carries_its_lip_synced_clip():
 
     s = LiveSession(TwoSentences(), send, voice=voice, lipsync=lipsync)
     await s.open()
-    for _ in range(50):
-        await asyncio.sleep(0)
+    # The first clip is held while ffprobe measures the line (a real subprocess): wait for it.
+    for _ in range(400):
+        if len([m for m in sent if m["type"] == "anchor_audio"]) == 2:
+            break
+        await asyncio.sleep(0.01)
     audio = [m for m in sent if m["type"] == "anchor_audio"]
     assert len(audio) == 2
     assert audio[0]["video"] == "say-1-0.mp4"
@@ -332,3 +335,14 @@ async def test_the_guests_voice_resets_the_idle_clock():
     s.last_heard = 0.0
     await s.on_event(GuestPartial(1, "Well"))
     assert s.last_heard > 0.0
+
+
+def test_buffer_seconds_holds_the_first_clip_just_long_enough():
+    from studio.live import MAX_BUFFER_S, buffer_seconds
+
+    assert buffer_seconds([3.0]) == 0.0  # one clip: nothing to wait for
+    assert buffer_seconds([5.0, 2.0], ratio=1.0) == 0.0  # renders faster than it plays
+    # Parts 2.5 s then 6.5 s at 1.3x: the second is ready 8.45 s after the first, which plays
+    # for only 2.5 s, so the first waits 5.95 s.
+    assert abs(buffer_seconds([2.5, 6.5]) - 5.95) < 1e-9
+    assert buffer_seconds([1.0, 40.0]) == MAX_BUFFER_S  # never beyond the cap

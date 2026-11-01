@@ -454,7 +454,7 @@ function drawProgram() {
   if (ready($("mark"))) c.drawImage($("mark"), 40, 18, 72 * $("mark").naturalWidth / $("mark").naturalHeight, 72);
   c.fillStyle = "#fff";
   c.font = "800 22px Inter, system-ui, sans-serif";
-  c.fillText("IOMARKETS.TV", 124, 50);
+  c.fillText("IoMarkets TV", 124, 50);
   c.fillStyle = "#9fb3c8";
   c.font = "600 15px Inter, system-ui, sans-serif";
   c.fillText("LIVE STUDIO", 124, 74);
@@ -583,7 +583,9 @@ function addLine(who, text, cls) {
   el.querySelector(".who").textContent = who;
   el.querySelector(".text").textContent = text;
   $("log").append(el);
-  el.scrollIntoView({ block: "nearest" });
+  // Scroll the transcript box only: scrollIntoView also scrolls the page, which moved the
+  // programme (and Teresa) out of the operator's view each time a line was added.
+  const log = $("log"); log.scrollTop = log.scrollHeight;
   return el;
 }
 
