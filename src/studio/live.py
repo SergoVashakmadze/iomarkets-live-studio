@@ -33,6 +33,9 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
+import os
+import tempfile
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -77,21 +80,30 @@ MAX_BUFFER_S = 8.0  # the longest the first clip is held back
 
 
 async def _mp3_seconds(mp3: bytes) -> float | None:
-    """The length of an MP3 in seconds, or None if ffprobe cannot tell."""
+    """The length of an MP3 in seconds, or None if ffprobe cannot tell.
+
+    From a file: ffprobe reports N/A for an MP3 on a pipe (checked 2026-11-01)."""
+    path = None
     try:
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+            f.write(mp3)
+            path = f.name
         proc = await asyncio.create_subprocess_exec(
-            "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
-            "pipe:0", stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
+            "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
         )  # fmt: skip
         try:
-            out, _ = await asyncio.wait_for(proc.communicate(mp3), 10)
+            out, _ = await asyncio.wait_for(proc.communicate(), 10)
         except BaseException:
             proc.kill()
             raise
         return float(out.decode().strip())
     except Exception:
         return None
+    finally:
+        if path:
+            with contextlib.suppress(OSError):
+                os.unlink(path)
 
 
 def buffer_seconds(durations: list[float], ratio: float = RENDER_RATIO) -> float:
@@ -366,6 +378,7 @@ class LiveSession:
             return  # a voice failed: _speak's own error path handles it
         lengths = await asyncio.gather(*(_mp3_seconds(m) for m in mp3s))
         if any(x is None for x in lengths):
+            print("[speak] could not measure the speech: no hold", flush=True)
             return
         wait = buffer_seconds([x for x in lengths if x is not None]) - (loop.time() - t_ready)
         print(
