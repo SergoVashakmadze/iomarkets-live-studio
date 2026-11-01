@@ -17,6 +17,16 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 1 (evening): Go live says why the camera will not start
+
+A tester pressed Go live and nothing seemed to happen. The page opened the session first, and
+only asked for the camera and microphone once the server answered. When the browser refused
+(prompt dismissed or blocked, the camera held by another app, an email app's built-in browser),
+the page closed the session and put the reason below the programme, out of sight. The page now
+asks for the devices on the click itself, before contacting the server, says what to do about
+each refusal right under the button, and reports it to the server log (`[device]`,
+`POST /api/device-error`).
+
 ### Oct 31 (night): an energetic delivery for business TV
 
 The operator: "less robotic and more enthusiastic/energetic". FastSpeech 2 predicts each sound's

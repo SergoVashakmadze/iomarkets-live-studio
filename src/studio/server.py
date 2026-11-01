@@ -101,6 +101,14 @@ class Start(BaseModel):
         return self
 
 
+class DeviceTrouble(BaseModel):
+    """Why the page could not start the camera or microphone (`/api/device-error`)."""
+
+    name: str = Field("", max_length=60)
+    message: str = Field("", max_length=300)
+    agent: str = Field("", max_length=300)
+
+
 def _token_ok(given: str | None) -> bool:
     """`STUDIO_TOKEN`, or `STUDIO_TOKEN_PREV` while a rotation overlaps (docs/SECRETS.md)."""
     current = os.environ.get("STUDIO_TOKEN")
@@ -150,6 +158,17 @@ def create_app(
     ).hexdigest()[:10]
     page = page.replace("__ASSETS_V__", version)
     warming: set[asyncio.Task] = set()
+
+    @app.post("/api/device-error")
+    async def device_error(
+        report: DeviceTrouble, token: str | None = Query(None)
+    ) -> dict[str, bool]:
+        """The page could not start the camera or microphone: put why in the server log, since
+        a tester's browser is otherwise out of sight."""
+        if not _token_ok(token):
+            raise HTTPException(403, "bad token")
+        print(f"[device] {report.name}: {report.message} | {report.agent}", flush=True)
+        return {"ok": True}
 
     @app.get("/", response_class=HTMLResponse)
     async def index(token: str | None = Query(None)) -> str:

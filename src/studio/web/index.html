@@ -565,8 +565,10 @@ function stopProgramme() {
 }
 
 // What still stands between the operator and Go live, said before they press it.
+let deviceIssue = false;                 // device advice stays under the buttons until the next try
 function showHint() {
   const hint = $("hint");
+  if (deviceIssue) return;
   if (ws && ws.readyState <= WebSocket.OPEN) { hint.textContent = ""; return; }
   const missing = [];
   if (!$("consent").checked) missing.push("tick the guest's consent");
@@ -750,13 +752,65 @@ $("build").onclick = async () => {
   $("build").disabled = false;
 };
 
-async function startMic(onChunk) {
+// Camera and microphone, asked for on the Go live click itself, before any session opens: a
+// refusal then costs nothing and is said next to the button, not lost below the programme.
+async function openDevices() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    const e = new Error("no camera access in this browser");
+    e.name = "NoMediaDevices";
+    throw e;
+  }
   stream = await navigator.mediaDevices.getUserMedia({
     audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
     video: { width: { ideal: 1280 }, height: { ideal: 720 } },
   });
   $("cam").srcObject = stream;
   $("cam").play().catch(() => {});        // started explicitly, not left to autoplay
+}
+
+// What to do about each way the browser can refuse, in the operator's words.
+function deviceAdvice(e) {
+  const mac = /Mac/.test(navigator.platform);
+  switch (e.name) {
+    case "NotAllowedError":
+    case "SecurityError":
+      return /system/i.test(e.message)
+        ? `Your computer is blocking the browser from the camera or microphone. Allow it in ${mac ? "System Settings › Privacy & Security › Camera, and Microphone" : "Settings › Privacy › Camera, and Microphone"}, restart the browser, then press Go live again.`
+        : "The browser is blocking the camera or microphone. Click the camera icon in the address bar, choose Allow for both, then press Go live again.";
+    case "NotReadableError":
+    case "AbortError":
+    case "TrackStartError":
+      return "Another app is using the camera or microphone (Zoom, Teams, OBS, a screen recorder's webcam bubble). Close it or turn its camera off, then press Go live again. Recording the screen itself is fine.";
+    case "NotFoundError":
+    case "OverconstrainedError":
+    case "DevicesNotFoundError":
+      return "No camera or microphone found. Connect a webcam and a microphone (a laptop's built-in ones are fine), then press Go live again.";
+    case "NoMediaDevices":
+      return "This browser cannot reach the camera here. Open the link in Chrome, Edge or Safari directly, not inside an email or chat app.";
+    default:
+      return `The camera or microphone would not start (${e.name}: ${e.message}). Reload the page and press Go live again.`;
+  }
+}
+
+// Said where the operator is looking: under the buttons, in the status bar and in the transcript.
+// The server log gets it too, since a tester's browser is otherwise out of sight.
+function deviceTrouble(e) {
+  deviceIssue = true;
+  const advice = deviceAdvice(e);
+  $("hint").textContent = advice;
+  $("hint").style.color = "";
+  setStatus("Camera or microphone blocked");
+  addLine("Studio", advice, "anchor error");
+  $("hint").scrollIntoView({ block: "center", behavior: "smooth" });
+  fetch(withToken("/api/device-error"), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: String(e.name).slice(0, 60), message: String(e.message).slice(0, 300),
+                           agent: navigator.userAgent.slice(0, 300) }),
+  }).catch(() => {});
+}
+
+async function startMic(onChunk) {
   audio = new AudioContext();
   const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
   await audio.audioWorklet.addModule(url);
@@ -917,6 +971,18 @@ async function startLive(cold) {
   if (!cold && !brief) { setStatus("Prepare a brief first, or use Cold start"); showHint(); $("brief").focus(); return; }
   if (!$("consent").checked) { setStatus("Confirm the guest's consent first"); showHint(); $("consent").focus(); return; }
   $("go").disabled = $("cold").disabled = true;
+  deviceIssue = false;
+  $("log").innerHTML = "";
+  setStatus("Starting camera and microphone…");
+  $("hint").textContent = "Allow the camera and microphone if the browser asks.";
+  try {
+    await openDevices();
+  } catch (e) {
+    stopMic();
+    $("go").disabled = $("cold").disabled = false;
+    deviceTrouble(e);
+    return;
+  }
   $("research").hidden = true;
   $("log").innerHTML = "";
   transcript = [];
@@ -998,7 +1064,7 @@ async function onMessage(m) {
         startRecorder();
         startProgramme();
       } catch (e) {
-        addLine("Studio", `Microphone unavailable: ${e.message}`, "anchor error");
+        deviceTrouble(e);
         ws.close();
         return;
       }
