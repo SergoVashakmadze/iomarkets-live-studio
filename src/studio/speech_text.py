@@ -112,6 +112,28 @@ def _acronym(m: re.Match) -> str:
     return spelled + ("s" if plural else "")
 
 
+def _mixed(m: re.Match) -> str:
+    """Letters and digits in one name, each said: P2Y1 "pee two why one", Rac1 "Rac one",
+    GPT4 "jee pee tee four", 3D "three dee". The voice drops digits it is given (Nov 1, a
+    pharmacologist's interview: "P2Y1" came out "P Y")."""
+    out = []
+    for part in re.findall(r"\d+|[A-Za-z]+", m.group(0)):
+        if part.isdigit():
+            out.append(number(int(part)))
+        elif part.upper() in _SAID_AS_WORDS:
+            out.append(part.lower())
+        elif len(part) == 1 or (part.isupper() and len(part) <= 5):
+            out.append(" ".join(_LETTERS[c] for c in part.lower()))
+        else:
+            out.append(part)
+    return " ".join(out)
+
+
+def _decade(m: re.Match) -> str:
+    said = year(int(m.group(1)))
+    return said[:-1] + "ies" if said.endswith("y") else said + "s"
+
+
 def to_speech(text: str, keep_brand: bool = False) -> str:
     """One line, written for the ear: every number and symbol as words. With `keep_brand`,
     "IoMarkets" stays one word for a voice with its own pronunciation of it (voice/server.py);
@@ -145,12 +167,15 @@ def to_speech(text: str, keep_brand: bool = False) -> str:
         t,
     )  # noqa: E501
     t = re.sub(r"(\d+)(st|nd|rd|th)\b", lambda m: _ordinal(int(m.group(1))), t)
+    t = re.sub(r"\b((?:1[1-9]|20)\d0)'?s\b", _decade, t)
     t = re.sub(
-        r"\b((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?:\s?(bn|mn|tn|k)\b)?",
+        r"\b((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?:\s?(bn|mn|tn|k)\b)?(?![A-Za-z])",
         _plain_number,
         t,
         flags=re.I,
     )
+    # Whatever still mixes letters and digits: a receptor, a gene, a model or a product name.
+    t = re.sub(r"\b(?=[A-Za-z]*\d)(?=\d*[A-Za-z])[A-Za-z\d]+\b", _mixed, t)
     t = re.sub(r"\b[A-Z]{2,5}s?\b", _acronym, t)
     t = t.replace("&", " and ").replace("+", " plus ").replace("/", " ")
     return re.sub(r"\s+", " ", t).strip()
