@@ -162,7 +162,7 @@ lipsync_state = modal.Dict.from_name("iomarkets-lipsync-state", create_if_missin
     image=lipsync_image,
     # Measured 2026-10-30, 4.3 s of speech, once warm: L4 8.7 s (2.0x real time), L40S 4.8 s
     # (1.1x, as the workstation's RTX 5060 Ti). An L40S keeps the anchor's pauses short.
-    gpu="L40S",
+    gpu="H100",  # trial 2026-11-01: the L40S rendered at ~1.1x real time, so she paused mid-line
     volumes={"/vol": lipsync_volume},
     max_containers=1,  # one anchor, one loop position, and never two GPUs billing at once
     scaledown_window=5 * 60,  # idle five minutes, then off

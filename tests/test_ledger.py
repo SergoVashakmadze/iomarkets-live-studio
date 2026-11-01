@@ -84,7 +84,7 @@ def test_the_gpu_has_its_own_smaller_cap(tmp_path):
 
     book = Ledger(tmp_path / "l.json", budget_usd=10.0, gpu_budget_usd=1.0)
     assert book.gpu_allowed()
-    book.charge("gpu", gpu_seconds(30 * 60))  # half an hour of L40S: ~$1.05
+    book.charge("gpu", gpu_seconds(30 * 60))  # half an hour of GPU: ~$2.05
     assert not book.gpu_allowed()  # past the GPU cap: the anchor is shown still
     book.check()  # interviews themselves go on: the day's total is still under $10
 
