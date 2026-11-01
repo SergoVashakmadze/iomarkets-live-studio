@@ -33,6 +33,10 @@ is the daily Meta budget in USD. The script:
 To ship new code without touching the secret or the judges' link:
 `uv run --no-project --with modal==1.6.1 modal deploy deploy/modal_app.py`.
 
+Teresa's page pictures are git-ignored, so a fresh checkout has none: build them first with
+`uv run python scripts/anchor_assets.py` (it reads `../iomarkets.tv-newsroom`). The deploy refuses
+to run without them; without them the page would show the Muse Image anchor instead.
+
 Re-running `deploy.sh` redeploys and rotates the token. Once judges have a link, rotate with overlap
 instead (`docs/SECRETS.md`).
 
