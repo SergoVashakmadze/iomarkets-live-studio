@@ -213,3 +213,23 @@ def test_picture_urls_carry_their_fingerprint(app_and_replay):
     page = TestClient(app_and_replay[0]).get("/").text
     assert "__ASSETS_V__" not in page
     assert re.search(r"v=[0-9a-f]{10}`", page)
+
+
+def test_device_errors_reach_the_log_for_token_holders_only(app_and_replay, monkeypatch, capsys):
+    app, _ = app_and_replay
+    monkeypatch.setenv("STUDIO_TOKEN", "s3cret")
+    client = TestClient(app)
+    report = {
+        "name": "NotReadableError",
+        "message": "Could not start video source",
+        "agent": "Chrome",
+    }
+    assert client.post("/api/device-error", json=report).status_code == 403
+    r = client.post("/api/device-error?token=s3cret", json=report)
+    assert r.status_code == 200
+    assert (
+        "[device] NotReadableError: Could not start video source | Chrome"
+        in capsys.readouterr().out
+    )
+    long = {**report, "message": "x" * 301}
+    assert client.post("/api/device-error?token=s3cret", json=long).status_code == 422
