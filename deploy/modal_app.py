@@ -24,6 +24,17 @@ import modal
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# Teresa's page pictures are git-ignored (scripts/anchor_assets.py builds them), so a deploy from a
+# fresh checkout would quietly show the Muse Image anchor instead. It did on Nov 1, mid-testing.
+TERESA = ("teresa-studio.jpg", "teresa.png", "teresa-wide.png")
+if modal.is_local():
+    missing = [n for n in TERESA if not (ROOT / "src" / "studio" / "assets" / n).is_file()]
+    if missing:
+        raise SystemExit(
+            f"Missing {', '.join(missing)} in src/studio/assets/: run "
+            "`uv run python scripts/anchor_assets.py` first, or the studio shows the wrong anchor."
+        )
+
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .apt_install("ffmpeg", "fonts-dejavu-core")  # drawtext in the segment needs a font
