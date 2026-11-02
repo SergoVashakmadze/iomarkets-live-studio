@@ -15,9 +15,11 @@ string, so a guest's name or a question cannot break or inject into the filter g
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import textwrap
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import httpx
@@ -112,6 +114,32 @@ async def lipsync_up() -> bool:
             return (await client.get(f"{lipsync_url()}/health")).status_code == 200
     except httpx.HTTPError:
         return False
+
+
+LIPSYNC_WARM_S = 150  # a cold L40S takes about two minutes to load the model
+LIPSYNC_POLL_S = 3
+
+
+async def lipsync_ready(on_wait: Callable[[], Awaitable[None]] | None = None) -> bool:
+    """Whether lip-sync is ready, starting the GPU and waiting for it if it is cold (Modal only:
+    elsewhere it is up or it is not). False when the GPU cap is spent or it did not come up in
+    time; the interview then goes ahead with the anchor still. `on_wait` is called once the first
+    check has failed, and again every few seconds while waiting, so the page can say so."""
+    if await lipsync_up():
+        return True
+    if not (_on_modal() and ledger.gpu_allowed()):
+        return False
+    with contextlib.suppress(Exception):
+        await lipsync_wake()
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + LIPSYNC_WARM_S
+    while loop.time() < deadline:
+        if on_wait:
+            await on_wait()
+        await asyncio.sleep(LIPSYNC_POLL_S)
+        if await lipsync_up():
+            return True
+    return False
 
 
 async def lipsync(mp3: Path, out: Path, shot: str = "wide", start: int | None = None) -> int | None:

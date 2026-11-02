@@ -170,6 +170,16 @@ def create_app(
         print(f"[device] {report.name}: {report.message} | {report.agent}", flush=True)
         return {"ok": True}
 
+    @app.post("/api/warm")
+    async def warm(token: str | None = Query(None)) -> dict[str, bool]:
+        """Start the lip-sync GPU ahead of Go live (the page calls it once the operator has
+        confirmed consent). A no-op when it is warm, off Modal, or today's GPU cap is spent."""
+        if not _token_ok(token):
+            raise HTTPException(403, "bad token")
+        with contextlib.suppress(Exception):
+            await compose.lipsync_wake()
+        return {"ok": True}
+
     @app.get("/", response_class=HTMLResponse)
     async def index(token: str | None = Query(None)) -> str:
         # Make the greeting (and the lip-sync GPU) ready while the operator sets up, so going
@@ -340,8 +350,15 @@ async def _run_live(
         researcher = partial(live_scout.research, client) if start.cold else None
         voice = None if os.environ.get("STUDIO_VOICE") == "browser" else synthesize
         anchor = Anchor(client, start.brief, cold=start.cold)
-        # Live lip-sync when the lip-sync server is up (the workstation; not Modal).
-        synced = voice is not None and await compose.lipsync_up()
+
+        # Live lip-sync when the lip-sync server is up. A cold GPU is started and waited for
+        # (about two minutes) rather than skipped: an interview without it has a frozen anchor.
+        async def warming() -> None:
+            await ws.send_json({"type": "lipsync_warming"})
+
+        synced = voice is not None and await compose.lipsync_ready(warming)
+        if voice is not None and not synced:
+            print("[lipsync] not ready: the interview goes ahead with the anchor still", flush=True)
 
         # The greeting plays the moment the interview starts (greeting.py); made once, then kept.
         hello = None
