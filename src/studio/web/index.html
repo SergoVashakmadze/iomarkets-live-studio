@@ -544,10 +544,10 @@ function startProgramme() {
     micToMix.connect(player.mix);                        // to the recording only, never the speakers
   }
   const tracks = [...$("program").captureStream(25).getVideoTracks(), ...player.mix.stream.getAudioTracks()];
-  const type = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+  const type = ["video/webm;codecs=vp8,opus", "video/webm"]   // VP8: VP9 in software froze a tester's tab (Nov 2)
     .find((t) => MediaRecorder.isTypeSupported(t));
   const chunks = [];
-  progRec = new MediaRecorder(new MediaStream(tracks), { ...(type ? { mimeType: type } : {}), videoBitsPerSecond: 5_000_000 });
+  progRec = new MediaRecorder(new MediaStream(tracks), { ...(type ? { mimeType: type } : {}), videoBitsPerSecond: 2_500_000 });
   progRec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   progRec.onstop = () => {
     const url = URL.createObjectURL(new Blob(chunks, { type: "video/webm" }));
@@ -686,7 +686,7 @@ const media = (name) => withToken(`/media/${room}/${name}`);
 // Answers: the recorder runs all the time and restarts at each turn boundary; the upload says
 // where in the recording the guest began (a second early, as speech is detected late).
 function startRecorder() {
-  const type = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+  const type = ["video/webm;codecs=vp8,opus", "video/webm"]   // VP8: VP9 in software froze a tester's tab (Nov 2)
     .find((t) => MediaRecorder.isTypeSupported(t));
   const chunks = [];
   recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
