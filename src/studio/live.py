@@ -78,6 +78,7 @@ def _short_start(parts: list[str], words: int = 9) -> list[str]:
 RENDER_RATIO = 1.1  # lip-sync seconds per second of speech (fit to 2026-11-01's ~60 renders)...
 RENDER_OVERHEAD_S = 1.0  # ...plus a fixed cost per sentence (encode, upload)
 MAX_BUFFER_S = 8.0  # the longest the first clip is held back
+SHORT_TURN_WORDS = 3  # a guest turn this short never replaces the line she is on
 
 
 async def _mp3_seconds(mp3: bytes) -> float | None:
@@ -249,7 +250,10 @@ class LiveSession:
                 if text:
                     self.transcript.append(f"Guest: {text}")
                     self.pending.append(text)
-                    self._start_reply()
+                    if self._keeps_line(text):
+                        print(f"[turn] {text!r} kept for the next reply: a line is on", flush=True)
+                    else:
+                        self._start_reply()
                     if self.desk:
                         self._spawn(self._check(text, turn=turn_id))
                     if self.researcher:
@@ -349,6 +353,15 @@ class LiveSession:
                     return
         finally:
             self._researching = False
+
+    def _keeps_line(self, text: str) -> bool:
+        """A few words ("Hello?", "Yeah", "Okay") while her line is rendering, held or playing
+        do not replace it: they wait for the guest's next turn. On Nov 2 a "Hello?" during the
+        opening's lip-sync replaced the first question after nine words, then left ten seconds
+        of silence while the new line ("We lost you...") rendered. A barge-in has already
+        stopped her, so it is answered as before."""
+        on = self.anchor_speaking or bool(self._speaking and not self._speaking.done())
+        return on and not self.interrupted and len(text.split()) <= SHORT_TURN_WORDS
 
     def _cancel_reply(self) -> None:
         if self._reply and not self._reply.done():

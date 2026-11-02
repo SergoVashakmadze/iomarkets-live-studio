@@ -17,6 +17,17 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 2: the tester's second take: life-science words, and a "Hello?" that cut her off
+
+The same tester's second recording, transcribed with Whisper as a stand-in listener. P2Y1, P2Y12,
+knockouts and platelets now come through. "Neutrophils" was heard as "natural cells" and the
+guest's name as "Dickson" (both guessed by rule), and "assays" as "lasses" (CMUdict's own sounds).
+The lexicon gained 44 words for platelets and lung inflammation; the ones from the take were
+synthesised and transcribed again to check them. The opening question also stopped after nine words: the
+guest's "Hello?" during its lip-sync started a new reply that replaced it, then left ten seconds
+of silence. A turn of three words or fewer now waits for the guest's next turn while her line is
+rendering or playing (`live.py`, `_keeps_line`). A barge-in is still answered.
+
 ### Nov 1 (night): scientific names said in full
 
 A pharmacologist tester could not follow the anchor on "P2Y1 receptor" and "Rac1". The voice drops
