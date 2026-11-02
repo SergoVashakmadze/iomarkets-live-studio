@@ -6,6 +6,17 @@ this week (the first shot below), and the demo may show only work built during t
 repo. The video carries three jobs: show a real interview working end to end, make each Meta
 model visible at the moment it works, and say plainly what was built when.
 
+## As built (2 Nov 2026)
+
+`uv run python scripts/video_cards.py && uv run python scripts/assemble_video.py TAKE_DIR` writes
+`video/iomarkets-live-studio-demo.mp4` (2:37) from Alex Kandelaki's take (TAKE_DIR holds his
+`programme.webm`, `segment.mp4` and `interview.srt`). The storyboard below assumed a screen recording
+of the page; there is none, so the video is the programme as it went out live, in five continuous
+excerpts (never spliced inside), with captions burned in and a label naming the Meta model at
+work, then 22 s of the packaged segment. His take has no interruption or chart, so those rows
+are not in it. The waits between his answer and her follow-up are left at their real length.
+No voice-over: the cards carry the words, and the title card opens with the disclosure line.
+
 ## What you need
 
 - One full interview recorded with a real guest (`docs/DEMO.md`: guest, chart, consent).

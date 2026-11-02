@@ -24,8 +24,7 @@ Paste-ready. Check each against the live form; the EIN is typed by the operator,
 - **Write-up:** `docs/WRITEUP.md` (by judging criterion). **What was built when:** `NEW_WORK.md`.
 - **Bonuses to name:** open-weights model (Muse Spark Open on Fireworks); creative (Muse Image);
   Most Viral: post a 45-60 s cut on X.
-- **Meta credits:** each participant, including startup entrants, must claim the $150 credit
-  individually by Wed 4 Nov, 9:00 PM Eastern.
+- **Meta credits:** the $150 credit is claimed (done before 2 Nov; one claim per participant).
 - **Do before submitting:** video recorded (testers' recordings are in: Alex Kandelaki, 2 Nov, a
   clean 7-minute take), video link in the form. The title card and `docs/VIDEO.md` now name Teresa.
 

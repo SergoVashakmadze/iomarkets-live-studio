@@ -17,6 +17,13 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 2 (night): the demo video, assembled from a real take
+
+`scripts/assemble_video.py` builds the 3-minute video from one take's programme recording, its
+packaged segment and its transcript: continuous excerpts with captions and Meta-model labels,
+between the title, how-it-works and new-work cards (`docs/VIDEO.md`, "As built"). The how-it-works
+card now says her reply is *written* in 1.3-2.1 s; voicing and lip-sync add more before she speaks.
+
 ### Nov 2 (night): no "Interesting." when the guest asks her to repeat
 
 In Alex Kandelaki's take the guest said "I didn't follow your question. Could you just repeat it

@@ -59,7 +59,7 @@ CARDS = {
             ("SAM 3.1  -  cuts the guest out of their room, answer by answer", 34, MUTED),
             ("Muse Spark Open  -  edits the research brief on open weights", 34, MUTED),
             ("", 40, WHITE),
-            ("Anchor replies in 1.3-2.1 s  |  barge-in detected in 0.2-0.4 s", 34, ACCENT),
+            ("Her reply written in 1.3-2.1 s  |  barge-in detected in 0.2-0.4 s", 34, ACCENT),
             ("Fact-check 6-8 s  |  a 12 s answer cut out in about 25 s", 34, ACCENT),
         ],
         8,
