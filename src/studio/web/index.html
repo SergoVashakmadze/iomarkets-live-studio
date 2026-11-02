@@ -834,6 +834,21 @@ let player = null;                       // AudioContext for anchor audio
 let voiceLine = null;                    // {id, text, parts: Map, next, source, timer, fallback}
 let anchorClip = null;                   // the lip-synced clip on screen (MuseTalk), if any
 let anchorHold = null;                   // the last clip, held on its last frame while she is silent
+
+// Every clip is its own <video>, and each holds a decoder in Chrome's shared GPU process until
+// it is emptied. Left alone they piled up over an interview and froze the whole browser of a
+// tester (Nov 2), so a clip is emptied as soon as it can no longer be shown.
+function release(v) {
+  if (!v || v === anchorClip || v === anchorHold) return;
+  v.pause();
+  v.removeAttribute("src");
+  v.load();
+}
+function hold(v) {
+  const old = anchorHold;
+  anchorHold = v;
+  release(old);
+}
 let lipsyncLive = false;                 // whether the server sends a clip with each sentence
 let speakingFlag = false;
 
@@ -846,11 +861,14 @@ function setSpeaking(on) {
 }
 
 function stopVoice() {
-  if (anchorClip) { anchorClip.pause(); anchorHold = anchorClip; anchorClip = null; }
+  if (anchorClip) { anchorClip.pause(); hold(anchorClip); anchorClip = null; }
   if (voiceLine) {
     clearTimeout(voiceLine.timer);
     for (const src of voiceLine.sources ?? []) { try { src.stop(); } catch {} }
+    const gone = voiceLine;
     voiceLine = null;
+    gone.items?.forEach((p) => release(p.video));
+    gone.parts?.forEach((p) => release(p.video));
   }
   speechSynthesis.cancel();
   setSpeaking(false);
@@ -895,7 +913,7 @@ async function onAudio(m) {
   const [buffer, video] = await Promise.all([player.decodeAudioData(bytes.buffer), m.video ? loadClip(m.video) : null]);
   // Telemetry for the operator's logs: how long a part took to be playable on this page.
   send({ type: "playback", line: m.id, part: m.part, load_ms: Math.round(performance.now() - t), clip: !!video, wanted: !!m.video });
-  if (voiceLine !== line) return;
+  if (voiceLine !== line) { release(video); return; }
   line.parts.set(m.part, { buffer, video, last: m.last });
   schedule(line);
 }
@@ -904,7 +922,9 @@ async function onAudio(m) {
 async function loadClip(name) {
   const v = Object.assign(document.createElement("video"), { src: media(name), muted: true, playsInline: true, preload: "auto" });
   await new Promise((done) => { v.oncanplaythrough = v.onerror = done; setTimeout(done, 4000); });
-  return v.readyState >= 2 ? v : null;
+  if (v.readyState >= 2) return v;
+  release(v);
+  return null;
 }
 
 // Each sentence is scheduled on the audio clock, the moment it is playable and in order, to start
@@ -929,7 +949,7 @@ function schedule(line) {
     if (line.sched === 0) setSpeaking(true);
     if (part.last) src.onended = () => {
       if (voiceLine !== line) return;
-      if (anchorClip) { anchorClip.pause(); anchorHold = anchorClip; anchorClip = null; }
+      if (anchorClip) { anchorClip.pause(); hold(anchorClip); anchorClip = null; }
       voiceLine = null;
       setSpeaking(false);
     };
@@ -945,8 +965,9 @@ function syncAnchor() {
   const cur = line.items.find((p) => t >= p.startAt && t < p.endAt);
   if (!cur || !cur.video) return;                           // between sentences or no clip: hold the last frame
   if (anchorClip !== cur.video) {
-    if (anchorClip) { anchorClip.pause(); anchorHold = anchorClip; }
+    const prev = anchorClip;
     anchorClip = cur.video;
+    if (prev) { prev.pause(); hold(prev); }
   }
   const want = t - cur.startAt;
   if (anchorClip.paused || Math.abs(anchorClip.currentTime - want) > 0.35) {
@@ -997,7 +1018,7 @@ async function startLive(cold) {
   $("segmentLink").textContent = "";
   $("progLink").textContent = "";
   ticker.items = [];
-  anchorHold = null;                     // a new interview starts from her still
+  hold(null);                            // a new interview starts from her still
   $("build").disabled = true;
   // The name and the topic's key words bias speech recognition; role words add nothing.
   const keywords = $("subject").value.split(/[,;]/)

@@ -25,6 +25,12 @@ refuses the whole session over one that is too long, so the anchor never heard t
 `asr.handshake()` now breaks any keyword over 30 characters into word runs that fit
 (`fit_keywords`, `66064f6`).
 
+The same tester's tab, then all of Chrome, froze for a minute at a time after Go live: the page
+recorded the camera and the programme in VP9 (software, the costliest codec) while screen-sharing,
+and every sentence's lip-sync clip was a new `<video>` that was never emptied, so decoders piled
+up in Chrome's shared GPU process. Both recorders now use VP8 at a lower programme bitrate, and a
+clip is emptied as soon as it can no longer be shown (`release`, `hold` in `index.html`).
+
 ### Nov 2 (afternoon): she reacts at once, and answers sooner
 
 The tester waited 14-17 s after each answer, with the anchor frozen. Two changes. The first clip
