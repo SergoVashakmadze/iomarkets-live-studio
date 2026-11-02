@@ -308,7 +308,12 @@ class Phonemizer:
                 if out and out[-1] != "sp":
                     out.append("sp")
             else:
-                out += self.word(tok)
+                phones = self.word(tok)
+                # "ee" after "ee" runs into one long vowel: "CEO" (see ee oh) came out "see-oh".
+                # A light y between them, as speakers say it: "see-yee-oh".
+                if phones and out and out[-1].startswith("IY") and phones[0].startswith("IY"):
+                    out.append("Y")
+                out += phones
         while out and out[-1] == "sp":
             out.pop()
         return out
