@@ -365,3 +365,51 @@ def test_even_parts_cuts_long_sentences_near_the_middle_at_a_natural_break():
     assert len(got) == 2 and all(len(g.split()) <= 11 for g in got)
     assert got[0].endswith(",")
     assert " ".join(got).replace(",", "") == plain
+
+
+async def test_a_short_turn_while_her_line_renders_does_not_replace_it():
+    """Nov 2: the guest's "Hello?" during the opening's lip-sync replaced the first question."""
+    sent: list[dict] = []
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def send(msg):
+        sent.append(msg)
+
+    async def voice(text):
+        return b"mp3"
+
+    async def lipsync(mp3, line_id, part):
+        started.set()
+        await release.wait()
+        return None
+
+    anchor = FakeAnchor()
+    s = LiveSession(anchor, send, voice=voice, lipsync=lipsync)
+    await s.open()
+    await asyncio.wait_for(started.wait(), 1)
+    await s.on_event(GuestStarted(1, barge_in=False))
+    await s.on_event(GuestTurn(1, "Hello?", 0))
+    await _settle()
+    assert anchor.asked == []  # the opening is still on
+    assert s.pending == ["Hello?"]
+    release.set()
+    for _ in range(100):
+        if any(m["type"] == "anchor_audio" for m in sent):
+            break
+        await asyncio.sleep(0.01)
+    assert [m["id"] for m in sent if m["type"] == "anchor_audio"] == [1]
+    # The guest's real answer gets the reply, and it covers the "Hello?" too.
+    s.set_anchor_speaking(False)
+    await s.on_event(GuestTurn(2, "I study platelets in the lung.", 0))
+    await _settle()
+    assert anchor.asked == [("Hello? I study platelets in the lung.", False)]
+
+
+async def test_a_short_turn_after_a_barge_in_is_answered():
+    anchor = FakeAnchor()
+    s, sent = _session(anchor)
+    s.set_anchor_speaking(True)
+    await s.on_event(GuestStarted(1, barge_in=True))
+    await s.on_event(GuestTurn(1, "Sorry?", 0))
+    await _settle()
+    assert anchor.asked == [("Sorry?", True)]
