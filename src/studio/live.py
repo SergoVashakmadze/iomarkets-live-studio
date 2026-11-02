@@ -35,6 +35,7 @@ import asyncio
 import base64
 import contextlib
 import os
+import re
 import tempfile
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass
@@ -87,6 +88,14 @@ REACTIONS = (
     "Okay, thank you.",
     "That's helpful.",
 )  # "Right." rose like a question
+# "I see." to "Could you repeat that?" sounds like she did not listen (Alex's take, Nov 2): no
+# reaction when the guest asks her something, only her answer.
+ASKS_HER = re.compile(
+    r"\?\s*$|\b(repeat|rephrase|say (that|it) again|come again|pardon|what do you mean"
+    r"|(didn't|did not|don't|do not) (quite )?(follow|catch|get|understand|hear)"
+    r" (you|that|your question|the question))\b",
+    re.IGNORECASE,
+)
 REACTION_SECONDS = 1.0  # at least; the length is read from the size (tts.py: 128 kb/s)
 REACTION_LOAD_S = 0.6  # the page loads the clip before it plays
 
@@ -274,7 +283,8 @@ class LiveSession:
                         print(f"[turn] {text!r} kept for the next reply: a line is on", flush=True)
                     else:
                         self._start_reply()
-                        self._react()
+                        if not ASKS_HER.search(text):
+                            self._react()
                     if self.desk:
                         self._spawn(self._check(text, turn=turn_id))
                     if self.researcher:

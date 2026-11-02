@@ -10,7 +10,9 @@ Paste-ready. Check each against the live form; the EIN is typed by the operator,
   is ready when the call ends.
 - **Problem statement:** Build for Your World.
 - **Code:** https://github.com/SergoVashakmadze/iomarkets-live-studio (MIT)
-- **Try it:** the judges' link (token in the Modal secret `iomarkets-studio`; rotate after judging)
+- **Try it:** no hosted link. The Modal app was stopped on 2 Nov after testing, so it costs nothing
+  and nobody can use it. Judges see the video and can run it from the code (README, "Try it").
+  To bring it back: `modal deploy` (docs/DEPLOY.md), which keeps the same link and token.
 - **Video:** unlisted YouTube link, 3:00 at most; **opens with the disclosure line** (`docs/VIDEO.md`):
   Teresa is a pre-existing HeyGen library avatar and the IoMarkets TV studio background is
   pre-existing; MuseTalk is open source (MIT); everything else, and every call to a Meta model, was
@@ -24,8 +26,8 @@ Paste-ready. Check each against the live form; the EIN is typed by the operator,
   Most Viral: post a 45-60 s cut on X.
 - **Meta credits:** each participant, including startup entrants, must claim the $150 credit
   individually by Wed 4 Nov, 9:00 PM Eastern.
-- **Do before submitting:** testers' recordings in (due Mon 2 Nov, 8 pm UK), video recorded, video
-  link in the form, the README/`docs/VIDEO.md`/title card updated for Teresa.
+- **Do before submitting:** video recorded (testers' recordings are in: Alex Kandelaki, 2 Nov, a
+  clean 7-minute take), video link in the form. The title card and `docs/VIDEO.md` now name Teresa.
 
 ## The form's fields (as seen 1 Nov 2026) and drafted answers
 

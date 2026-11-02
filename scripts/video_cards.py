@@ -26,12 +26,17 @@ CARDS = {
             ("", 30, WHITE),
             # The video must open with this disclosure (docs/ORGANISER_RULES.md).
             (
-                "Pre-existing: Meta's models and open-source libraries. New this week: the studio",
+                "Pre-existing: Meta's models, open-source libraries (MuseTalk lip-sync, MIT),",
                 34,
                 WHITE,
             ),
             (
-                "software, and the AI anchor, made with Meta's Muse Image and FastSpeech 2.",
+                "the anchor's look (Teresa, a HeyGen library avatar) and the IoMarkets TV set.",
+                34,
+                WHITE,
+            ),
+            (
+                "New this week: all the studio software. Her voice is Meta's FastSpeech 2.",
                 34,
                 WHITE,
             ),
