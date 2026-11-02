@@ -1093,7 +1093,7 @@ async function onMessage(m) {
     case "anchor_line":
       modelOff("anchor");
       note("anchor", m.text);
-      addLine("Anchor (AI)", m.text, "anchor");
+      if (!m.aside) addLine("Anchor (AI)", m.text, "anchor");  // "I see.": not in the transcript
       speak(m.id, m.text);
       break;
     case "anchor_audio":

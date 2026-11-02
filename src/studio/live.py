@@ -77,8 +77,18 @@ def _short_start(parts: list[str], words: int = 9) -> list[str]:
 
 RENDER_RATIO = 1.1  # lip-sync seconds per second of speech (fit to 2026-11-01's ~60 renders)...
 RENDER_OVERHEAD_S = 1.0  # ...plus a fixed cost per sentence (encode, upload)
-MAX_BUFFER_S = 8.0  # the longest the first clip is held back
+MAX_BUFFER_S = 3.0  # the longest the first clip is held back (8 s until Nov 2: replies came
+# 14-17 s after the guest stopped; a long line may now pause briefly between pieces)
 SHORT_TURN_WORDS = 3  # a guest turn this short never replaces the line she is on
+# Said the moment the guest finishes, lip-synced, while her real answer is written and rendered.
+REACTIONS = (
+    "I see.",
+    "Interesting.",
+    "Okay, thank you.",
+    "That's helpful.",
+)  # "Right." rose like a question
+REACTION_SECONDS = 1.0  # at least; the length is read from the size (tts.py: 128 kb/s)
+REACTION_LOAD_S = 0.6  # the page loads the clip before it plays
 
 
 async def _mp3_seconds(mp3: bytes) -> float | None:
@@ -182,6 +192,10 @@ class LiveSession:
         self.last_heard = asyncio.get_event_loop().time()  # the guest's last sound: idle end
         self._hold_until = 0.0  # the opening waits for the greeting to finish
         self._speaking: asyncio.Task | None = None
+        self._reaction: asyncio.Task | None = None  # rendering; done once it is sent
+        self._reaction_until = 0.0  # when the reaction sent last finishes on the page
+        self._reactions: dict[str, tuple[bytes, float]] = {}  # voiced at open: mp3, seconds
+        self._reaction_n = 0
         self.transcript: list[str] = []
         self.research_text = ""
         self._researching = False
@@ -225,6 +239,8 @@ class LiveSession:
             await self.send(msg)
             # Allow the page a moment to load the clip before it starts.
             self._hold_until = asyncio.get_running_loop().time() + g.seconds + 0.4
+        if self.voice and self.lipsync:
+            self._spawn(self._voice_reactions())
         self._start_reply(opening=True)
 
     async def on_event(self, event: Event) -> None:
@@ -234,8 +250,12 @@ class LiveSession:
             case GuestStarted(turn_id, barge_in):
                 if self.last_line and turn_id not in self.question_for_turn:
                     self.question_for_turn[turn_id] = self.last_line
+                reacting = self._reacting()
+                self._drop_reaction()  # still rendering: the guest is not done after all
                 if barge_in:
-                    self.interrupted = True
+                    # Talking over "I see." is not interrupting her answer.
+                    self.interrupted = self.interrupted or not reacting
+                    self._reaction_until = 0.0
                     self.anchor_speaking = False
                     self._stop_speaking()
                     await self.send({"type": "stop_anchor"})
@@ -254,6 +274,7 @@ class LiveSession:
                         print(f"[turn] {text!r} kept for the next reply: a line is on", flush=True)
                     else:
                         self._start_reply()
+                        self._react()
                     if self.desk:
                         self._spawn(self._check(text, turn=turn_id))
                     if self.researcher:
@@ -274,6 +295,7 @@ class LiveSession:
     async def close(self) -> None:
         self._cancel_reply()
         self._stop_speaking()
+        self._drop_reaction()
         for task in list(self._background):
             task.cancel()
 
@@ -360,8 +382,64 @@ class LiveSession:
         opening's lip-sync replaced the first question after nine words, then left ten seconds
         of silence while the new line ("We lost you...") rendered. A barge-in has already
         stopped her, so it is answered as before."""
-        on = self.anchor_speaking or bool(self._speaking and not self._speaking.done())
+        speaking = self.anchor_speaking and not self._reacting()
+        on = speaking or bool(self._speaking and not self._speaking.done())
         return on and not self.interrupted and len(text.split()) <= SHORT_TURN_WORDS
+
+    def _reacting(self) -> bool:
+        return asyncio.get_running_loop().time() < self._reaction_until
+
+    async def _voice_reactions(self) -> None:
+        assert self.voice is not None
+        for text in REACTIONS:
+            with contextlib.suppress(Exception):
+                mp3 = await self.voice(text)
+                self._reactions[text] = (mp3, max(len(mp3) * 8 / 128_000, REACTION_SECONDS))
+
+    def _react(self) -> None:
+        """A short "I see." the moment the guest finishes, so she is not frozen while her answer
+        is written and rendered (14-17 s on Nov 2). Lip-synced live, carrying on from where her
+        last clip ended: the GPU is idle while the reply is written. Never over a line of hers."""
+        on = self.anchor_speaking or bool(self._speaking and not self._speaking.done())
+        ready = [t for t in REACTIONS if t in self._reactions]
+        if not (self.lipsync and ready) or on:
+            return
+        text = ready[self._reaction_n % len(ready)]
+        self._reaction_n += 1
+        self._drop_reaction()
+        self._reaction = asyncio.create_task(self._send_reaction(text, *self._reactions[text]))
+
+    def _drop_reaction(self) -> None:
+        if self._reaction and not self._reaction.done():
+            self._reaction.cancel()
+
+    async def _send_reaction(self, text: str, mp3: bytes, seconds: float) -> None:
+        assert self.lipsync is not None
+        self._line_id += 1
+        line_id = self._line_id
+        try:
+            video = await self.lipsync(mp3, line_id, 0)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            video = None
+        if video is None:
+            return  # her voice over a still face is worse than her waiting
+        self._reaction = None  # sending: too late to drop, or the page gets a line with no voice
+        msg = {"type": "anchor_line", "id": line_id, "text": text, "aside": True}
+        await self.send(msg)
+        await self.send(
+            {
+                "type": "anchor_audio",
+                "id": line_id,
+                "part": 0,
+                "last": True,
+                "mp3": base64.b64encode(mp3).decode(),
+                "video": video,
+            }
+        )
+        self._reaction_until = asyncio.get_running_loop().time() + seconds + REACTION_LOAD_S
+        print(f"[react] {text!r}", flush=True)
 
     def _cancel_reply(self) -> None:
         if self._reply and not self._reply.done():
@@ -396,7 +474,8 @@ class LiveSession:
         self._line_id += 1
         self.last_line = line
         self.transcript.append(f"Anchor: {line}")
-        hold = self._hold_until if opening else 0.0
+        self._drop_reaction()  # her answer is ready first: no "I see." now
+        hold = self._hold_until if opening else (self._reaction_until if self._reacting() else 0.0)
         if self.voice:
             self._stop_speaking()
             self._speaking = asyncio.create_task(self._speak(self._line_id, line, hold))

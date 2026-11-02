@@ -17,6 +17,16 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 2 (afternoon): she reacts at once, and answers sooner
+
+The tester waited 14-17 s after each answer, with the anchor frozen. Two changes. The first clip
+of a line is now held back at most 3 s instead of 8 s, so her answer can start up to 5 s sooner;
+a long line may pause briefly between pieces. And the moment the guest finishes, she says a short
+lip-synced "I see." / "Interesting." (`live.py`, `_react`), voiced when the interview opens and
+lip-synced live while the reply is still being written (the GPU is idle then), so her movement
+carries on from her last clip. Her answer waits for it to finish, it is left out of the
+transcript, and talking over it doesn't count as interrupting her.
+
 ### Nov 2: the tester's second take: life-science words, and a "Hello?" that cut her off
 
 The same tester's second recording, transcribed with Whisper as a stand-in listener. P2Y1, P2Y12,
