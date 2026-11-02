@@ -961,6 +961,11 @@ function send(msg) {
 
 // Live session
 
+// Start the lip-sync GPU as soon as the operator confirms consent, the last step before Go live.
+$("consent").addEventListener("change", () => {
+  if ($("consent").checked) fetch(withToken("/api/warm"), { method: "POST" }).catch(() => {});
+});
+
 $("go").onclick = () => startLive(false);
 $("cold").onclick = () => startLive(true);
 
@@ -1059,6 +1064,7 @@ async function onMessage(m) {
     case "ready":
       room = m.room;
       lipsyncLive = !!m.lipsync;
+      if (!lipsyncLive) addLine("Studio", "Lip-sync is off for this interview: the anchor will speak without moving her lips (the GPU did not start, or today's GPU budget is spent). Press End and try again in a few minutes if you need it.", "anchor error");
       try {
         await startMic((buf) => ws?.readyState === WebSocket.OPEN && ws.send(buf));
         startRecorder();
@@ -1075,6 +1081,10 @@ async function onMessage(m) {
       showCaption();
       $("monitor").classList.add("on");
       setStatus("Live", true);
+      break;
+    case "lipsync_warming":
+      setStatus("Starting the anchor's lip-sync (about 2 minutes the first time)…");
+      $("hint").textContent = "The anchor's lip-sync GPU was asleep and is starting. The interview begins as soon as it is ready; keep this page open.";
       break;
     case "anchor_thinking":
       setStatus("Anchor thinking…", true);

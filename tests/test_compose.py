@@ -66,6 +66,61 @@ async def test_lipsync_is_skipped_without_a_server(tmp_path, monkeypatch):
     assert await compose.lipsync(mp3, tmp_path / "out.mp4") is None
 
 
+async def test_lipsync_ready_waits_for_a_cold_gpu(monkeypatch):
+    """On Modal a cold GPU is started and waited for; the page is told while it waits."""
+    monkeypatch.setenv("STUDIO_LIPSYNC", "modal")
+    monkeypatch.setattr(compose, "LIPSYNC_POLL_S", 0)
+    answers = iter([False, False, False, True])  # up? asked at the start, then each poll
+    woke, waits = [], []
+
+    async def up():
+        return next(answers)
+
+    async def wake():
+        woke.append(1)
+
+    async def wait():
+        waits.append(1)
+
+    monkeypatch.setattr(compose, "lipsync_up", up)
+    monkeypatch.setattr(compose, "lipsync_wake", wake)
+    monkeypatch.setattr(compose.ledger, "gpu_allowed", lambda: True)
+    assert await compose.lipsync_ready(wait) is True
+    assert woke == [1] and len(waits) == 3
+
+
+async def test_lipsync_ready_gives_up_when_the_gpu_never_comes(monkeypatch):
+    monkeypatch.setenv("STUDIO_LIPSYNC", "modal")
+    monkeypatch.setattr(compose, "LIPSYNC_WARM_S", 0.05)
+    monkeypatch.setattr(compose, "LIPSYNC_POLL_S", 0.01)
+
+    async def never():
+        return False
+
+    async def wake():
+        pass
+
+    monkeypatch.setattr(compose, "lipsync_up", never)
+    monkeypatch.setattr(compose, "lipsync_wake", wake)
+    monkeypatch.setattr(compose.ledger, "gpu_allowed", lambda: True)
+    assert await compose.lipsync_ready() is False
+
+
+async def test_lipsync_ready_does_not_start_a_gpu_over_the_cap(monkeypatch):
+    monkeypatch.setenv("STUDIO_LIPSYNC", "modal")
+
+    async def never():
+        return False
+
+    async def wake():
+        raise AssertionError("must not wake the GPU")
+
+    monkeypatch.setattr(compose, "lipsync_up", never)
+    monkeypatch.setattr(compose, "lipsync_wake", wake)
+    monkeypatch.setattr(compose.ledger, "gpu_allowed", lambda: False)
+    assert await compose.lipsync_ready() is False
+
+
 @needs_ffmpeg
 async def test_join_mixes_sizes_and_audio_layouts(tmp_path):
     a = _clip(tmp_path / "a.mp4", size="320x240")
