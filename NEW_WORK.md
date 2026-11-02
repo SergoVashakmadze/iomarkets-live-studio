@@ -17,6 +17,14 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 2 (evening): a long subject no longer stops the interview from starting
+
+A tester's recording stalled with "ASR keyword 2 exceeds the maximum length of 30 characters":
+each comma-separated piece of the Subject field is sent to Meta's ASR as a keyword, and the ASR
+refuses the whole session over one that is too long, so the anchor never heard the guest.
+`asr.handshake()` now breaks any keyword over 30 characters into word runs that fit
+(`fit_keywords`, `66064f6`).
+
 ### Nov 2 (afternoon): she reacts at once, and answers sooner
 
 The tester waited 14-17 s after each answer, with the anchor frozen. Two changes. The first clip
