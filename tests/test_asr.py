@@ -221,6 +221,7 @@ async def test_policy_close_raises_with_code(fast):
 
 
 def test_long_keywords_are_split_to_fit_the_asr_limit():
-    kws = asr.handshake("k", ["Eliud Kipchoge", "training for a sub-two-hour marathon race"])["keywords"]
+    topic = "training for a sub-two-hour marathon race"
+    kws = asr.handshake("k", ["Eliud Kipchoge", topic])["keywords"]
     assert all(len(k) <= 30 for k in kws)
-    assert kws[0] == "Eliud Kipchoge" and " ".join(kws[1:]) == "training for a sub-two-hour marathon race"
+    assert kws[0] == "Eliud Kipchoge" and " ".join(kws[1:]) == topic
