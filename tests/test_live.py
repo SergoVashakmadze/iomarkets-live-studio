@@ -342,9 +342,9 @@ def test_buffer_seconds_holds_the_first_clip_just_long_enough():
 
     assert buffer_seconds([3.0]) == 0.0  # one clip: nothing to wait for
     assert buffer_seconds([5.0, 2.0], ratio=1.0, overhead=0.0) == 0.0  # renders faster than plays
-    # Parts 2.5 s then 6.5 s at 1.1x + 1 s: the second is ready 8.15 s after the first, which
-    # plays for only 2.5 s, so the first waits 5.65 s.
-    assert abs(buffer_seconds([2.5, 6.5]) - 5.65) < 1e-9
+    # Parts 2.5 s then 3.5 s at 1.1x + 1 s: the second is ready 4.85 s after the first, which
+    # plays for only 2.5 s, so the first waits 2.35 s.
+    assert abs(buffer_seconds([2.5, 3.5]) - 2.35) < 1e-9
     assert buffer_seconds([1.0, 40.0]) == MAX_BUFFER_S  # never beyond the cap
 
 
@@ -413,3 +413,82 @@ async def test_a_short_turn_after_a_barge_in_is_answered():
     await s.on_event(GuestTurn(1, "Sorry?", 0))
     await _settle()
     assert anchor.asked == [("Sorry?", True)]
+
+
+def _reacting_session(anchor: FakeAnchor, render: float = 0.0):
+    sent: list[dict] = []
+
+    async def send(msg):
+        sent.append(msg)
+
+    async def voice(text):
+        return text.encode()
+
+    async def lipsync(mp3, line_id, part):
+        await asyncio.sleep(render)
+        return f"say-{line_id}-{part}.mp4"
+
+    return LiveSession(anchor, send, voice=voice, lipsync=lipsync), sent
+
+
+async def _until(cond, timeout: float = 3.0) -> None:
+    for _ in range(int(timeout * 100)):
+        if cond():
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("timed out")
+
+
+async def _finish(s: LiveSession) -> None:
+    """Let her last line finish (it measures its speech with ffprobe, a real subprocess)."""
+    if s._speaking:
+        await asyncio.wait([s._speaking], timeout=3)
+
+
+async def test_she_reacts_at_once_and_answers_after_the_reaction():
+    anchor = FakeAnchor(delay=0.2)
+    s, sent = _reacting_session(anchor)
+    await s.open()
+    await _until(lambda: len(_lines(sent)) == 1 and len(s._reactions) == 4)
+    await s.on_event(GuestTurn(1, "We study platelets in the lung.", 0))
+    await _until(lambda: len(_lines(sent)) == 3)
+    lines = [m for m in sent if m["type"] == "anchor_line"]
+    assert lines[1]["text"] == "I see." and lines[1]["aside"]
+    assert lines[2]["text"] == "re: We study platelets in the lung." and "aside" not in lines[2]
+    reaction = next(m for m in sent if m["type"] == "anchor_audio" and m["id"] == lines[1]["id"])
+    assert reaction["video"] and reaction["last"]
+    # Her answer waits for the reaction to finish on the page; neither is in the transcript.
+    sent_at = sent.index(lines[2])
+    assert sent.index(reaction) < sent_at
+    assert "Anchor: I see." not in s.transcript
+    assert s.last_line == "re: We study platelets in the lung."
+    await _finish(s)
+
+
+async def test_no_reaction_when_her_answer_is_ready_first():
+    anchor = FakeAnchor(delay=0.0)
+    s, sent = _reacting_session(anchor, render=0.3)
+    await s.open()
+    await _until(lambda: len(s._reactions) == 4 and len(_lines(sent)) == 1)
+    await s.on_event(GuestTurn(1, "We study platelets in the lung.", 0))
+    await asyncio.sleep(0.5)
+    assert [m["text"] for m in sent if m["type"] == "anchor_line"][1:] == [
+        "re: We study platelets in the lung."
+    ]
+    await _finish(s)
+
+
+async def test_talking_over_the_reaction_is_not_an_interruption():
+    anchor = FakeAnchor(delay=0.3)
+    s, sent = _reacting_session(anchor)
+    await s.open()
+    await _until(lambda: len(s._reactions) == 4 and len(_lines(sent)) == 1)
+    await s.on_event(GuestTurn(1, "We study platelets.", 0))
+    await _until(lambda: any(m.get("aside") for m in sent))
+    s.set_anchor_speaking(True)
+    await s.on_event(GuestStarted(2, barge_in=True))
+    s.set_anchor_speaking(False)
+    await s.on_event(GuestTurn(2, "In the lung, mostly.", 0))
+    await _until(lambda: anchor.asked)
+    assert anchor.asked == [("We study platelets. In the lung, mostly.", False)]
+    await _finish(s)
