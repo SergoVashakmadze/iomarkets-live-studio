@@ -85,6 +85,7 @@ CARDS = {
             ("github.com/SergoVashakmadze/iomarkets-live-studio", 30, ACCENT),
             ("", 40, WHITE),
             ("Built with Muse Spark Open", 34, MUTED),
+            ("Narration: Kokoro-82M (open source). Anchor voice: Meta FastSpeech 2.", 30, MUTED),
             ("Journalism on any topic. Not medical, legal or financial advice.", 36, MUTED),
         ],
         5,
