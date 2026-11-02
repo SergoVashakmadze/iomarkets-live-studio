@@ -17,6 +17,14 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 2 (night): no "Interesting." when the guest asks her to repeat
+
+In Alex Kandelaki's take the guest said "I didn't follow your question. Could you just repeat it
+again?" and she answered "Interesting." before rephrasing. The quick reaction is now skipped when
+the guest asks her something (a question, or a request to repeat or rephrase: `ASKS_HER` in
+`live.py`); her real answer comes as before. The title card and video plan now name Teresa in the
+opening disclosure, and the hosted studio was stopped after testing.
+
 ### Nov 2 (evening): a long subject no longer stops the interview from starting
 
 A tester's recording stalled with "ASR keyword 2 exceeds the maximum length of 30 characters":
