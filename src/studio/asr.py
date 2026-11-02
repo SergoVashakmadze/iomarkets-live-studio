@@ -157,6 +157,26 @@ class Pacer:
         return out
 
 
+MAX_KEYWORD_CHARS = 30  # the ASR refuses the whole session over one longer keyword
+
+
+def fit_keywords(keywords: list[str]) -> list[str]:
+    """Break any keyword over the ASR's 30-character limit into word runs that fit."""
+    out: list[str] = []
+    for kw in keywords:
+        run = ""
+        for word in kw.split():
+            word = word[:MAX_KEYWORD_CHARS]
+            if run and len(run) + 1 + len(word) > MAX_KEYWORD_CHARS:
+                out.append(run)
+                run = word
+            else:
+                run = f"{run} {word}" if run else word
+        if run:
+            out.append(run)
+    return list(dict.fromkeys(out))
+
+
 def handshake(api_key: str, keywords: list[str] = (), language: list[str] = ()) -> dict:
     msg: dict[str, Any] = {
         "authorization": {"accessToken": f"Bearer {api_key}"},
@@ -166,8 +186,9 @@ def handshake(api_key: str, keywords: list[str] = (), language: list[str] = ()) 
         "partialMode": "CUMULATIVE",
         "emitAudioProgress": False,
     }
+    keywords = fit_keywords(keywords)
     if keywords:
-        msg["keywords"] = list(keywords)
+        msg["keywords"] = keywords
     if language:
         msg["languageBias"] = list(language)
     return msg
