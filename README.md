@@ -67,13 +67,20 @@ its own spend and refuses new briefs and interviews once a UTC day reaches
 `STUDIO_DAILY_BUDGET_USD` (default $10, set in `.env`). The page's top bar shows today's spend against that cap. Nothing runs
 on a GPU locally.
 
-**What looks different from the video.** Two things in the video are pre-existing media that are
-not in this repo, because they are not ours to redistribute: Teresa (a HeyGen library avatar) and
-the IoMarkets TV studio background. A local run shows the fallback anchor, "Alexandra Morgan", and
-her set, both made with Muse Image during the event (`scripts/anchor_art.py`). She is shown still,
-because MuseTalk lip-sync needs a GPU service (level 3). The voice is Meta's MMS-TTS on your CPU.
-For the FastSpeech 2 voice heard in the video, run `voice/server.py` as its docstring says (its own
-Python 3.10 environment) and start the studio with `STUDIO_TTS_URL=http://127.0.0.1:8767`.
+**The anchor is Teresa, in the IoMarkets TV studio, as in the video.** Both are pre-existing
+IoMarkets.tv media, declared as such (`NEW_WORK.md`, and the video's opening line) and allowed in
+writing by an organiser (`docs/ORGANISER_RULES.md`). They are in the repo, so a plain clone shows
+them. Her voice is Meta's MMS-TTS on your CPU. For the FastSpeech 2 voice heard in the video, run
+`voice/server.py` as its docstring says (its own Python 3.10 environment) and start the studio
+with `STUDIO_TTS_URL=http://127.0.0.1:8767`.
+
+> **Lip-sync needs a GPU or a Modal account.** Teresa's lip movement is rendered by MuseTalk
+> (open source, MIT), which needs an NVIDIA GPU. On an ordinary laptop she speaks every line with
+> voice and text but **without moving her lips**. To see the lip-sync, either:
+> - **your own NVIDIA GPU**: set up a MuseTalk checkout, run
+>   `lipsync/server.py` in it as its docstring says (it reads Teresa's media from
+>   `lipsync/anchor/`), and start the studio with `STUDIO_LIPSYNC_URL=http://127.0.0.1:8766`; or
+> - **your own Modal account** (level 3 below), which runs it on an L40S GPU for you.
 
 **A guest on another machine.** Camera and microphone need HTTPS everywhere except localhost. Set a
 `STUDIO_TOKEN` in `.env` (any long random string), run `cloudflared tunnel --url
@@ -82,11 +89,19 @@ http://127.0.0.1:8000` (cloudflared 2026.10.2 or later), and send the guest
 
 ### 3. Your own Modal account: the hosted studio, with lip-sync
 
-`docs/DEPLOY.md` deploys the same app to Modal: `bash deploy/deploy.sh path/to/your.env 10`, where
-the `.env` holds your keys and `10` is your daily Meta budget in USD. It runs in your Modal
-workspace, on your keys, and prints your own private link. Lip-sync of Teresa also needs her
-pre-existing media on a Modal Volume (`deploy/lipsync_setup.sh`), which the repo does not hold, so
-for judging levels 1 and 2 are the practical routes and the video shows the lip-synced version.
+`docs/DEPLOY.md` deploys the same app, lip-sync included, to your Modal workspace on your keys:
+
+```sh
+uv run --no-project --with modal==1.6.1 modal token new   # once: log in to your Modal account
+bash deploy/lipsync_setup.sh             # once: Teresa's media and MuseTalk's public weights
+bash deploy/deploy.sh path/to/your.env 10   # your keys; 10 = your daily Meta budget in USD
+```
+
+It prints the path of a private file holding your link (URL with its token). Open it in Chrome; the
+first interview waits about two minutes while the GPU starts. Cost on your Modal bill: about
+$2.45 an hour while the L40S is up (it stops five idle minutes after an interview), plus about
+$0.13 of CPU a session; Meta usage is as in level 2. The studio caps GPU spend at
+`STUDIO_GPU_DAILY_BUDGET_USD` (default $5 a day), then shows Teresa still.
 
 ## Demo
 
@@ -125,9 +140,10 @@ she is "Teresa". Two parts of her are **pre-existing, not built this week**: her
 made earlier with HeyGen, and the studio background she sits in was made earlier too. Her voice is
 Meta's FastSpeech 2 (`voice/server.py`, with MMS-TTS as the fallback). Her lip-sync is **MuseTalk**
 v1.5 (open source, MIT) on one Modal GPU (`lipsync/server.py`, `deploy/modal_app.py`). An organiser
-confirmed in writing that both are allowed (`docs/ORGANISER_RULES.md`). When Teresa's image files are
-absent, as in a fresh clone, the page shows the Muse Image anchor "Alexandra Morgan" instead. When
-the lip-sync service is down, the anchor is shown still, and the text and voice carry on.
+confirmed in writing that both are allowed (`docs/ORGANISER_RULES.md`). Her pictures and lip-sync
+media are in the repo (`src/studio/assets/teresa*`, `lipsync/anchor/`). The Muse Image anchor
+"Alexandra Morgan" remains as the fallback if they are removed. Without a GPU, or when the
+lip-sync service is down, Teresa is shown still, and the text and voice carry on.
 
 ## Licence
 
