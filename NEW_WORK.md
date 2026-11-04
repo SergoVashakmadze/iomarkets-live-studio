@@ -17,6 +17,13 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 4: "CEO" said as three letters
+
+FastSpeech 2 ran "see ee oh" together into "see-oh": two "ee" sounds in a row merge into one long
+vowel. `Phonemizer` in `voice/server.py` now puts a light "y" between them ("see-yee-oh", phones
+`S IY1 Y IY1 OW1`), as speakers do. Built Nov 2 (PR #44), merged Nov 4; checked by its phones,
+not yet by ear.
+
 ### Nov 4: judges run it on their own keys
 
 The README's "Run it on your own keys" section tells judges how to run the studio without the
