@@ -9,6 +9,9 @@ below are from Alex Kandelaki's take of 2 Nov 2026. Each is a continuous stretch
 programme, never spliced inside, so nothing looks faster than it was. Captions are burned in
 (many judges watch muted) and each shot carries a label naming the Meta model at work.
 
+If video/voiceover/ holds a WAV per card (scripts/voiceover.py), each card is held on its last
+frame for as long as its line, which is spoken over it; the interview keeps its own sound.
+
 Writes video/iomarkets-live-studio-demo.mp4 (1920x1080, 30 fps, H.264, AAC).
 """
 
@@ -23,6 +26,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CARDS = ROOT / "video" / "cards"
 OUT = ROOT / "video" / "iomarkets-live-studio-demo.mp4"
+VOICEOVER = ROOT / "video" / "voiceover"
+VO_LEAD, VO_TAIL = 0.4, 0.6  # seconds of quiet card before and after the line
 FONT = "DejaVu Sans"
 
 # (source, start s, end s, label). Times are in the take's programme / segment.
@@ -35,7 +40,7 @@ SHOTS = [
         26.0,
         "Live. Muse Spark writes her lines, Meta FastSpeech 2 voices them, MuseTalk lip-syncs",
     ),
-    ("programme", 27.5, 41.0, "Muse Voice Transcribe hears the guest as he speaks"),
+    ("programme", 28.0, 39.0, "Muse Voice Transcribe hears the guest as he speaks"),
     (
         "programme",
         78.0,
@@ -115,6 +120,14 @@ def window_srt(cues, start: float, end: float, path: Path) -> None:
     path.write_text("\n".join(blocks))
 
 
+def duration(path: Path) -> float:
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+        check=True, capture_output=True, text=True,
+    )  # fmt: skip
+    return float(out.stdout)
+
+
 def run(args: list[str]) -> None:
     subprocess.run(["ffmpeg", "-v", "error", "-y", *args], check=True)
 
@@ -127,8 +140,17 @@ def main(take: Path) -> None:
         for i, (kind, a, b, label) in enumerate(SHOTS):
             part = work / f"{i:02}.mp4"
             if kind == "card":
-                run(["-i", str(CARDS / f"{a}.mp4"), "-vf", "scale=1920:1080,setsar=1",
-                     "-af", "aresample=48000", *ENCODE, str(part)])  # fmt: skip
+                card, vo = CARDS / f"{a}.mp4", VOICEOVER / f"{a}.wav"
+                if vo.exists():
+                    hold = max(0.0, VO_LEAD + duration(vo) + VO_TAIL - duration(card))
+                    vf = f"scale=1920:1080,setsar=1,tpad=stop_mode=clone:stop_duration={hold:.2f}"
+                    run(["-i", str(card), "-i", str(vo), "-map", "0:v", "-map", "1:a", "-vf", vf,
+                         "-af", f"adelay={int(VO_LEAD * 1000)}:all=1,apad,aresample=48000,"
+                                "loudnorm=I=-16:TP=-1.5",
+                         "-shortest", *ENCODE, str(part)])  # fmt: skip
+                else:
+                    run(["-i", str(card), "-vf", "scale=1920:1080,setsar=1",
+                         "-af", "aresample=48000", *ENCODE, str(part)])  # fmt: skip
             else:
                 src = take / ("programme.webm" if kind == "programme" else "segment.mp4")
                 dur = b - a

@@ -98,4 +98,4 @@ Muse Image.
 
 - Live: no hosted link (stopped after testing on 2 Nov); run it from the code, see the README.
 - Code: <https://github.com/SergoVashakmadze/iomarkets-live-studio> (MIT)
-- Video: *(link, after recording)*
+- Video: <https://youtu.be/0N31qRkWRH4> (2:56, unlisted)

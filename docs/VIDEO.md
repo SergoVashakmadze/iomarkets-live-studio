@@ -9,13 +9,15 @@ model visible at the moment it works, and say plainly what was built when.
 ## As built (2 Nov 2026)
 
 `uv run python scripts/video_cards.py && uv run python scripts/assemble_video.py TAKE_DIR` writes
-`video/iomarkets-live-studio-demo.mp4` (2:37) from Alex Kandelaki's take (TAKE_DIR holds his
+`video/iomarkets-live-studio-demo.mp4` (2:56) from Alex Kandelaki's take (TAKE_DIR holds his
 `programme.webm`, `segment.mp4` and `interview.srt`). The storyboard below assumed a screen recording
 of the page; there is none, so the video is the programme as it went out live, in five continuous
 excerpts (never spliced inside), with captions burned in and a label naming the Meta model at
 work, then 22 s of the packaged segment. His take has no interruption or chart, so those rows
 are not in it. The waits between his answer and her follow-up are left at their real length.
-No voice-over: the cards carry the words, and the title card opens with the disclosure line.
+A male narrator (Kokoro-82M, open source; `scripts/voiceover.py`, run from the newsroom's
+broadcast venv) reads each card, so it is never mistaken for the anchor; the end card credits it.
+The title card and its narration open with the disclosure line. Total 2:56.
 
 ## What you need
 

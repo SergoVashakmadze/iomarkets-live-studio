@@ -25,8 +25,8 @@ Paste-ready. Check each against the live form; the EIN is typed by the operator,
 - **Bonuses to name:** open-weights model (Muse Spark Open on Fireworks); creative (Muse Image);
   Most Viral: post a 45-60 s cut on X.
 - **Meta credits:** the $150 credit is claimed (done before 2 Nov; one claim per participant).
-- **Do before submitting:** video recorded (testers' recordings are in: Alex Kandelaki, 2 Nov, a
-  clean 7-minute take), video link in the form. The title card and `docs/VIDEO.md` now name Teresa.
+- **Do before submitting:** paste the video link into the form, type the EIN, confirm the opinion
+  fields. Video done: https://youtu.be/0N31qRkWRH4.
 
 ## The form's fields (as seen 1 Nov 2026) and drafted answers
 
@@ -37,7 +37,8 @@ Opinion and rating fields are the operator's to confirm; they are drafted from t
 - **Problem statement:** Build for Your World
 - **Most Viral X post link:** leave empty until the 45-60 s cut is posted
 - **Public GitHub Repository:** https://github.com/SergoVashakmadze/iomarkets-live-studio
-- **3-Minute Demo Video:** the unlisted YouTube link, after recording (opens with the disclosure line)
+- **3-Minute Demo Video:** https://youtu.be/0N31qRkWRH4 (unlisted, 2:56, uploaded 2 Nov; opens
+  with the disclosure line; YouTube's "AI was used" label is on)
 - **Project Description:** IoMarkets Live Studio is a live interview studio for any topic. A guest
   talks to an AI anchor in real time; Meta's models listen, research the guest beforehand,
   fact-check every figure they say or show while they talk, cut them out of their room with SAM 3.1
