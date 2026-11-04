@@ -114,6 +114,11 @@ $0.13 of CPU a session; Meta usage is as in level 2. The studio caps GPU spend a
 See [`docs/DEPLOY.md`](docs/DEPLOY.md) (Modal, one container, about $0.13 of compute per judge
 session; Meta usage, about $1.30 a session, is metered and capped per day).
 
+## Handover
+
+[`docs/HANDOVER_2026-11-04.md`](docs/HANDOVER_2026-11-04.md): the state during judging (hosted app
+stopped, what is kept), how to bring a hosted link back, open PRs, and the secrets.
+
 ## Secrets
 
 See [`docs/SECRETS.md`](docs/SECRETS.md): every secret by name and how to rotate each one
