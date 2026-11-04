@@ -233,3 +233,16 @@ def test_device_errors_reach_the_log_for_token_holders_only(app_and_replay, monk
     )
     long = {**report, "message": "x" * 301}
     assert client.post("/api/device-error?token=s3cret", json=long).status_code == 422
+
+
+def test_without_a_key_the_page_says_how_to_add_one(monkeypatch):
+    """A judge running the code without META_API_KEY gets told to bring their own, not a 500."""
+    monkeypatch.delenv("META_API_KEY", raising=False)
+    client = TestClient(create_app(listener_factory=FakeListener, editor_factory=lambda: None))
+    assert client.get("/").status_code == 200
+    r = client.post("/api/brief", data={"subject": "Jane Doe, Example"})
+    assert r.status_code == 503 and "own Meta API key" in r.json()["detail"]
+    with client.websocket_connect("/ws/live") as ws:
+        ws.send_json({"type": "start", "brief": "x"})
+        msg = ws.receive_json()
+    assert msg["type"] == "error" and "META_API_KEY is not set" in msg["message"]
