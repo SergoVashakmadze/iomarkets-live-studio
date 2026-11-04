@@ -31,6 +31,7 @@ import websockets
 from websockets.asyncio.client import ClientConnection
 
 from studio import ledger
+from studio.meta.responses import MissingKeyError
 
 ASR_URL = "wss://api.meta.ai/v1/asr/realtime"
 ASR_MODEL = "muse-voice-transcribe-1.0"
@@ -218,7 +219,7 @@ class GuestListener:
     ):
         key = api_key or os.environ.get("META_API_KEY")
         if not key:
-            raise RuntimeError("META_API_KEY is not set (see .env.example)")
+            raise MissingKeyError()
         self._hello = handshake(key, keywords, language)
         self._url = url
         self._connect = connect

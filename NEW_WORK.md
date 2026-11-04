@@ -17,6 +17,22 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 4: judges run it on their own keys
+
+The README's "Run it on your own keys" section tells judges how to run the studio without the
+author's credits: the offline test suite (no key), the full studio on their laptop with their own
+`META_API_KEY`, or their own Modal deployment. A missing key now gets a plain message instead of a
+server error: `studio serve` warns at start, Prepare brief answers 503 and Go live sends an `error`
+line, both saying to add a key to `.env` (`MissingKeyError` in `meta/responses.py`; test
+`test_without_a_key_the_page_says_how_to_add_one`).
+
+Teresa and the studio background (pre-existing, declared) are now in the repo, so a clone shows the
+anchor as in the video. `deploy/lipsync_setup.sh` uploads them from `lipsync/anchor/` and no longer
+needs the author's private newsroom repo or MuseTalk install: face-parse-bisent's weights, which
+MuseTalk publishes only on Google Drive, come from a Hugging Face copy at a pinned revision,
+checked against the original's SHA-256 (`fetch_models`). The README says lip-sync needs an NVIDIA
+GPU or the judge's own Modal account.
+
 ### Nov 2 (night): the demo video, assembled from a real take
 
 `scripts/assemble_video.py` builds the 3-minute video from one take's programme recording, its
@@ -419,16 +435,24 @@ websockets (BSD-3), FastAPI (MIT), uvicorn (BSD-3), numpy (BSD-3 and others), py
 Open weights run by the studio itself: **Meta's MMS-TTS** (`facebook/mms-tts-eng`, CC-BY-NC-4.0),
 the anchor's voice.
 
-**MuseTalk v1.5** (open source, MIT, TMElyralab): `lipsync/server.py` was built on it on Oct 30
-and removed on Oct 31; the submitted studio does not use it.
+**MuseTalk v1.5** (open source, MIT, TMElyralab) lip-syncs the anchor: `lipsync/server.py` was
+built on it on Oct 30, removed on Oct 31, and restored on Nov 1 after the organiser's ruling. Its
+face parser's weights (face-parsing.PyTorch, MIT) are fetched from a pinned, hash-checked copy.
 
 Contained here but made before the event:
 
 - The IoMarkets logo (Rainmaker Partners Ltd, 2026), embedded in the studio page as a 176 px WebP
   for the top bar, the favicon and the on-air corner bug.
 
-Used Oct 30 only, no longer used since Oct 31, and never in this repo: a HeyGen library
-avatar (Teresa) and the IoMarkets TV studio background, both made before the event.
+- **Teresa**, the anchor: a HeyGen library avatar of IoMarkets.tv, made before the event. Her
+  loop and its mask (`lipsync/anchor/teresa_loop*.mp4`) and the stills built from them during the
+  event (`src/studio/assets/teresa*`, `scripts/anchor_assets.py`).
+- **The IoMarkets TV studio background** (`lipsync/anchor/studio_background_iomarkets_tv.png`),
+  made before the event.
+
+Both are declared in the video's opening line and were allowed in writing by an organiser on
+Nov 1 (`docs/ORGANISER_RULES.md`). They were added to this repo on Nov 4 so that judges running
+the code see the studio as submitted.
 
 No pre-existing datasets are used. Test fixtures are recordings of this repo's own live calls.
 
@@ -438,6 +462,6 @@ The organiser (Adam Blumenfeld, Discord, 2026-11-01; `docs/ORGANISER_RULES.md`) 
 MuseTalk (MIT, open source) and the pre-existing HeyGen avatar (Teresa, disclosed in the demo
 video) are both allowed, on either track. This branch undoes `3ba69a0`: `lipsync/server.py`, the
 Modal L40S class `Lipsync` (`deploy/modal_app.py`, beside the CPU `Voice` class), the setup and
-keep-warm scripts, and the lip-sync paths in `compose.py` and `server.py`. Teresa's media are not
-in this repo (pre-existing, not open source): they are on the Modal Volume `iomarkets-lipsync`
-and are built locally by `scripts/anchor_assets.py` (see `docs/HANDOVER_2026-11-01.md`).
+keep-warm scripts, and the lip-sync paths in `compose.py` and `server.py`. Teresa's media (pre-existing)
+were at first kept out of the repo, on the Modal Volume `iomarkets-lipsync`; since Nov 4 they are
+in it (see "Pre-existing" above).

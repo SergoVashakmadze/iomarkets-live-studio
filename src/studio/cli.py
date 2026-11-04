@@ -153,6 +153,12 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.host not in ("127.0.0.1", "localhost") and not os.environ.get("STUDIO_TOKEN"):
             parser.error("set STUDIO_TOKEN before serving beyond localhost")
+        if not os.environ.get("META_API_KEY"):
+            print(
+                "No META_API_KEY: the page opens, but briefs and interviews need your own Meta "
+                "API key in .env (README, 'Run it on your own keys').",
+                file=sys.stderr,
+            )
         uvicorn.run(create_app(), host=args.host, port=args.port)
         return 0
     if args.command == "cutout":

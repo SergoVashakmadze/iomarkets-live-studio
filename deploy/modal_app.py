@@ -24,9 +24,13 @@ import modal
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Teresa's page pictures are git-ignored (scripts/anchor_assets.py builds them), so a deploy from a
-# fresh checkout would quietly show the Muse Image anchor instead. It did on Nov 1, mid-testing.
+# Teresa's page pictures (scripts/anchor_assets.py; in the repo since Nov 4). Without them a deploy
+# would quietly show the Muse Image anchor instead. It did on Nov 1, mid-testing.
 TERESA = ("teresa-studio.jpg", "teresa.png", "teresa-wide.png")
+# MuseTalk's face parser (face-parsing.PyTorch, MIT): the same file as on its Google Drive.
+FACE_PARSE_REPO = "ManyOtherFunctions/face-parse-bisent"
+FACE_PARSE_REV = "0073b233a5a3c4b1377d4dbf49245017938a72b5"
+FACE_PARSE_SHA256 = "468e13ca13a9b43cc0881a9f99083a430e9c0a38abd935431d1c28ee94b26567"
 if modal.is_local():
     missing = [n for n in TERESA if not (ROOT / "src" / "studio" / "assets" / n).is_file()]
     if missing:
@@ -245,8 +249,9 @@ def cool_down() -> None:
 
 @app.function(image=lipsync_image, volumes={"/vol": lipsync_volume}, timeout=60 * 60)
 def fetch_models():
-    """MuseTalk's public weights onto the Volume, from the sources its download_weights.sh uses
-    (face-parse-bisent's 79999_iter.pth is on Google Drive: deploy/lipsync_setup.sh uploads it)."""
+    """MuseTalk's public weights onto the Volume, from the sources its download_weights.sh uses.
+    face-parse-bisent's 79999_iter.pth is published on Google Drive only; it is taken from a Hugging
+    Face copy at a pinned revision and checked against the original's SHA-256."""
     import urllib.request
 
     from huggingface_hub import hf_hub_download
@@ -263,6 +268,17 @@ def fetch_models():
         ("yzd-v/DWPose", "dw-ll_ucoco_384.pth", "dwpose"),
     ]:
         hf_hub_download(repo, name, local_dir=f"{m}/{sub}" if sub else m)
+    parse = Path(f"{m}/face-parse-bisent/79999_iter.pth")
+    if not parse.exists():
+        import hashlib
+
+        got = hf_hub_download(
+            FACE_PARSE_REPO, "79999_iter.pth", revision=FACE_PARSE_REV,
+            local_dir=f"{m}/face-parse-bisent",
+        )  # fmt: skip
+        if hashlib.sha256(Path(got).read_bytes()).hexdigest() != FACE_PARSE_SHA256:
+            Path(got).unlink()
+            raise SystemExit("face-parse-bisent 79999_iter.pth: SHA-256 mismatch, not kept")
     resnet = Path(f"{m}/face-parse-bisent/resnet18-5c106cde.pth")
     if not resnet.exists():  # the image has no curl; urllib verifies TLS as curl would
         url = "https://download.pytorch.org/models/resnet18-5c106cde.pth"

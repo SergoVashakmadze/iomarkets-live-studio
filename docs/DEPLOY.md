@@ -1,7 +1,12 @@
 # Deploying the live studio for judges (Modal)
 
-The app is one FastAPI process with ffmpeg; Meta's models are all hosted, so no GPU is needed.
-`deploy/modal_app.py` runs it on Modal as a single container that scales to zero.
+The app is one FastAPI process with ffmpeg; Meta's models are all hosted. `deploy/modal_app.py`
+runs it on Modal as a single container that scales to zero, beside two private classes: `Voice`
+(FastSpeech 2, CPU) and `Lipsync` (MuseTalk on an L40S GPU, for Teresa's lip-sync).
+
+**Judges deploying to their own Modal account:** `modal token new`, then
+`bash deploy/lipsync_setup.sh` once (Teresa's media from `lipsync/anchor/` and MuseTalk's public
+weights onto the Volume), then `deploy.sh` below with your own `.env`. Everything runs on your keys.
 
 ## What it costs
 
@@ -33,18 +38,21 @@ is the daily Meta budget in USD. The script:
 To ship new code without touching the secret or the judges' link:
 `uv run --no-project --with modal==1.6.1 modal deploy deploy/modal_app.py`.
 
-Teresa's page pictures are git-ignored, so a fresh checkout has none: build them first with
-`uv run python scripts/anchor_assets.py` (it reads `../iomarkets.tv-newsroom`). The deploy refuses
-to run without them; without them the page would show the Muse Image anchor instead.
+Teresa's page pictures are in the repo (`src/studio/assets/teresa*`, built by
+`scripts/anchor_assets.py`). The deploy refuses to run without them; without them the page would
+show the Muse Image anchor instead.
 
 Re-running `deploy.sh` redeploys and rotates the token. Once judges have a link, rotate with overlap
 instead (`docs/SECRETS.md`).
 
-## No GPU, and the guards on spend
+## The GPU, and the guards on spend
 
-The anchor is a Muse Image still voiced by Meta's FastSpeech 2 in the CPU class `Voice` (MMS-TTS on the web container is the fallback). The MuseTalk
-lip-sync class on an L40S (Oct 30) was removed on Oct 31: the organisers allow only Meta models
-at runtime. Nothing in this app starts a GPU.
+The anchor, Teresa, is voiced by Meta's FastSpeech 2 in the CPU class `Voice` (MMS-TTS on the web
+container is the fallback) and lip-synced by MuseTalk in the class `Lipsync` on an L40S, about
+$2.45 an hour while up. It has no public URL, starts when a token holder opens the page, and
+scales to zero five idle minutes after; `deploy/warm.sh on HOURS` keeps it up for a session. Its
+spend is capped by `STUDIO_GPU_DAILY_BUDGET_USD` ($5 by default), after which Teresa is shown
+still.
 
 | Guard | What it stops |
 |---|---|
