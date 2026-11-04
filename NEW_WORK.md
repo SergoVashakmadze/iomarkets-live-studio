@@ -17,6 +17,15 @@ the record. Every entry links to the commits that built it.
 
 ## Built during the hackathon (Oct 26, 12:24 PM ET – Nov 4, 2026)
 
+### Nov 4: judges run it on their own keys
+
+The README's "Run it on your own keys" section tells judges how to run the studio without the
+author's credits: the offline test suite (no key), the full studio on their laptop with their own
+`META_API_KEY`, or their own Modal deployment. A missing key now gets a plain message instead of a
+server error: `studio serve` warns at start, Prepare brief answers 503 and Go live sends an `error`
+line, both saying to add a key to `.env` (`MissingKeyError` in `meta/responses.py`; test
+`test_without_a_key_the_page_says_how_to_add_one`).
+
 ### Nov 2 (night): the demo video, assembled from a real take
 
 `scripts/assemble_video.py` builds the 3-minute video from one take's programme recording, its

@@ -167,6 +167,16 @@ class Response:
         )
 
 
+class MissingKeyError(RuntimeError):
+    """No META_API_KEY: the studio runs on the operator's own key, so a judge brings theirs."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "META_API_KEY is not set. The studio runs on your own Meta API key: put it in .env "
+            "(see README, 'Run it on your own keys') and restart `studio serve`."
+        )
+
+
 class ResponsesClient:
     def __init__(
         self,
@@ -180,7 +190,7 @@ class ResponsesClient:
     ):
         key = api_key or os.environ.get("META_API_KEY")
         if not key:
-            raise RuntimeError("META_API_KEY is not set (see .env.example)")
+            raise MissingKeyError()
         self.model = model or os.environ.get("META_MODEL") or DEFAULT_MODEL
         self.max_retries = max_retries
         base = base_url or os.environ.get("META_API_BASE_URL") or DEFAULT_BASE_URL
