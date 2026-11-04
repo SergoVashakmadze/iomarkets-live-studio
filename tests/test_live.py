@@ -465,6 +465,19 @@ async def test_she_reacts_at_once_and_answers_after_the_reaction():
     await _finish(s)
 
 
+async def test_no_reaction_when_the_guest_asks_her_to_repeat():
+    anchor = FakeAnchor(delay=0.2)
+    s, sent = _reacting_session(anchor)
+    await s.open()
+    await _until(lambda: len(_lines(sent)) == 1 and len(s._reactions) == 4)
+    ask = "So I didn't follow your question. Could you just repeat it again, please"
+    await s.on_event(GuestTurn(1, ask, 0))
+    await _until(lambda: len(_lines(sent)) == 2)
+    await asyncio.sleep(0.3)
+    assert [m["text"] for m in sent if m["type"] == "anchor_line"][1:] == [f"re: {ask}"]
+    await _finish(s)
+
+
 async def test_no_reaction_when_her_answer_is_ready_first():
     anchor = FakeAnchor(delay=0.0)
     s, sent = _reacting_session(anchor, render=0.3)

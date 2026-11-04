@@ -62,7 +62,7 @@ from studio.materials import (
     upload_videos,
 )
 from studio.meta.open_weights import open_weights_client
-from studio.meta.responses import ResponsesClient
+from studio.meta.responses import MissingKeyError, ResponsesClient
 from studio.segment import MAX_CLIP_BYTES, ROOMS, SegmentRoom
 from studio.tts import synthesize
 
@@ -225,8 +225,12 @@ def create_app(
         except MaterialError as e:
             raise HTTPException(400, str(e)) from e
         private = any(m.private for m in found)
+        try:
+            client = client_factory()
+        except MissingKeyError as e:
+            raise HTTPException(503, str(e)) from e
         editor = editor_factory()
-        async with client_factory() as client:
+        async with client:
             uploaded: list[str] = []
             try:
                 uploaded = await upload_videos(client, found)
@@ -325,6 +329,11 @@ def create_app(
         except AsrError as e:
             with contextlib.suppress(Exception):
                 await ws.send_json({"type": "error", "message": f"speech recognition: {e}"})
+                await ws.close(code=1011)
+            return
+        except MissingKeyError as e:
+            with contextlib.suppress(Exception):
+                await ws.send_json({"type": "error", "message": str(e)})
                 await ws.close(code=1011)
             return
         with contextlib.suppress(Exception):  # a clean close once the cut-outs are done

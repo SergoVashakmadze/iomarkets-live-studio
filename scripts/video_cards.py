@@ -26,12 +26,17 @@ CARDS = {
             ("", 30, WHITE),
             # The video must open with this disclosure (docs/ORGANISER_RULES.md).
             (
-                "Pre-existing: Meta's models and open-source libraries. New this week: the studio",
+                "Pre-existing: Meta's models, open-source libraries (MuseTalk lip-sync, MIT),",
                 34,
                 WHITE,
             ),
             (
-                "software, and the AI anchor, made with Meta's Muse Image and FastSpeech 2.",
+                "the anchor's look (Teresa, a HeyGen library avatar) and the IoMarkets TV set.",
+                34,
+                WHITE,
+            ),
+            (
+                "New this week: all the studio software. Her voice is Meta's FastSpeech 2.",
                 34,
                 WHITE,
             ),
@@ -54,7 +59,7 @@ CARDS = {
             ("SAM 3.1  -  cuts the guest out of their room, answer by answer", 34, MUTED),
             ("Muse Spark Open  -  edits the research brief on open weights", 34, MUTED),
             ("", 40, WHITE),
-            ("Anchor replies in 1.3-2.1 s  |  barge-in detected in 0.2-0.4 s", 34, ACCENT),
+            ("Her reply written in 1.3-2.1 s  |  barge-in detected in 0.2-0.4 s", 34, ACCENT),
             ("Fact-check 6-8 s  |  a 12 s answer cut out in about 25 s", 34, ACCENT),
         ],
         8,
@@ -80,6 +85,7 @@ CARDS = {
             ("github.com/SergoVashakmadze/iomarkets-live-studio", 30, ACCENT),
             ("", 40, WHITE),
             ("Built with Muse Spark Open", 34, MUTED),
+            ("Narration: Kokoro-82M (open source). Anchor voice: Meta FastSpeech 2.", 30, MUTED),
             ("Journalism on any topic. Not medical, legal or financial advice.", 36, MUTED),
         ],
         5,

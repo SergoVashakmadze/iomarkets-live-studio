@@ -1,9 +1,9 @@
 """The anchor's lip-sync: MuseTalk v1.5 over her moving loop, so head and body move as she talks.
 
-OFF since 2026-10-31. It was built for the pre-existing HeyGen avatar, which the organisers ruled
-out (not open source), and MuseTalk is not a Meta model. Kept for the roadmap: lip-sync the Muse
-Image anchor once a Meta model or a ruling allows it. The studio uses it only when
-STUDIO_LIPSYNC_URL (or STUDIO_LIPSYNC=modal) is set.
+Teresa is a pre-existing HeyGen avatar of IoMarkets.tv, disclosed as such; MuseTalk is open
+source. An organiser allowed both in writing on 2026-11-01 (docs/ORGANISER_RULES.md). Her loop,
+its mask and the studio background are in lipsync/anchor/. The studio uses this server only when
+STUDIO_LIPSYNC_URL (or STUDIO_LIPSYNC=modal) is set; it needs an NVIDIA GPU.
 
 Runs in a MuseTalk checkout's environment (MuseTalk is MIT, github.com/TMElyralab/MuseTalk),
 with that checkout as the working directory, since its models load from ./models:
@@ -73,7 +73,7 @@ SHOTS = {"live": ((420, 230, 1080, 810), (960, 720)), "wide": ((0, 0, 1920, 1080
 Y_OFFSET = 24  # the loop's bottom edge (y 1068) pushed off the frame, as anchor_assets.py
 
 ROOT = Path(__file__).resolve().parent.parent
-NEWSROOM = ROOT.parent / "iomarkets.tv-newsroom" / "services" / "broadcast" / "assets"
+MEDIA = ROOT / "lipsync" / "anchor"  # Teresa's pre-existing loop, its mask, the studio
 
 
 def read_video(path: Path, gray: bool = False) -> list[np.ndarray]:
@@ -304,9 +304,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="127.0.0.1")  # 0.0.0.0 on Modal
     ap.add_argument("--port", type=int, default=8766)
-    ap.add_argument("--loop", type=Path, default=NEWSROOM / "avatars" / "teresa_loop.mp4")
-    ap.add_argument("--mask", type=Path, default=NEWSROOM / "avatars" / "teresa_loop_mask.mp4")
-    ap.add_argument("--studio", type=Path, default=NEWSROOM / "studio_background_iomarkets_tv.png")
+    ap.add_argument("--loop", type=Path, default=MEDIA / "teresa_loop.mp4")
+    ap.add_argument("--mask", type=Path, default=MEDIA / "teresa_loop_mask.mp4")
+    ap.add_argument("--studio", type=Path, default=MEDIA / "studio_background_iomarkets_tv.png")
     ap.add_argument("--cache", type=Path, default=Path.home() / ".cache" / "iomarkets-lipsync")
     args = ap.parse_args()
     t = time.time()

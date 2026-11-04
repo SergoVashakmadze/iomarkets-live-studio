@@ -218,3 +218,10 @@ async def test_policy_close_raises_with_code(fast):
         with pytest.raises(AsrError) as e:
             [_ async for _ in listener.events()]
     assert e.value.code == 1008
+
+
+def test_long_keywords_are_split_to_fit_the_asr_limit():
+    topic = "training for a sub-two-hour marathon race"
+    kws = asr.handshake("k", ["Eliud Kipchoge", topic])["keywords"]
+    assert all(len(k) <= 30 for k in kws)
+    assert kws[0] == "Eliud Kipchoge" and " ".join(kws[1:]) == topic

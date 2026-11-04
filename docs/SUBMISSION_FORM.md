@@ -10,7 +10,9 @@ Paste-ready. Check each against the live form; the EIN is typed by the operator,
   is ready when the call ends.
 - **Problem statement:** Build for Your World.
 - **Code:** https://github.com/SergoVashakmadze/iomarkets-live-studio (MIT)
-- **Try it:** the judges' link (token in the Modal secret `iomarkets-studio`; rotate after judging)
+- **Try it:** no hosted link. The Modal app was stopped on 2 Nov after testing, so it costs nothing
+  and nobody can use it. Judges see the video and can run it from the code (README, "Try it").
+  To bring it back: `modal deploy` (docs/DEPLOY.md), which keeps the same link and token.
 - **Video:** unlisted YouTube link, 3:00 at most; **opens with the disclosure line** (`docs/VIDEO.md`):
   Teresa is a pre-existing HeyGen library avatar and the IoMarkets TV studio background is
   pre-existing; MuseTalk is open source (MIT); everything else, and every call to a Meta model, was
@@ -22,10 +24,9 @@ Paste-ready. Check each against the live form; the EIN is typed by the operator,
 - **Write-up:** `docs/WRITEUP.md` (by judging criterion). **What was built when:** `NEW_WORK.md`.
 - **Bonuses to name:** open-weights model (Muse Spark Open on Fireworks); creative (Muse Image);
   Most Viral: post a 45-60 s cut on X.
-- **Meta credits:** each participant, including startup entrants, must claim the $150 credit
-  individually by Wed 4 Nov, 9:00 PM Eastern.
-- **Do before submitting:** testers' recordings in (due Mon 2 Nov, 8 pm UK), video recorded, video
-  link in the form, the README/`docs/VIDEO.md`/title card updated for Teresa.
+- **Meta credits:** the $150 credit is claimed (done before 2 Nov; one claim per participant).
+- **Do before submitting:** paste the video link into the form, type the EIN, confirm the opinion
+  fields. Video done: https://youtu.be/0N31qRkWRH4.
 
 ## The form's fields (as seen 1 Nov 2026) and drafted answers
 
@@ -36,7 +37,8 @@ Opinion and rating fields are the operator's to confirm; they are drafted from t
 - **Problem statement:** Build for Your World
 - **Most Viral X post link:** leave empty until the 45-60 s cut is posted
 - **Public GitHub Repository:** https://github.com/SergoVashakmadze/iomarkets-live-studio
-- **3-Minute Demo Video:** the unlisted YouTube link, after recording (opens with the disclosure line)
+- **3-Minute Demo Video:** https://youtu.be/0N31qRkWRH4 (unlisted, 2:56, uploaded 2 Nov; opens
+  with the disclosure line; YouTube's "AI was used" label is on)
 - **Project Description:** IoMarkets Live Studio is a live interview studio for any topic. A guest
   talks to an AI anchor in real time; Meta's models listen, research the guest beforehand,
   fact-check every figure they say or show while they talk, cut them out of their room with SAM 3.1

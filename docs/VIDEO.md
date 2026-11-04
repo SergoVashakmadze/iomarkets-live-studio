@@ -6,6 +6,19 @@ this week (the first shot below), and the demo may show only work built during t
 repo. The video carries three jobs: show a real interview working end to end, make each Meta
 model visible at the moment it works, and say plainly what was built when.
 
+## As built (2 Nov 2026)
+
+`uv run python scripts/video_cards.py && uv run python scripts/assemble_video.py TAKE_DIR` writes
+`video/iomarkets-live-studio-demo.mp4` (2:56) from Alex Kandelaki's take (TAKE_DIR holds his
+`programme.webm`, `segment.mp4` and `interview.srt`). The storyboard below assumed a screen recording
+of the page; there is none, so the video is the programme as it went out live, in five continuous
+excerpts (never spliced inside), with captions burned in and a label naming the Meta model at
+work, then 22 s of the packaged segment. His take has no interruption or chart, so those rows
+are not in it. The waits between his answer and her follow-up are left at their real length.
+A male narrator (Kokoro-82M, open source; `scripts/voiceover.py`, run from the newsroom's
+broadcast venv) reads each card, so it is never mistaken for the anchor; the end card credits it.
+The title card and its narration open with the disclosure line. Total 2:56.
+
 ## What you need
 
 - One full interview recorded with a real guest (`docs/DEMO.md`: guest, chart, consent).
@@ -28,7 +41,7 @@ model visible at the moment it works, and say plainly what was built when.
 
 | Time | Shot | On screen | Voice-over (operator) | Scores |
 |---|---|---|---|---|
-| 0:00-0:07 | `01-title` card | Disclosure line on the card | "Pre-existing: Meta's models and open-source libraries. Built this week: the whole studio, and the AI anchor, made with Meta's Muse Image and voiced by Meta's FastSpeech 2. IoMarkets Live Studio: a live interview with an AI anchor." | Rules (the video must open with this line) |
+| 0:00-0:07 | `01-title` card | Disclosure line on the card | "Pre-existing: Meta's models, open-source libraries including MuseTalk for lip-sync, and the anchor's look: Teresa, a HeyGen library avatar, in the IoMarkets TV set. Built this week: all the studio software; her voice is Meta's FastSpeech 2. IoMarkets Live Studio: a live interview with an AI anchor." | Rules (the video must open with this line) |
 | 0:06-0:16 | `02-problem` card | | "A live interview takes a presenter, a researcher, a fact-checker and an editor. Small newsrooms go without. This does all four, live, on Meta's models." | Impact |
 | 0:16-0:34 | Screen: type the guest, paste a link, drop their deck, **Prepare brief** | Badges light; brief appears with PRESSURE POINTS | "Scout reads the guest's deck and links with Muse Spark and searches the web; Muse Spark Open, Meta's open-weights model on Fireworks, edits it into the brief; the Devil's Advocate lists the claims to test, each with a question." | Meta tooling, Impact |
 | 0:34-1:00 | Screen: tick consent, **Go live**; anchor opens; guest answers | Voice Transcribe badge on while the guest talks; live transcript; anchor line | "The guest speaks; Muse Voice Transcribe hears every word as it is said, and the anchor, on Muse Spark, answers in about two seconds." | Demo |
